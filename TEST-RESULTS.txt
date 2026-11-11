@@ -1,0 +1,27 @@
+HASEEB AI Windows 11 desktop helper — validation report
+Date: 11 November 2026
+
+ACTUALLY RUN:
+- Python compileall: PASS.
+- python3 -m unittest discover -s tests -v: 16 tests PASS.
+- Real temporary-file note/folder creation and no-overwrite: PASS.
+- Workspace traversal, Windows reserved names, alternate data streams: blocked.
+- Symlink write/traversal checks: PASS in Linux.
+- Search results cap and stop-before-execution: PASS.
+- Malformed/unsupported AI actions and extra executable arguments: blocked.
+- Plain HTTPS URLs only; embedded credentials rejected.
+- Typing control characters and unsupported hotkeys: blocked.
+- Fixed executable launch with shell=False: mocked assertion PASS.
+- Local AI loopback request, bounded context and failure reporting: mocked PASS.
+- Screen permission gate, declined write, cancelled countdown, stop epoch: PASS.
+
+NOT RUN / NOT CLAIMED:
+- Windows 11 installation, dependency installation on Windows.
+- Actual Windows app launch, global hotkey registration, screenshot and screen input.
+- GUI visual rendering: tkinter import succeeds, but runtime has no graphical display.
+- Local Ollama inference or performance on user's laptop.
+- BUILD-EXE.bat / signed Windows executable / SmartScreen verification.
+
+The package includes source plus Windows setup and optional EXE build scripts.
+No prebuilt Windows executable or bundled AI model is included.
+Use README's Windows smoke test to validate the machine-specific integration.
