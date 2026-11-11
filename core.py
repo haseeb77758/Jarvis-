@@ -54,6 +54,7 @@ def validate(action):
     fields = {
         'launch': {'app'}, 'launch_custom': {'alias'}, 'website': {'url'}, 'folder': {'name'},
         'note': {'name', 'text'}, 'find': {'query'}, 'screenshot': set(),
+        'volume': {'direction'},
         'click': {'x', 'y'}, 'type': {'text'}, 'key': {'keys'},
         'windows': set(), 'inspect': {'title'}, 'focus': {'title'},
         'wait_window': {'title'}, 'invoke': {'title', 'name'},
@@ -66,6 +67,8 @@ def validate(action):
             raise ValueError(f'{key} khali ya invalid hai.')
     if kind in {'inspect', 'focus', 'wait_window', 'invoke', 'type_window', 'key_window'} and any(len(action[k]) > 250 for k in fields[kind] - {'text', 'keys'}):
         raise ValueError('Window/button naam 250 characters se chhota rakhein.')
+    if kind == 'volume' and action['direction'] not in {'up', 'down', 'mute'}:
+        raise ValueError('Volume direction invalid hai.')
     if kind == 'launch' and action['app'] not in APP_NAMES:
         raise ValueError('Sirf supported apps khul sakti hain.')
     if kind == 'launch_custom' and not re.fullmatch(r'[a-z0-9][a-z0-9 -]{0,39}', action['alias']):
@@ -92,6 +95,10 @@ def validate(action):
 def parse_command(text):
     text = text.strip()
     low = text.lower()
+    volume_commands = {'volume up': 'up', 'volume down': 'down', 'volume mute': 'mute',
+                       'awaz barhao': 'up', 'awaz kam karo': 'down', 'awaz band karo': 'mute'}
+    if low in volume_commands:
+        return validate({'action': 'volume', 'direction': volume_commands[low]})
     if low in ('windows', 'list windows', 'show windows'):
         return {'action': 'windows'}
     for prefix, kind in [('inspect:', 'inspect'), ('focus:', 'focus'), ('wait:', 'wait_window')]:
@@ -201,6 +208,9 @@ class Controller:
         import pyautogui as pg
         pg.FAILSAFE = True
         pg.PAUSE = 0.15
+        if kind == 'volume':
+            pg.press({'up': 'volumeup', 'down': 'volumedown', 'mute': 'volumemute'}[a['direction']])
+            return 'Volume key input bheja: ' + a['direction']
         if kind == 'screenshot':
             return pg.screenshot()
         if kind == 'click':
