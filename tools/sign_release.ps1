@@ -21,9 +21,9 @@ if (-not $CertificateBase64.Trim() -or -not $CertificatePassword) {
 $pfx = Join-Path $env:RUNNER_TEMP ('jarvis-signing-' + [guid]::NewGuid().ToString('N') + '.pfx')
 try {
     [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($CertificateBase64))
-    $certificate = New-Object Security.Cryptography.X509Certificates.X509Certificate2(
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
         $pfx, $CertificatePassword,
-        [Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet
+        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet
     )
     if (-not $certificate.HasPrivateKey) { throw 'Signing certificate does not include a private key.' }
     $usage = $certificate.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.37' }
