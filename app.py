@@ -13,6 +13,7 @@ import re
 from memory import PreferenceStore
 from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
 from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model, ollama_binary, ollama_status, MODEL
+from tools.update_windows import check_update, install_update, installed_commit, UpdateError
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
 BORDER, SURFACE, DEEP = '#253b4d', '#142537', '#0b1521'
@@ -49,6 +50,7 @@ class App:
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(100, self.poll)
         root.after(600, self.check_ollama)
+        root.after(2400, self.check_updates_silently)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
         self.say('HASEEB AI', 'Salam! Yeh Jarvis AI Chat hai. Apna sawal neeche likho aur SEND dabao. Ollama ready na ho to Setup AI dabao. Computer control ke liye Desktop mode alag se select karo.')
@@ -282,6 +284,50 @@ class App:
             self.events.put((self.generation, 'ollama_status', state, '', None))
         threading.Thread(target=check, daemon=True).start()
 
+    def check_updates_silently(self):
+        """Background notification only: never install code without approval."""
+        if self.busy:
+            return
+        def check():
+            try:
+                sha, available = check_update(Path(__file__).resolve().parent)
+                self.events.put((self.generation, 'update_notice', (sha, available), '', None))
+            except (OSError, ValueError, UpdateError):
+                # App works offline; a failed update check is not a fatal warning.
+                return
+        threading.Thread(target=check, daemon=True).start()
+
+    def update_jarvis(self):
+        """One-click review for a specific GitHub main commit."""
+        if self.busy:
+            return
+        self.say('UPDATE', 'GitHub par Jarvis source update check kar raha hoon...')
+        self.worker(lambda: check_update(Path(__file__).resolve().parent), 'update_check')
+
+    def approve_update(self, result):
+        sha, available = result
+        if not available:
+            self.say('UPDATE', 'Jarvis already latest approved source snapshot par hai.')
+            return
+        if not messagebox.askyesno(
+            'Review Jarvis update',
+            'GitHub repo: haseeb77758/Jarvis-\n'
+            'New main commit: ' + sha[:12] + '\n\n'
+            'Official GitHub source code download hoga. Runtime tests aur GUI '
+            'smoke test pass honay par code files replace hongi.\n'
+            'Ollama models, user memory aur local shortcuts preserve honge.\n'
+            'Failed code update automatically rollback karega.\n'
+            'Third-party Python dependencies requirements.txt ke mutabiq '
+            'update ho sakti hain, jo rollback mein automatically reverse nahi hoti.\n'
+            'Application ko update ke baad restart karna hoga.\n\n'
+            'Is update ko approve karte hain?',
+            parent=self.root
+        ):
+            self.say('UPDATE', 'Update cancel kar diya; koi code change nahi hua.')
+            return
+        self.say('UPDATE', 'Approved GitHub version download aur verification chal rahi hai...')
+        self.worker(lambda: install_update(Path(__file__).resolve().parent, sha), 'update_apply')
+
     def setup_ai(self):
         """Guided local setup: explicit approval for official Ollama and model."""
         if self.busy:
@@ -492,6 +538,10 @@ class App:
                     self.halt()
                     self.root.deiconify()
                     continue
+                if kind == 'update_notice':
+                    if generation == self.generation and value[1]:
+                        self.status.set('GitHub update available · Update Jarvis')
+                    continue
                 if kind == 'ollama_status':
                     self.ai_status.set({
                         'ready': 'OLLAMA · READY',
@@ -519,6 +569,14 @@ class App:
                     self.review_voice(value)
                 elif kind == 'screenshot':
                     self.show_screen(value)
+                elif kind == 'update_check':
+                    self.approve_update(value)
+                elif kind == 'update_apply':
+                    self.say('UPDATE', value)
+                    self.status.set('Updated · restart Jarvis to use new code')
+                    messagebox.showinfo('Jarvis update installed',
+                                        value + '\\n\\nClose Jarvis and reopen the Desktop shortcut to activate it.',
+                                        parent=self.root)
                 elif kind == 'setup_status':
                     self.confirm_model_setup(value)
                 elif kind == 'setup':
