@@ -7,7 +7,8 @@ import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import webbrowser
-from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan
+import shutil
+from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080f18', '#122231', '#e5f1f5', '#92a9b9', '#36dccf'
 
@@ -16,8 +17,8 @@ class App:
     def __init__(self, root):
         self.root = root
         root.title('JARVIS | HASEEB AI — Windows 11')
-        root.geometry('1120x800')
-        root.minsize(800, 620)
+        root.geometry('1240x800')
+        root.minsize(1060, 620)
         root.configure(bg=BG)
         self.events = queue.Queue()
         self.stop = threading.Event()
@@ -37,7 +38,7 @@ class App:
         root.after(100, self.poll)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
-        self.say('HASEEB AI', 'Salam Haseeb bhai! Chrome kholo, calculator kholo, folder banao: Client Work, find: invoice, ya screenshot likhein.\nLocal AI ke liye pehle SETUP-LOCAL-AI.bat chalayein. Cloud chat button pehle wali online app kholta hai; woh computer control nahi karti.')
+        self.say('HASEEB AI', 'Salam Haseeb bhai! Chrome kholo, calculator kholo, folder banao: Client Work, find: invoice, ya screenshot likhein.\nFree local AI ke liye Setup local AI button use karein. Cloud chat button pehle wali online app kholta hai; woh computer control nahi karti.')
 
     def global_stop(self):
         import ctypes
@@ -68,6 +69,7 @@ class App:
                  justify='left', font=('Segoe UI', 9)).pack(side='left')
         self.button(header, 'STOP / Esc', self.halt, True).pack(side='right', padx=5)
         self.button(header, 'Resume', self.resume).pack(side='right', padx=5)
+        self.button(header, 'Setup local AI', self.setup_ai).pack(side='right', padx=5)
         self.button(header, 'Cloud chat ↗', lambda: webbrowser.open(CLOUD_URL)).pack(side='right', padx=5)
         tk.Label(self.root, textvariable=self.status, fg=MUTED, bg=BG, anchor='w').pack(fill='x', padx=26)
         tools = tk.Frame(self.root, bg=BG)
@@ -113,6 +115,22 @@ class App:
         self.busy = on
         self.send.configure(state='disabled' if on else 'normal')
         self.status.set('Working…' if on else ('Stopped · Resume to continue' if self.stop.is_set() else 'Ready · local controls'))
+
+    def setup_ai(self):
+        if self.busy:
+            return
+        if self.stop.is_set():
+            self.say('HASEEB AI', 'Pehle Resume dabayein.')
+            return
+        installed = Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs/Ollama/ollama.exe'
+        if not installed.is_file() and not shutil.which('ollama.exe'):
+            if messagebox.askokcancel('Install local AI runtime',
+                'Local AI ke liye Ollama install karna hoga. Official download page kholun?\nInstallation ke baad isi Setup local AI button ko dobara dabayein.', parent=self.root):
+                webbrowser.open('https://ollama.com/download/windows')
+            return
+        if messagebox.askokcancel('Download free local AI',
+            'qwen2.5:1.5b model approximately 986 MB download hoga. Internet aur disk space chahiye.\nAPI key ya paid plan nahi chahiye. Download shuru karein?', parent=self.root):
+            self.worker(lambda: setup_local_model(self.stop), 'setup')
 
     def choose(self):
         if self.busy:

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080f18">
+  <title>JARVIS — Haseeb Crafts</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://js.puter.com/v2/" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="./"><span class="mark">J</span><span>JARVIS<small>Created by Haseeb Crafts</small></span></a>
+    <span class="edition">BROWSER EDITION</span>
+    <button id="login" type="button">Connect AI</button>
+  </header>
+  <main>
+    <aside>
+      <div class="aside-title">YOUR WORKSPACE</div>
+      <button class="new" id="newChat" type="button">＋ New conversation</button>
+      <div class="orb" aria-hidden="true"><div class="orb-core">J</div></div>
+      <h2>Ideas into action.</h2>
+      <p>Your writing, coding and creative partner. Ask in English or Roman Urdu.</p>
+      <div class="connection"><i></i><span id="status" role="status">Loading AI connection…</span></div>
+      <div class="local-note">Browser chat cannot control your computer. Use the Windows EXE for desktop controls.</div>
+      <a class="desktop" href="https://github.com/haseeb77758/Jarvis-/actions">Windows app downloads ↗</a>
+      <a class="secondary" href="https://haseeb-ai-4ybb30.v2.appdeploy.ai/" target="_blank" rel="noopener noreferrer">Open existing cloud chat ↗</a>
+    </aside>
+    <section class="workspace" aria-label="AI conversation">
+      <div class="section-head"><div><span class="eyebrow">HASEEB INTELLIGENCE</span><h1>Socho. Bolo. Banao.</h1></div><span class="tag">PERSONAL ASSISTANT</span></div>
+      <div id="chat" class="chat" role="log" aria-label="Chat history" aria-live="polite"></div>
+      <div class="suggestions" id="suggestions">
+        <button type="button">Haseeb Crafts ke liye 3 video ideas do</button>
+        <button type="button">Website ka hero copy likho</button>
+        <button type="button">Mera daily work plan banao</button>
+      </div>
+      <form id="form">
+        <label class="sr-only" for="message">Message</label>
+        <textarea id="message" rows="2" maxlength="4000" placeholder="Haseeb bhai, aaj kya banana hai?"></textarea>
+        <div class="composer-footer"><span id="hint">Enter to send · Shift+Enter for a new line</span><div><button id="stop" type="button" hidden>Stop</button><button id="send" type="submit">Send ↗</button></div></div>
+      </form>
+      <p class="disclosure">AI chat uses Puter sign-in and its free monthly allowance, subject to limits. Messages go to Puter and its model provider. No API key needed. History stays in this tab.</p>
+    </section>
+  </main>
+  <footer>JARVIS / HASEEB CRAFTS <span>Browser chat · Desktop controls available in the Windows app</span></footer>
+</body>
+</html>

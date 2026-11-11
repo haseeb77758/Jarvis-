@@ -8,10 +8,10 @@ if not exist .venv\Scripts\python.exe (
 )
 .venv\Scripts\python.exe -m pip install pyinstaller
 if errorlevel 1 goto failed
-.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --windowed --onedir --name Jarvis app.py
+.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis app.py
 if errorlevel 1 goto failed
-echo Build complete: dist\Jarvis\Jarvis.exe
-echo Keep the entire dist\Jarvis folder together. Ollama remains a separate installation.
+echo Build complete: dist\Jarvis.exe
+echo This is a single EXE. Use its Setup local AI button for optional Ollama setup.
 pause
 exit /b
 :failed

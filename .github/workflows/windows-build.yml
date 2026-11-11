@@ -29,24 +29,20 @@ jobs:
       - name: Windows UI and screen smoke test
         run: python tools/windows_smoke.py
       - name: Build the Windows executable
-        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name Jarvis app.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis app.py
       - name: Verify the built app starts
         shell: pwsh
         run: |
-          $app = Start-Process -FilePath '.\dist\Jarvis\Jarvis.exe' -ArgumentList '--self-test' -PassThru
-          if (-not $app.WaitForExit(45000)) {
+          $app = Start-Process -FilePath '.\dist\Jarvis.exe' -ArgumentList '--self-test' -PassThru
+          if (-not $app.WaitForExit(90000)) {
             $app.Kill()
             throw 'Built app smoke test timed out.'
           }
           if ($app.ExitCode -ne 0) { throw "Built app failed: $($app.ExitCode)" }
-      - name: Add the quick-start guide
-        shell: pwsh
-        run: |
-          Copy-Item README.md,README-ROMAN-URDU.md,SETUP-LOCAL-AI.bat -Destination dist/Jarvis/
       - name: Upload Windows application
         uses: actions/upload-artifact@v7
         with:
-          name: Jarvis-Windows-x64
-          path: dist/Jarvis/
+          name: Jarvis-Single-EXE-Windows-x64
+          path: dist/Jarvis.exe
           if-no-files-found: error
           retention-days: 14

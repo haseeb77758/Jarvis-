@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import shutil
+import tempfile
 import threading
 import time
 from urllib.parse import urlparse
@@ -242,3 +244,33 @@ class LocalAI:
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError('Local AI ne khali reply diya. Direct command try karein.')
         return content
+
+
+def setup_local_model(stop):
+    """Download only the named local model with an existing official Ollama install."""
+    if os.name != 'nt':
+        raise RuntimeError('Model setup button Windows ke liye hai.')
+    installed = Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs/Ollama/ollama.exe'
+    executable = str(installed) if installed.is_file() else shutil.which('ollama.exe')
+    if not executable:
+        raise FileNotFoundError('Ollama install nahi mila. Official download page se install karein, phir Setup local AI dobara dabayein.')
+    with tempfile.TemporaryFile(mode='w+b') as log:
+        process = subprocess.Popen([executable, 'pull', MODEL], stdout=log, stderr=subprocess.STDOUT,
+                                   shell=False, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        deadline = time.monotonic() + 900
+        while process.poll() is None:
+            if stop.wait(0.25) or time.monotonic() > deadline:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                raise RuntimeError('Model download stopped. Setup button se baad mein retry kar sakte hain.')
+        if process.returncode:
+            log.seek(0, 2)
+            length = log.tell()
+            log.seek(max(0, length - 1500))
+            details = log.read().decode('utf-8', errors='replace')
+            raise RuntimeError('Ollama model download fail hua. Ollama Start menu se open karein aur internet check karein.\n' + details)
+    return 'Local AI model ready. Local AI chat select karke Salam bhejein.'

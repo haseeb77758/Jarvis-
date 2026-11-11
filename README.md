@@ -4,14 +4,23 @@ Created by **Haseeb Crafts**.
 
 A Windows desktop assistant with local controls, optional free local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
 
-## Download the Windows app
+## Option 2 — Browser chat from this repository
 
-1. Open this repository's **Actions → Windows test and build**.
-2. Open the latest successful run and download **Jarvis-Windows-x64** from Artifacts.
-3. Extract the complete ZIP and run **Jarvis.exe**. Keep the `_internal` folder next to the EXE.
-4. For offline AI, run **SETUP-LOCAL-AI.bat** once. It opens the official Ollama installer if missing, then downloads `qwen2.5:1.5b` (about 986 MB).
+The standalone browser app is in **web/**. It uses Puter sign-in and the user's free monthly allowance, with no API key. Browser chat cannot control Windows. The external provider may prompt for more credits when the allowance is exhausted; there is no unlimited-free claim.
 
-You must be signed in to GitHub to download artifacts from this private repository. Artifacts are retained for 14 days; a new push or manual workflow run rebuilds the package. If no successful build exists yet, use the source setup below. This build is unsigned and contains no bundled AI model.
+- **Private GitHub preview:** Open **Code → Codespaces → Create codespace on main**. The devcontainer starts the static server on port 8000 and opens the browser preview. If needed, use **Ports → 8000 → Open in Browser**. Codespaces uses the account's included development allowance; stop it after use. Creating a codespace has not been done automatically in this session.
+- **GitHub Pages publishing:** The `Publish browser chat to GitHub Pages` workflow is ready but manual. GitHub Free cannot publish Pages from a private repository. A Pro account may publish from a private repo; otherwise changing repository visibility is an explicit owner decision. First configure **Settings → Pages → Source: GitHub Actions**, then run that workflow. No public URL is claimed before successful publishing.
+- **Immediate existing cloud chat:** https://haseeb-ai-4ybb30.v2.appdeploy.ai/ (separate hosted version, not GitHub Pages).
+- **Local browser preview:** `python -m http.server 8000 --directory web`, then open http://localhost:8000.
+
+## Option 3 — One Windows EXE
+
+1. Open **Actions → Windows test and build**, then the latest successful run.
+2. Download **Jarvis-Single-EXE-Windows-x64** from Artifacts and extract it.
+3. Run **Jarvis.exe**. No `_internal` folder or Python install is required for this build.
+4. Use the app's **Setup local AI** button once for optional free offline AI. If Ollama is missing, it opens the official installer page. After installation, press the button again to download `qwen2.5:1.5b` (about 986 MB). The model/runtime are separate downloads, not embedded in the EXE.
+
+The app is unsigned. One-file packaging extracts bundled application libraries into a temporary folder while running; it does not mean an AI model is embedded or that no temporary files are used. You must sign in to GitHub to download private-repository artifacts. Artifacts are retained for 14 days. No repository visibility or billing setting was changed.
 
 ## Run from source
 
@@ -45,6 +54,11 @@ Extract/clone the repository and double-click **SETUP.bat**. It checks Python 3.
 
 ## Validation
 
-`python -m unittest discover -s tests -v` runs the local integration/validation suite. The Windows workflow installs dependencies, runs these tests, creates the UI and captures only runner screen dimensions in a smoke test, builds with PyInstaller and checks the resulting EXE's `--self-test` exit code before uploading it.
+`python -m unittest discover -s tests -v` runs the local integration/validation suite. The Windows workflow installs dependencies, runs these tests, creates the UI and verifies a runner-only screenshot in a smoke test, builds with PyInstaller and checks the resulting EXE's `--self-test` exit code before uploading it.
 
 Windows CI success demonstrates a hosted Windows runner, not successful installation or AI performance on your own laptop. Run the guide's smoke test on the target PC.
+
+
+## Browser test coverage
+
+The separate browser-check workflow tests sign-in gating, conversation context, new-chat reset, safe text rendering, quota errors/retry, abort and mobile layout with an explicitly mocked Puter provider. It does not claim a real Puter model reply or account sign-in was verified. That needs a user-signed-in browser.

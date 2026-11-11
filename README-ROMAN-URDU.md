@@ -2,7 +2,7 @@
 Created by Haseeb Crafts
 
 ## Pehle seedhi baat
-Yeh Windows par chalne wala local desktop helper ka source package hai, prebuilt ya signed EXE nahi. Yeh is chat se tumhare computer par install nahi hua. Linux environment mein code, action validation, cancellation aur UI event logic test ki hai. Is runtime mein display nahi tha, is liye window visually render nahi hui; actual Windows app launching, DPI, screen input aur tumhare laptop ki AI speed yahan verify nahi hui.
+Yeh Windows par chalne wala local desktop helper ka source package hai, source download mein prebuilt ya signed EXE nahi. Yeh is chat se tumhare computer par install nahi hua. Linux environment mein code, action validation, cancellation aur UI event logic test ki hai. Is runtime mein display nahi tha, is liye window visually render nahi hui; actual Windows app launching, DPI, screen input aur tumhare laptop ki AI speed yahan verify nahi hui.
 
 Yeh tumhare poore PC ka unrestricted autonomous agent nahi. Is version mein approved Windows apps launch, selected workspace mein filename search, folder/text-note creation, primary-monitor screenshot preview aur reviewed mouse/keyboard actions hain. Screen ko AI se automatically samajh kar arbitrary websites par multi-step tasks complete karna included nahi. Model ko screenshots, file contents ya file listing automatically nahi bheje jate.
 
@@ -67,7 +67,7 @@ Workspace default tumhara user-home folder hai. Choose folder se Desktop, Docume
 8. Local AI setup ke baad Local AI chat mein Salam bhejo. Response ki quality/speed PC par judge karo.
 
 ## EXE banana (optional)
-BUILD-EXE.bat Windows par PyInstaller install aur build karega. Output dist\Jarvis\Jarvis.exe. Pura dist\Jarvis folder saath rakho. Yeh unsigned build hoga. Source download mein compiled EXE nahi. GitHub Actions → Windows test and build ke successful run mein Jarvis-Windows-x64 artifact milega; us mein built EXE hoti hai.
+BUILD-EXE.bat Windows par PyInstaller install aur build karega. Output dist\Jarvis.exe. Yeh one-file EXE hai; _internal folder saath rakhna nahi hota. Yeh unsigned build hoga. Source download mein compiled EXE nahi. GitHub Actions → Windows test and build ke successful run mein Jarvis-Single-EXE-Windows-x64 artifact milega; us mein built EXE hoti hai.
 
 ## Privacy / limits
 No background monitoring, no automatic startup, no inbound web server, no remote-control tunnel, no arbitrary PowerShell/CMD execution. Local AI calls only fixed loopback Ollama address with proxy disabled. Chat history app close/new chat par clear; automatic chat logs nahi. User-selected notes/screenshots locally save hotay hain. Cloud chat open karne par us app ki cloud data flow apply hoti hai.
@@ -82,3 +82,9 @@ https://docs.ollama.com/windows
 https://docs.ollama.com/api/chat
 https://ollama.com/library/qwen2.5:1.5b
 https://pyautogui.readthedocs.io/en/latest/
+
+
+## Latest additions: browser + single EXE
+Repo ke README.md mein Option 2 aur Option 3 dekhein. Single-EXE app mein Setup local AI button included hai, is liye EXE ke saath setup BAT carry karna zaroori nahi. Ollama aur model phir bhi first-time download/install hote hain.
+
+GitHub Pages ke liye repo plan/Pages settings configure honi chahiye; private repo ko public is update mein nahi kiya gaya. Private Codespaces preview bhi configured hai. Browser Puter sign-in use karta hai; desktop local chat Ollama use karti hai. Dono ki capabilities aur allowances alag hain.
