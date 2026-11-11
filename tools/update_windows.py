@@ -1,6 +1,6 @@
 """Consent-based source updater for the installed Windows Jarvis application.
 
-Only reads pinned public GitHub repository source over HTTPS. Never disables
+Reads an approved private GitHub repository over authenticated HTTPS. Never disables
 Windows Security, downloads executables, updates preferences or changes startup.
 A new snapshot is tested before promotion; local code changes are rolled back
 if promotion or the installed-app smoke test fails.
@@ -12,11 +12,14 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import stat
 import subprocess
 import sys
 import tempfile
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener, HTTPRedirectHandler
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from zipfile import ZipFile, BadZipFile
 
 REPOSITORY = "haseeb77758/Jarvis-"
@@ -34,6 +37,7 @@ REQUIRED = frozenset({
     "tests/test_updater.py",
 })
 LOCAL_TESTS = (
+    "test_private_github_auth.py",
     "test_sandbox_chat.py",
     "test_chat_ui.py", "test_core.py", "test_desktop_voice_memory.py",
     "test_safety_regressions.py", "test_stonic_tools.py",
@@ -46,32 +50,141 @@ class UpdateError(RuntimeError):
     pass
 
 
+class GitHubAuthenticationRequired(UpdateError):
+    """Private repo requires a GitHub account with explicit repo access."""
+
+
+def github_cli():
+    """Only GitHub's official CLI, never execute a downloaded unreviewed script."""
+    found = shutil.which("gh.exe") or shutil.which("gh")
+    if found and Path(found).is_file():
+        return str(found)
+    candidates = []
+    for key in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+        root = os.environ.get(key)
+        if root:
+            candidates.append(Path(root) / "GitHub CLI" / "gh.exe")
+            candidates.append(Path(root) / "Programs" / "GitHub CLI" / "gh.exe")
+    return next((str(p) for p in candidates if p.is_file()), None)
+
+
+def github_auth_token() -> str:
+    """Read the user's GitHub CLI login *into memory only*; never print/store it.
+
+    The GitHub CLI owns OS credential storage and account login. This app makes
+    only read-only GitHub API calls, but CLI's granted scope can be broader.
+    """
+    executable = github_cli()
+    if not executable:
+        raise GitHubAuthenticationRequired(
+            "PRIVATE GITHUB ACCESS: GitHub CLI install nahi hai. "
+            "Jarvis mein Connect GitHub dabayein, official GitHub CLI install karein."
+        )
+    try:
+        result = subprocess.run([executable, "auth", "token", "--hostname", "github.com"],
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                timeout=12, shell=False, check=False, text=True)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise GitHubAuthenticationRequired(
+            "PRIVATE GITHUB ACCESS: GitHub CLI login read nahi ho raha. "
+            "Connect GitHub dabayein."
+        ) from exc
+    token = result.stdout.strip() if result.returncode == 0 else ""
+    if not 8 <= len(token) <= 1024 or any(char.isspace() for char in token):
+        raise GitHubAuthenticationRequired(
+            "PRIVATE GITHUB ACCESS: GitHub account sign in nahi hai. "
+            "Jarvis mein Connect GitHub dabayein aur browser se login karein."
+        )
+    return token
+
+
+def launch_github_login() -> None:
+    """Start the official GitHub device/browser login in a visible console.
+
+    No credentials are passed to Jarvis or placed on a command line.
+    """
+    if os.name != "nt":
+        raise UpdateError("GitHub browser login button is for Windows.")
+    executable = github_cli()
+    if not executable:
+        raise GitHubAuthenticationRequired(
+            "PRIVATE GITHUB ACCESS: Pehle https://cli.github.com/ se official "
+            "GitHub CLI install karein, phir Jarvis restart karein."
+        )
+    try:
+        subprocess.Popen(
+            [executable, "auth", "login", "--hostname", "github.com",
+             "--git-protocol", "https", "--web"],
+            creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+            shell=False,
+        )
+    except OSError as exc:
+        raise UpdateError(
+            "GitHub login window open nahi hui. GitHub CLI reinstall karein."
+        ) from exc
+
+
+class SafeGitHubRedirect(HTTPRedirectHandler):
+    """Do not send private bearer tokens to redirected archive hosts."""
+    SAFE_HOSTS = frozenset({"api.github.com", "codeload.github.com"})
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        destination = urlparse(newurl)
+        original = urlparse(req.full_url)
+        if destination.scheme != "https" or destination.hostname not in self.SAFE_HOSTS:
+            raise UpdateError("GitHub archive redirect went to an untrusted host.")
+        rewritten = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if rewritten is not None and original.hostname != destination.hostname:
+            rewritten.remove_header("Authorization")
+            rewritten.unredirected_hdrs.pop("Authorization", None)
+        return rewritten
+
+
 def _request(url: str, limit: int, timeout: int) -> bytes:
-    """Bound downloads, use HTTPS certificate validation, never use a shell."""
-    if not url.startswith("https://"):
-        raise UpdateError("Only official HTTPS GitHub sources are supported.")
-    request = Request(url, headers={"User-Agent": "HASEEB-Jarvis-Source-Updater/1.0",
-                                    "Accept": "application/vnd.github+json"})
+    """Read-only authenticated private GitHub access, never log tokens."""
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.hostname != "api.github.com":
+        raise UpdateError("Only the official GitHub HTTPS API is supported.")
+    token = github_auth_token()
+    request = Request(url, headers={
+        "User-Agent": "HASEEB-Jarvis-Source-Updater/2.0",
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + token,
+    })
+    client = build_opener(SafeGitHubRedirect())
     chunks, total = [], 0
-    with urlopen(request, timeout=timeout) as response:
-        while True:
-            data = response.read(131072)
-            if not data:
-                break
-            total += len(data)
-            if total > limit:
-                raise UpdateError("GitHub update exceeds the safe download size.")
-            chunks.append(data)
+    try:
+        with client.open(request, timeout=timeout) as response:
+            while True:
+                data = response.read(131072)
+                if not data:
+                    break
+                total += len(data)
+                if total > limit:
+                    raise UpdateError("GitHub update exceeds the safe download size.")
+                chunks.append(data)
+    except HTTPError as exc:
+        if exc.code in (401, 403, 404):
+            raise GitHubAuthenticationRequired(
+                "PRIVATE GITHUB ACCESS: GitHub ne repository access reject kiya "
+                "(HTTP " + str(exc.code) + "). Connect GitHub se "
+                "haseeb77758 account login karein, aur repo permission check karein."
+            ) from exc
+        raise UpdateError("GitHub server returned HTTP " + str(exc.code) + ".") from exc
+    except (URLError, TimeoutError, OSError) as exc:
+        raise UpdateError(
+            "GitHub network connection fail hui. Internet, DNS ya firewall check karein."
+        ) from exc
     return b"".join(chunks)
 
 
 def latest_commit() -> str:
-    """Fetch the current main commit without executing GitHub content."""
+    """Fetch main branch SHA from the user's authenticated private repository."""
     try:
-        payload = json.loads(_request(LATEST_URL, 300_000, 8))
+        payload = json.loads(_request(LATEST_URL, 300_000, 12))
         sha = payload["sha"]
-    except (OSError, KeyError, ValueError, TypeError) as exc:
-        raise UpdateError("GitHub update check failed. Internet aur GitHub access check karein.") from exc
+    except (KeyError, ValueError, TypeError) as exc:
+        raise UpdateError("GitHub response mein valid main commit nahi mila.") from exc
     if not isinstance(sha, str) or not SHA_RE.fullmatch(sha):
         raise UpdateError("GitHub returned an invalid commit identifier.")
     return sha
@@ -211,11 +324,9 @@ def install_update(destination: Path, sha: str, *, archive: bytes | None = None,
     if not python.is_file():
         raise UpdateError("Installed Jarvis Python environment missing. Run setup once first.")
     if archive is None:
-        url = "https://github.com/" + REPOSITORY + "/archive/" + sha + ".zip"
-        try:
-            archive = _request(url, MAX_ARCHIVE_BYTES, 60)
-        except OSError as exc:
-            raise UpdateError("GitHub source download failed.") from exc
+        # Authenticate this *same approved SHA* via GitHub's private-repo API.
+        url = "https://api.github.com/repos/" + REPOSITORY + "/zipball/" + sha
+        archive = _request(url, MAX_ARCHIVE_BYTES, 60)
     if len(archive) > MAX_ARCHIVE_BYTES:
         raise UpdateError("Update archive too large.")
     files = snapshot_sources(archive)
