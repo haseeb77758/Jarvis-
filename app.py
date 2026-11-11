@@ -311,15 +311,15 @@ class App:
             return
         if not messagebox.askyesno(
             'Review Jarvis update',
-            'GitHub repo: haseeb77758/Jarvis-\\n'
-            'New main commit: ' + sha[:12] + '\\n\\n'
+            'GitHub repo: haseeb77758/Jarvis-\n'
+            'New main commit: ' + sha[:12] + '\n\n'
             'Official GitHub source code download hoga. Runtime tests aur GUI '
-            'smoke test pass honay par code files replace hongi.\\n'
-            'Ollama models, user memory aur local shortcuts preserve honge.\\n'
-            'Failed code update automatically rollback karega.\\n'
+            'smoke test pass honay par code files replace hongi.\n'
+            'Ollama models, user memory aur local shortcuts preserve honge.\n'
+            'Failed code update automatically rollback karega.\n'
             'Third-party Python dependencies requirements.txt ke mutabiq '
-            'update ho sakti hain, jo rollback mein automatically reverse nahi hoti.\\n'
-            'Application ko update ke baad restart karna hoga.\\n\\n'
+            'update ho sakti hain, jo rollback mein automatically reverse nahi hoti.\n'
+            'Application ko update ke baad restart karna hoga.\n\n'
             'Is update ko approve karte hain?',
             parent=self.root
         ):
