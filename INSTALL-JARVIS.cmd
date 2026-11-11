@@ -46,7 +46,14 @@ winget install --id Python.Python.3.12 --exact --source winget --scope user --ac
 if errorlevel 1 goto :python_manual
 echo.
 echo Python installation finished. Checking available Python runtime...
-goto :detect
+if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
+    set "PYTHON_EXE=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+    goto :run_exe
+)
+echo Python was installed but is not available in this terminal yet.
+echo Close this window and double-click INSTALL-JARVIS.cmd again.
+pause
+exit /b 1
 :run_py
 echo Official Python 3.12 detected.
 py -3.12 tools\install_windows.py
