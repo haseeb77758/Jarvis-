@@ -31,7 +31,7 @@ class DesktopSafetyRegressionTests(unittest.TestCase):
                          'folder/name', 'folder\\name', 'trailing.', ' leading'):
                 with self.subTest(name=name), self.assertRaises(ValueError):
                     safe_child(directory, name)
-            self.assertEqual(safe_child(directory, 'Client Work'), Path(directory) / 'Client Work')
+            self.assertEqual(safe_child(directory, 'Client Work'), Path(directory).resolve() / 'Client Work')
 
     def test_plan_rejects_shell_actions_and_excessive_steps(self):
         with self.assertRaises(ValueError):
