@@ -147,6 +147,49 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(body['options']['num_ctx'], 2048)
         self.assertNotIn('images', body)
 
+    def test_chat_system_promotes_actual_answers_not_echoes(self):
+        from core import CHAT_SYSTEM, _looks_like_echo
+        self.assertIn("Never merely repeat", CHAT_SYSTEM)
+        self.assertTrue(_looks_like_echo("aur sunao", "Aur sunao!"))
+        self.assertTrue(_looks_like_echo("assalam ua alaikum", "Assalam u Alaikum!"))
+        self.assertFalse(_looks_like_echo("aur sunao", "Main theek hoon! Tum sunao, aaj kya plan hai?"))
+        self.assertFalse(_looks_like_echo("computer kholo", "Computer kholne ka tarika yeh hai:"))
+
+    def test_chat_retries_echo_and_returns_new_conversational_reply(self):
+        ai = LocalAI()
+        responses = [
+            {"message": {"content": "Aur sunao!"}},
+            {"message": {"content": "Bas theek! Tum batao, aaj kya naya chal raha hai?"}},
+        ]
+        ai.opener = Mock()
+        def responder(*_args, **_kwargs):
+            value = responses.pop(0)
+            fake = Mock()
+            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(value).encode()))
+            fake.__exit__ = Mock(return_value=False)
+            return fake
+        ai.opener.open.side_effect = responder
+        answer = ai.ask([{"role": "user", "content": "aur sunao"}])
+        self.assertIn("Tum batao", answer)
+        self.assertEqual(ai.opener.open.call_count, 2)
+        first = json.loads(ai.opener.open.call_args_list[0].args[0].data)
+        second = json.loads(ai.opener.open.call_args_list[1].args[0].data)
+        self.assertGreater(second["options"]["temperature"], first["options"]["temperature"])
+        self.assertIn("echoed", second["messages"][0]["content"])
+
+    def test_chat_never_displays_repeated_echo_as_success(self):
+        ai = LocalAI()
+        ai.opener = Mock()
+        fake = Mock()
+        fake.__enter__ = Mock(return_value=io.BytesIO(
+            json.dumps({"message": {"content": "Aur sunao!"}}).encode()
+        ))
+        fake.__exit__ = Mock(return_value=False)
+        ai.opener.open.return_value = fake
+        with self.assertRaisesRegex(RuntimeError, "repeat"):
+            ai.ask([{"role": "user", "content": "aur sunao"}])
+        self.assertEqual(ai.opener.open.call_count, 2)
+
     def test_local_ai_connection_failure_is_actionable(self):
         ai = LocalAI()
         ai.opener = Mock()
