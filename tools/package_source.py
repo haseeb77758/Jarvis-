@@ -14,7 +14,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parents[1]
 FOLDER = "Jarvis-Source-Windows"
 FILES = (
-    "app.py", "chat_ui.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
+    "app.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
     "RUN-JARVIS.py", "START-JARVIS-GUI.pyw", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
     "SETUP-LOCAL-AI.bat", "requirements.txt", "README.md",
     "README-ROMAN-URDU.md", "DESKTOP-FIRST.md", "SMART-APP-CONTROL.md",
