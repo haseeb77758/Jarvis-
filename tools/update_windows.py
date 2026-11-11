@@ -128,7 +128,7 @@ def snapshot_sources(archive: bytes) -> dict[str, bytes]:
             total = 0
             for entry in entries:
                 name = PurePosixPath(entry.filename)
-                if (name.is_absolute() or "\\\\" in entry.filename
+                if (name.is_absolute() or "\\" in entry.filename
                         or ":" in entry.filename or any(p in {"", ".", ".."} for p in name.parts)):
                     raise UpdateError("Invalid archive path.")
                 if len(name.parts) < 2:
