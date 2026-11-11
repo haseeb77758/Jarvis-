@@ -120,6 +120,8 @@ def install(agree: bool = False) -> Path:
     import compileall
     if not compileall.compile_file(str(destination / "app.py"), quiet=1):
         raise RuntimeError("Jarvis source compile check failed.")
+    print("Verifying Jarvis app UI starts in the installed Python environment...")
+    run(str(python), str(destination / "app.py"), "--self-test", cwd=destination)
     print("Verifying installed Python can import Windows shortcut dependencies...")
     run(str(python), "-c", "import win32com.client; import win32com.shell", cwd=destination)
     print("Creating Desktop and Start Menu shortcuts using installed Python environment...")
