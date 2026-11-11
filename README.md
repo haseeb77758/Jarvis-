@@ -2,6 +2,8 @@
 
 Created by **Haseeb Crafts**.
 
+> **Windows 11 Smart App Control update:** The ordinary EXE remains unsigned and may be blocked on protected computers. The new manual **Trusted signed Jarvis Windows release** workflow can create a signed distribution only after the publisher supplies a valid publicly trusted code-signing certificate via secure GitHub Actions secrets. Read [TRUSTED-WINDOWS-RELEASE.md](TRUSTED-WINDOWS-RELEASE.md). A successful unsigned CI build does not resolve Smart App Control.
+
 > **Windows 11 Smart App Control blocked Jarvis.exe?** The executable is unsigned. Do **not** disable Windows security. Download the **Jarvis-Source-Windows** ZIP from the latest successful **Windows source package (no unsigned EXE)** GitHub Actions run, extract it, install official Python 3.10+ and run `py -3 RUN-JARVIS.py` inside the extracted source folder. This requires explicit approval for dependency installation, and does not guarantee every PC's security policy allows execution. See [SMART-APP-CONTROL.md](SMART-APP-CONTROL.md). For publicly distributable EXE releases, use a legitimate trusted code-signing certificate.
 
 A Windows desktop assistant with named-window controls, offline voice input/output, explicit local memory, optional local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
@@ -18,7 +20,7 @@ The standalone browser app is in **web/**. It uses Puter sign-in and the user's 
 ## Option 3 — One Windows EXE
 
 1. Open **Actions → Windows test and build**, then the latest successful run.
-2. Download **Jarvis-Single-EXE-Windows-x64** from Artifacts and extract it.
+2. Download **Jarvis-UNSIGNED-Development-Windows-x64** from Artifacts and extract it.
 3. Run **Jarvis.exe**. No `_internal` folder or Python install is required for this build.
 4. Voice recognition dependencies and the tiny multilingual voice model are bundled in the new Windows EXE. Use **Test voice**, **Mic · 6 seconds**, and transcript review.
 5. Use the app's **Setup local AI** button once for optional free offline AI. If Ollama is missing, it opens the official installer page. After installation, press the button again to download `qwen2.5:1.5b` (about 986 MB). The local chatbot model/runtime are separate downloads. The smaller voice-transcription model is embedded in this build.
