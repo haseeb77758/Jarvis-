@@ -22,6 +22,13 @@ def fake_zip(override=None, extra=None):
     return buffer.getvalue()
 
 
+def _incomplete_zip():
+    buffer = io.BytesIO()
+    with ZipFile(buffer, "w") as archive:
+        archive.writestr("Jarvis-abc/app.py", "only one file")
+    return buffer.getvalue()
+
+
 class UpdateTests(unittest.TestCase):
     def test_archive_allowlist_prevents_code_outside_owned_source(self):
         data = fake_zip(extra={
