@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FOLDER = "Jarvis-Source-Windows"
 FILES = (
     "app.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
-    "RUN-JARVIS.py", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
+    "RUN-JARVIS.py", "START-JARVIS-GUI.pyw", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
     "SETUP-LOCAL-AI.bat", "requirements.txt", "README.md",
     "README-ROMAN-URDU.md", "DESKTOP-FIRST.md", "SMART-APP-CONTROL.md",
 )
@@ -49,7 +49,7 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
         "This manifest checks contents, not publisher identity or malware safety.",
         "These files do not include Jarvis.exe. Do not disable Smart App Control.",
         "Official Python required: https://www.python.org/downloads/windows/",
-        "First step: README-START-HERE.txt, then double-click INSTALL-JARVIS.cmd",
+        "First step: README-START-HERE.txt, then open START-JARVIS-GUI.pyw using official Python 3.12",
         "",
         "SHA256   RELATIVE PATH",
     ]
@@ -59,15 +59,16 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
             archive.writestr(f"{FOLDER}/{item.as_posix()}", data)
             manifest.append(f"{hashlib.sha256(data).hexdigest()}   {item.as_posix()}")
         help_text = (
-            "HASEEB AI / JARVIS — WINDOWS 11 ONE-CLICK SETUP\n\n"
+            "HASEEB AI / JARVIS — WINDOWS 11 PYTHON GUI SETUP\n\n"
             "1. Extract the complete ZIP (do not launch files inside the ZIP).\n"
             "2. Open the Jarvis-Source-Windows folder.\n"
-            "3. Double-click INSTALL-JARVIS.cmd. No coding or terminal is needed.\n"
-            "4. If Python 3.12 is missing, approve its official winget install.\n"
-            "5. Type YES to approve Jarvis dependencies and shortcut creation.\n"
-            "6. After setup, double-click HASEEB AI - Jarvis on your Desktop.\n"
+            "3. Install official Python 3.12 (including tkinter).\n"
+            "4. Double-click START-JARVIS-GUI.pyw in the extracted folder.\n"
+            "   Select Python if Windows asks which application should open it.\n"
+            "5. Tick the install-permission box, then click INSTALL & OPEN JARVIS.\n"
+            "6. After setup, use HASEEB AI - Jarvis on your Desktop.\n"
             "7. Optional AI chat still requires local Ollama/model setup.\n\n"
-            "IMPORTANT: This source-based installer does NOT disable Windows\n"
+            "IMPORTANT: This GUI setup does NOT disable Windows\n"
             "Smart App Control or Defender, and contains no unsigned Jarvis.exe.\n"
             "Windows policies may still block a component or installation.\n"
             "Never disable protections or run as Administrator to force it.\n"
