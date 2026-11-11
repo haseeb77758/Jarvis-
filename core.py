@@ -360,6 +360,40 @@ def ollama_status(model=MODEL, opener=None, executable=None):
         return 'stopped'
 
 
+def _looks_like_echo(user_text, answer):
+    """Detect short near-verbatim replies rather than penalizing normal conversation."""
+    import difflib
+    import re
+    def compact(value):
+        return " ".join(re.findall(r"\w+", value.casefold()))
+    question = compact(user_text)
+    response = compact(answer)
+    if not question or not response:
+        return False
+    if question == response:
+        return True
+    # Short-message spelling variants such as "assalam ua alaikum" vs
+    # "assalam u alaikum" are essentially a repeated greeting, not a reply.
+    if len(question) >= 8 and len(response) <= len(question) + 8:
+        return difflib.SequenceMatcher(None, question, response).ratio() >= 0.88
+    return False
+
+
+CHAT_SYSTEM = (
+    'You are Jarvis, a friendly, practical AI conversation partner created by Haseeb Crafts. '
+    'Have a natural back-and-forth chat in Roman Urdu unless the user requests another language. '
+    'IMPORTANT: Never merely repeat, rephrase or translate the user message. Actually respond to it. '
+    'For a greeting, reply warmly and ask a short follow-up question. '
+    'For small talk such as "aur sunao", say something conversational and invite the user to continue. '
+    'For a specific question, give a useful and accurate answer instead of restating the question. '
+    'Remember earlier turns in this chat but do not invent personal details or claim to know private information. '
+    'Keep responses concise and clear unless the user asks for detail. '
+    'You cannot control the computer from this chat and must never claim an action was performed. '
+    'Examples: User: "Assalam u alaikum" Assistant: "Wa alaikum assalam! Kya haal hain?"; '
+    'User: "aur sunao" Assistant: "Bas sab theek! Tum sunao, aaj kis cheez par baat karein?"'
+)
+
+
 class LocalAI:
     def __init__(self, model=MODEL):
         self.model = model
@@ -367,8 +401,7 @@ class LocalAI:
         self.opener = build_opener(ProxyHandler({}))
 
     def ask(self, messages, plan=False, preferences=(), applications=()):
-        system = ('You are HASEEB AI, created by Haseeb Crafts. Answer in concise Roman Urdu or the language requested. '
-                  'You cannot control the computer from chat. Never claim an action was performed. ')
+        system = CHAT_SYSTEM
         if plan:
             system = ('Return only JSON: {"actions":[...]}. At most eight actions. Allowed schemas: '
                       '{"action":"launch","app":"chrome|edge|notepad|calculator|paint|explorer"}; '
@@ -395,21 +428,52 @@ class LocalAI:
             system += '\nRegistered app aliases: ' + json.dumps(list(applications)[:20])
         if preferences:
             system += '\nUser-saved response preferences (not tool permissions): ' + json.dumps(list(preferences)[:20], ensure_ascii=False)
-        body = {'model': self.model, 'messages': [{'role': 'system', 'content': system}] + messages[-8:],
-                'stream': False, 'options': {'num_ctx': 2048, 'num_predict': 600, 'temperature': 0.2}, 'keep_alive': '2m'}
-        if plan:
-            body['format'] = 'json'
-        req = Request('http://127.0.0.1:11434/api/chat', json.dumps(body).encode(), {'Content-Type': 'application/json'})
-        try:
-            with self.opener.open(req, timeout=180) as r:
-                data = json.loads(r.read(2_000_000))
-        except Exception as exc:
-            raise RuntimeError('Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se kholein aur qwen2.5:1.5b download confirm karein. SETUP-LOCAL-AI.bat bhi optional fallback hai. Direct commands chalti rahengi.') from exc
-        content = data.get('message', {}).get('content')
-        if not isinstance(content, str) or not content.strip():
-            raise RuntimeError('Local AI ne khali reply diya. Direct command try karein.')
-        return content
-
+        latest_user = next((item.get('content', '') for item in reversed(messages)
+                            if item.get('role') == 'user' and isinstance(item.get('content'), str)), '')
+        # One extra attempt for short parroting replies, but never in action-plan JSON mode.
+        for attempt in range(1 if plan else 2):
+            instruction = system
+            if attempt:
+                instruction += ('\nYour previous draft echoed the incoming message instead of answering. '
+                                'Reply freshly and conversationally, with at least one new, helpful statement. '
+                                'Do not quote the user or say what they said.')
+            body = {
+                'model': self.model,
+                'messages': [{'role': 'system', 'content': instruction}] + messages[-8:],
+                'stream': False,
+                'options': {
+                    'num_ctx': 2048,
+                    'num_predict': 600,
+                    'temperature': 0.2 if plan else (0.75 if attempt else 0.6),
+                    'top_p': 0.9,
+                    'repeat_penalty': 1.14 if not plan else 1.0,
+                },
+                'keep_alive': '2m',
+            }
+            if plan:
+                body['format'] = 'json'
+            req = Request('http://127.0.0.1:11434/api/chat',
+                          json.dumps(body).encode(), {'Content-Type': 'application/json'})
+            try:
+                with self.opener.open(req, timeout=180) as response:
+                    data = json.loads(response.read(2_000_000))
+            except Exception as exc:
+                raise RuntimeError(
+                    'Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se '
+                    'kholein aur qwen2.5:1.5b download confirm karein. '
+                    'SETUP-LOCAL-AI.bat bhi optional fallback hai. Direct commands chalti rahengi.'
+                ) from exc
+            content = data.get('message', {}).get('content')
+            if not isinstance(content, str) or not content.strip():
+                raise RuntimeError('Local AI ne khali reply diya. Direct command try karein.')
+            content = content.strip()
+            if plan or not _looks_like_echo(latest_user, content):
+                return content
+        raise RuntimeError(
+            'Ollama ka chhota 1.5B model aapki baat repeat kar raha hai. '
+            'New chat se retry karein ya thora detailed sawaal poochhein; '
+            'behtar jawab ke liye bara local model chahiye ho sakta hai.'
+        )
 
 def setup_local_model(stop):
     """Download only the named local model with an existing official Ollama install."""
