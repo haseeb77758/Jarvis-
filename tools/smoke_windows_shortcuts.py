@@ -40,6 +40,6 @@ if __name__ == "__main__":
             assert shortcut.is_file(), str(shortcut)
             link = wsh.CreateShortcut(str(shortcut))
             assert Path(link.TargetPath).resolve() == pythonw.resolve(), link.TargetPath
-            assert str(installed / "app.py") in link.Arguments, link.Arguments
+            assert Path(link.Arguments.strip('"')).resolve() == (installed / "app.py").resolve(), link.Arguments
             assert Path(link.WorkingDirectory).resolve() == installed.resolve(), link.WorkingDirectory
         print("PASS: actual installed venv imports win32com and creates valid Windows .lnk files in isolated directories")
