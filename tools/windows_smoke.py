@@ -28,6 +28,11 @@ with tempfile.TemporaryDirectory() as data:
         assert root.winfo_exists()
         assert app.mode.get() == 'Computer commands'
         assert app.permission.get() is False
+        assert hasattr(app, 'activity_log'), 'Dashboard activity panel missing'
+        assert app.entry.winfo_exists() and app.log.winfo_exists()
+        assert app.send.winfo_exists() and app.select.winfo_exists()
+        app.say('RESULT', 'Dashboard activity check')
+        assert 'Dashboard activity check' in app.activity_log.get('1.0', 'end')
         width, height = pyautogui.size()
         image = pyautogui.screenshot()
         assert min(width, height, image.width, image.height) > 0
