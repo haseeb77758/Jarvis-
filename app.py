@@ -38,7 +38,7 @@ class App:
         self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)))
         self.control = Controller(Path.home(), self.stop, self.store.apps)
         self.ai = LocalAI()
-        self.mode = tk.StringVar(value='Computer commands')
+        self.mode = tk.StringVar(value='Local AI chat')
         self.ai_status = tk.StringVar(value='OLLAMA · CHECKING')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
@@ -51,7 +51,7 @@ class App:
         root.after(600, self.check_ollama)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
-        self.say('HASEEB AI', 'Salam Haseeb bhai! Chrome kholo, calculator kholo, folder banao: Client Work, find: invoice, ya screenshot likhein.\nFree local AI ke liye Setup local AI button use karein. Cloud chat button pehle wali online app kholta hai; woh computer control nahi karti.')
+        self.say('HASEEB AI', 'Salam! Yeh Jarvis AI Chat hai. Apna sawal neeche likho aur SEND dabao. Ollama ready na ho to Setup AI dabao. Computer control ke liye Desktop mode alag se select karo.')
 
     def global_stop(self):
         import ctypes
@@ -378,6 +378,14 @@ class App:
         self.stop.clear()
         self.status.set('Ready · local controls')
 
+    def send_local_chat(self, text):
+        """Chat must never be interpreted as a privileged desktop command."""
+        messages = self.history + [{'role': 'user', 'content': text}]
+        self.worker(
+            lambda: self.ai.ask(messages, False, self.store.facts, self.store.apps),
+            'ai', text
+        )
+
     def submit(self, value=None):
         if isinstance(value, str) and value.strip().casefold() in {'stop', 'jarvis stop', 'stop jarvis'}:
             self.halt()
@@ -393,10 +401,13 @@ class App:
         if self.stop.is_set():
             self.say('HASEEB AI', 'Stopped hai. Pehle Resume dabayein.')
             return
-        self.entry.delete(0, 'end')
-        self.say('YOU', text)
         if len(text) > 4000:
             self.say('HASEEB AI', 'Message 4,000 characters se chhota rakhein.')
+            return
+        self.entry.delete(0, 'end')
+        self.say('YOU', text)
+        if self.mode.get() == 'Local AI chat':
+            self.send_local_chat(text)
             return
         try:
             if text.casefold().startswith('remember:'):
