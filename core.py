@@ -434,7 +434,7 @@ class LocalAI:
         for attempt in range(1 if plan else 2):
             instruction = system
             if attempt:
-                instruction += ('\nYour previous draft echoed the user's words instead of answering. '
+                instruction += ('\nYour previous draft echoed the incoming message instead of answering. '
                                 'Reply freshly and conversationally, with at least one new, helpful statement. '
                                 'Do not quote the user or say what they said.')
             body = {
