@@ -1,0 +1,37 @@
+name: Windows source package (no unsigned EXE)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-zip:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Check source packaging tests (no external dependencies)
+        run: python -m unittest discover -s tests -p test_source_package.py -v
+      - name: Assemble source ZIP
+        run: python tools/package_source.py --output dist/Jarvis-Source-Windows.zip
+      - name: Verify archive file list and checksums
+        run: python tools/verify_source_zip.py dist/Jarvis-Source-Windows.zip
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jarvis-Source-Windows
+          path: dist/Jarvis-Source-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
