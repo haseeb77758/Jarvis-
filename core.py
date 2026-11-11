@@ -55,7 +55,8 @@ def validate(action):
     fields = {
         'launch': {'app'}, 'launch_custom': {'alias'}, 'website': {'url'}, 'folder': {'name'},
         'note': {'name', 'text'}, 'find': {'query'}, 'screenshot': set(),
-        'volume': {'direction'}, 'web_search': {'query'}, 'youtube_search': {'query'},
+        'volume': {'direction'}, 'media': {'command'}, 'whatsapp_draft': {'text'},
+        'web_search': {'query'}, 'youtube_search': {'query'},
         'clock': set(),
         'click': {'x', 'y'}, 'type': {'text'}, 'key': {'keys'},
         'windows': set(), 'inspect': {'title'}, 'focus': {'title'},
@@ -71,6 +72,10 @@ def validate(action):
         raise ValueError('Window/button naam 250 characters se chhota rakhein.')
     if kind in {'web_search', 'youtube_search'} and (len(action['query']) > 180 or any(ord(c) < 32 for c in action['query'])):
         raise ValueError('Search query invalid ya bohat lambi hai.')
+    if kind == 'media' and action['command'] not in {'play_pause', 'next', 'previous'}:
+        raise ValueError('Media command allowed nahi.')
+    if kind == 'whatsapp_draft' and (len(action['text']) > 500 or any(ord(c) < 32 for c in action['text'])):
+        raise ValueError('WhatsApp draft 1–500 single-line characters ka hona chahiye.')
     if kind == 'volume' and action['direction'] not in {'up', 'down', 'mute'}:
         raise ValueError('Volume direction invalid hai.')
     if kind == 'launch' and action['app'] not in APP_NAMES:
@@ -107,6 +112,32 @@ def parse_command(text):
                          ('youtube:', 'youtube_search'), ('play youtube:', 'youtube_search')]:
         if low.startswith(prefix):
             return validate({'action': kind, 'query': text[len(prefix):].strip()})
+    media_commands = {'pause music': 'play_pause', 'play pause': 'play_pause',
+                      'music pause': 'play_pause', 'music play': 'play_pause',
+                      'music roko': 'play_pause', 'media pause': 'play_pause',
+                      'media play': 'play_pause', 'next song': 'next',
+                      'next track': 'next', 'agla gana': 'next',
+                      'previous song': 'previous', 'previous track': 'previous'}
+    if low in media_commands:
+        return validate({'action': 'media', 'command': media_commands[low]})
+    websites = {'youtube kholo': 'https://www.youtube.com',
+                'open youtube': 'https://www.youtube.com',
+                'google kholo': 'https://www.google.com',
+                'open google': 'https://www.google.com',
+                'whatsapp kholo': 'https://web.whatsapp.com',
+                'open whatsapp': 'https://web.whatsapp.com'}
+    if low in websites:
+        return validate({'action': 'website', 'url': websites[low]})
+    for prefix, kind in [('youtube par search karo:', 'youtube_search'),
+                         ('youtube par dhoondo:', 'youtube_search'),
+                         ('google par search karo:', 'web_search'),
+                         ('google par dhoondo:', 'web_search'),
+                         ('search google:', 'web_search')]:
+        if low.startswith(prefix):
+            return validate({'action': kind, 'query': text[len(prefix):].strip()})
+    for prefix in ('whatsapp draft:', 'whatsapp message draft:', 'message draft:'):
+        if low.startswith(prefix):
+            return validate({'action': 'whatsapp_draft', 'text': text[len(prefix):].strip()})
     if low in volume_commands:
         return validate({'action': 'volume', 'direction': volume_commands[low]})
     if low in ('windows', 'list windows', 'show windows'):
@@ -206,13 +237,20 @@ class Controller:
         if kind == 'launch':
             self.launch(a['app'])
             return 'Launch request bhej di: ' + a['app']
-        if kind in {'website', 'web_search', 'youtube_search'}:
+        if kind in {'website', 'web_search', 'youtube_search', 'whatsapp_draft'}:
             import webbrowser
-            url = a['url'] if kind == 'website' else (
-                'https://www.google.com/search?' + urlencode({'q': a['query']}) if kind == 'web_search'
-                else 'https://www.youtube.com/results?' + urlencode({'search_query': a['query']}))
+            if kind == 'whatsapp_draft':
+                url = 'https://wa.me/?' + urlencode({'text': a['text']})
+            else:
+                url = a['url'] if kind == 'website' else (
+                    'https://www.google.com/search?' + urlencode({'q': a['query']}) if kind == 'web_search'
+                    else 'https://www.youtube.com/results?' + urlencode({'search_query': a['query']}))
             if not webbrowser.open(url):
                 raise RuntimeError('Browser launch request fail hui.')
+            if kind == 'whatsapp_draft':
+                return 'WhatsApp draft link khol diya. Contact choose karke Send khud dabayein; Jarvis ne message nahi bheja.'
+            if kind == 'youtube_search':
+                return 'YouTube search results browser mein kholne ki request bheji. Video choose karke Play dabayein.'
             return 'Browser ko website open request bhej di.'
         target_handle = None
         if kind in {'type_window', 'key_window'}:
@@ -223,6 +261,9 @@ class Controller:
         import pyautogui as pg
         pg.FAILSAFE = True
         pg.PAUSE = 0.15
+        if kind == 'media':
+            pg.press({'play_pause': 'playpause', 'next': 'nexttrack', 'previous': 'prevtrack'}[a['command']])
+            return 'Windows media key bheji: ' + a['command'] + '. Media app response verify karein.'
         if kind == 'volume':
             pg.press({'up': 'volumeup', 'down': 'volumedown', 'mute': 'volumemute'}[a['direction']])
             return 'Volume key input bheja: ' + a['direction']
@@ -311,7 +352,9 @@ class LocalAI:
                       '{"action":"type_window","title":"window title","text":"single line ASCII text explicitly requested by user"}. '
                       '{"action":"web_search","query":"search words"}; '
                       '{"action":"youtube_search","query":"video words"}; '
-                      '{"action":"clock"}; {"action":"volume","direction":"up|down|mute"}. '
+                      '{"action":"clock"}; {"action":"volume","direction":"up|down|mute"}; '
+                      '{"action":"media","command":"play_pause|next|previous"}; '
+                      '{"action":"whatsapp_draft","text":"one-line message, never auto send"}. '
                       'After launching an app, add wait_window and focus before typing. Never invent a button name. '
                       'No other actions. No shell commands. '
                       'Do not claim success. User will review and approve each action. '
