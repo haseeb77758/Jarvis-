@@ -38,6 +38,34 @@ jobs:
           }
       - name: Validate Microsoft Store MSIX layout offline
         run: python -m unittest discover -s tests -p test_store_msix.py -v
+      - name: Smoke-test real Microsoft MSIX pack and unpack
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist/msix-dummy -Force | Out-Null
+          Copy-Item "$env:WINDIR\System32\notepad.exe" "dist/msix-dummy/Jarvis.exe"
+          python tools/prepare_store_msix.py --source dist/msix-dummy --output dist/msix-layout-test --identity HaseebCrafts.JarvisTest --publisher "CN=StorePackagingTest" --version 1.0.0.0
+          if ($LASTEXITCODE -ne 0) { throw 'MSIX manifest preparation failed.' }
+          $kitsRoot = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
+          $makeappx = Get-ChildItem $kitsRoot -Filter makeappx.exe -File -Recurse |
+            Where-Object { $_.FullName -match '\\x64\\makeappx\\.exe
+        run: python tools/package_source.py --output dist/Jarvis-Source-Windows.zip
+      - name: Verify archive file list and checksums
+        run: python tools/verify_source_zip.py dist/Jarvis-Source-Windows.zip
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jarvis-One-Click-Windows
+          path: dist/Jarvis-Source-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
+ } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $makeappx) { throw 'makeappx.exe not found on Windows runner.' }
+          & $makeappx.FullName pack /d dist/msix-layout-test /p dist/test-unsigned.msix /o
+          if ($LASTEXITCODE -ne 0) { throw 'Microsoft MSIX pack failed.' }
+          & $makeappx.FullName unpack /p dist/test-unsigned.msix /d dist/msix-unpacked-test /o
+          if ($LASTEXITCODE -ne 0) { throw 'Microsoft MSIX unpack failed.' }
+          if (-not (Test-Path dist/msix-unpacked-test/Jarvis.exe)) { throw 'MSIX contents missing Jarvis.exe' }
       - name: Assemble source ZIP
         run: python tools/package_source.py --output dist/Jarvis-Source-Windows.zip
       - name: Verify archive file list and checksums
