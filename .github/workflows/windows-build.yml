@@ -45,6 +45,17 @@ jobs:
             throw 'Built app smoke test timed out.'
           }
           if ($app.ExitCode -ne 0) { throw "Built app failed: $($app.ExitCode)" }
+      - name: Package reviewable Windows source
+        run: python tools/package_source.py
+      - name: Verify source archive and manifest
+        run: python tools/verify_source_zip.py dist/Jarvis-Source-Windows.zip
+      - name: Upload reviewable Windows source
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jarvis-Source-Windows
+          path: dist/Jarvis-Source-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload Windows application
         uses: actions/upload-artifact@v7
         with:
