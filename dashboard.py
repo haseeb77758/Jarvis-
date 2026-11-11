@@ -162,8 +162,8 @@ def make_dashboard(app):
     root = app.root
     root.configure(bg=BG)
     root.title('HASEEB AI  |  JARVIS — Desktop Intelligence')
-    root.geometry('1360x805')
-    root.minsize(1110, 680)
+    root.geometry('1280x720')
+    root.minsize(1040, 620)
 
     header = tk.Frame(root, bg=DEEP, height=54, highlightbackground=LINE, highlightthickness=1)
     header.pack(fill='x')
