@@ -3,6 +3,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import threading
+import os
 import unittest
 from playwright.sync_api import sync_playwright
 
@@ -40,7 +41,7 @@ class BrowserTests(unittest.TestCase):
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         cls.base = f'http://127.0.0.1:{cls.server.server_port}'
         cls.pw = sync_playwright().start()
-        cls.browser = cls.pw.chromium.launch()
+        cls.browser = cls.pw.chromium.launch(channel=os.environ.get('JARVIS_BROWSER_CHANNEL') or None)
 
     @classmethod
     def tearDownClass(cls):

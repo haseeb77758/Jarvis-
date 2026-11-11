@@ -7,9 +7,12 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -19,6 +22,7 @@ jobs:
       - name: Install browser test runner
         run: |
           python -m pip install playwright
-          python -m playwright install --with-deps chromium
       - name: Test browser workflows using a mocked provider
+        env:
+          JARVIS_BROWSER_CHANNEL: chrome
         run: python tools/test_browser.py
