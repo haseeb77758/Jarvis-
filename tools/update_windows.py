@@ -96,7 +96,13 @@ def check_update(destination: Path) -> tuple[str, bool]:
 
 def _safe_source_path(path: PurePosixPath) -> bool:
     if path.is_absolute() or not path.parts or any(
-        part in {"", ".", ".."} or part.startswith(".") for part in path.parts
+        part in {"", ".", ".."} or part.startswith(".")
+        or not re.fullmatch(r"[A-Za-z0-9_.-]+", part)
+        or part.split(".")[0].upper() in {
+            "CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
+            *(f"LPT{i}" for i in range(1, 10))
+        }
+        for part in path.parts
     ):
         return False
     if len(path.parts) == 1:
@@ -122,7 +128,8 @@ def snapshot_sources(archive: bytes) -> dict[str, bytes]:
             total = 0
             for entry in entries:
                 name = PurePosixPath(entry.filename)
-                if name.is_absolute() or any(p in {"", ".", ".."} for p in name.parts):
+                if (name.is_absolute() or "\\\\" in entry.filename
+                        or ":" in entry.filename or any(p in {"", ".", ".."} for p in name.parts)):
                     raise UpdateError("Invalid archive path.")
                 if len(name.parts) < 2:
                     raise UpdateError("Unexpected archive layout.")
