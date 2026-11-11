@@ -62,6 +62,31 @@ class OneClickInstallerTests(unittest.TestCase):
                     installer.run_local_tests(Path("python.exe"), root)
                 runner.assert_not_called()
 
+    def test_shortcuts_created_by_venv_python_not_installer_python(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "JarvisApp"
+            (destination / "tools").mkdir(parents=True)
+            (destination / "tools" / "create_shortcuts.py").write_text("# helper", encoding="utf-8")
+            scripts = destination / ".venv" / "Scripts"
+            scripts.mkdir(parents=True)
+            (scripts / "pythonw.exe").write_bytes(b"test stub")
+            desktop = Path(directory) / "desktop"
+            programs = Path(directory) / "programs"
+            with patch.object(installer, "run") as run:
+                def create_fakes(*_args, **_kwargs):
+                    desktop.mkdir(exist_ok=True)
+                    programs.mkdir(exist_ok=True)
+                    (desktop / (installer.APP_NAME + ".lnk")).write_bytes(b"test fake")
+                    (programs / (installer.APP_NAME + ".lnk")).write_bytes(b"test fake")
+                run.side_effect = create_fakes
+                result = installer.create_shortcuts(destination, scripts / "python.exe", desktop, programs)
+            self.assertEqual(len(result), 2)
+            invoked = run.call_args.args
+            self.assertEqual(invoked[0], str(scripts / "python.exe"))
+            self.assertEqual(invoked[1], str(destination / "tools" / "create_shortcuts.py"))
+            self.assertEqual(invoked[2], str(destination))
+            self.assertEqual(invoked[3], str(scripts / "pythonw.exe"))
+
     def test_runtime_uses_virtual_environment_not_unsigned_exe(self):
         path = Path("C:/Jarvis")
         self.assertEqual(installer.installed_python(path), path / ".venv" / "Scripts" / "python.exe")

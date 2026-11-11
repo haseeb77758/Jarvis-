@@ -70,27 +70,29 @@ def run_local_tests(python: Path, destination: Path) -> None:
     print("PASS: All local Jarvis runtime checks completed.")
 
 
-def create_shortcuts(destination: Path, pythonw: Path) -> list[Path]:
-    """Native Windows shortcuts using existing pywin32 dependency."""
-    import win32com.client
-    from win32com.shell import shell, shellcon
-
-    desktop = Path(shell.SHGetFolderPath(0, shellcon.CSIDL_DESKTOPDIRECTORY, None, 0))
-    programs = Path(shell.SHGetFolderPath(0, shellcon.CSIDL_PROGRAMS, None, 0))
-    programs.mkdir(parents=True, exist_ok=True)
-    script = destination / "app.py"
-    if not script.is_file() or not pythonw.is_file():
-        raise FileNotFoundError("Required Jarvis source/runtime not found for shortcut.")
+def create_shortcuts(destination: Path, python: Path, desktop: Path | None = None,
+                     programs: Path | None = None) -> list[Path]:
+    """Run Windows shell COM helper using installed venv, never system Python."""
+    pythonw = python.with_name("pythonw.exe")
+    if not pythonw.is_file():
+        raise FileNotFoundError("Installed Python GUI runtime missing: " + str(pythonw))
+    helper = destination / "tools" / "create_shortcuts.py"
+    if not helper.is_file():
+        raise FileNotFoundError("Shortcut helper missing: " + str(helper))
+    args = [str(python), str(helper), str(destination), str(pythonw)]
+    if desktop is not None or programs is not None:
+        if desktop is None or programs is None:
+            raise ValueError("Both shortcut destinations are required for isolated testing.")
+        args.extend(["--desktop", str(desktop), "--programs", str(programs)])
+    run(*args, cwd=destination)
+    if desktop is None:
+        # In normal installation the helper prints and checks native shell paths.
+        print("PASS: Windows shell shortcut helper completed using venv Python.")
+        return []
     paths = [desktop / (APP_NAME + ".lnk"), programs / (APP_NAME + ".lnk")]
-    wsh = win32com.client.Dispatch("WScript.Shell")
     for path in paths:
-        shortcut = wsh.CreateShortcut(str(path))
-        shortcut.TargetPath = str(pythonw)
-        shortcut.Arguments = '"' + str(script) + '"'
-        shortcut.WorkingDirectory = str(destination)
-        shortcut.Description = "Haseeb AI - Windows desktop assistant (Python source edition)"
-        shortcut.WindowStyle = 1
-        shortcut.Save()
+        if not path.is_file():
+            raise RuntimeError("Shortcut missing after helper: " + str(path))
     return paths
 
 
@@ -118,8 +120,12 @@ def install(agree: bool = False) -> Path:
     import compileall
     if not compileall.compile_file(str(destination / "app.py"), quiet=1):
         raise RuntimeError("Jarvis source compile check failed.")
-    pythonw = python.with_name("pythonw.exe")
-    shortcuts = create_shortcuts(destination, pythonw)
+    print("Verifying Jarvis app UI starts in the installed Python environment...")
+    run(str(python), str(destination / "app.py"), "--self-test", cwd=destination)
+    print("Verifying installed Python can import Windows shortcut dependencies...")
+    run(str(python), "-c", "import win32com.client; import win32com.shell", cwd=destination)
+    print("Creating Desktop and Start Menu shortcuts using installed Python environment...")
+    shortcuts = create_shortcuts(destination, python)
     for shortcut in shortcuts:
         print("Shortcut ready:", shortcut)
     print("INSTALLATION COMPLETE.")
