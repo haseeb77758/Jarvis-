@@ -26,7 +26,11 @@ with tempfile.TemporaryDirectory() as data:
         root.update_idletasks()
         root.update()
         assert root.winfo_exists()
+        assert app.mode.get() == 'Local AI chat', 'Chat screen must be default'
+        app.mode.set('Computer commands')
         assert app.mode.get() == 'Computer commands'
+        app.mode.set('Local AI chat')
+        assert app.entry.winfo_class() == 'Text', 'Multiline Jarvis chat composer is missing'
         assert app.permission.get() is False
         assert hasattr(app, 'activity_log'), 'Dashboard activity panel missing'
         assert app.entry.winfo_exists() and app.log.winfo_exists()
