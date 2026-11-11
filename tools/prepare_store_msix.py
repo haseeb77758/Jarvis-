@@ -73,7 +73,7 @@ def prepare(source: Path, output: Path, identity: str, publisher: str,
     if any(c in publisher_display for c in "<>&") or not publisher_display.strip():
         raise ValueError("Publisher display name invalid.")
     if output.exists():
-        shutil.rmtree(output)
+        raise FileExistsError("Refusing to replace an existing MSIX output folder.")
     shutil.copytree(source, output, symlinks=False)
     assets = output / "Assets"
     assets.mkdir(exist_ok=True)
