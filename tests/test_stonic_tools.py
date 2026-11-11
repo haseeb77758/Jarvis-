@@ -13,7 +13,7 @@ class StonicToolsTests(unittest.TestCase):
         self.assertEqual(parse_command('kitne baje hain'), {'action':'clock'})
     def test_search_validation(self):
         for action in ('web_search','youtube_search'):
-            for query in ('', 'x'*181, 'hi\\nbye'):
+            for query in ('', 'x'*181, 'hi\nbye'):
                 with self.subTest(action=action,query=query), self.assertRaises(ValueError):
                     validate({'action':action,'query':query})
         with self.assertRaises(ValueError):
