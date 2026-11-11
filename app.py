@@ -13,7 +13,7 @@ import re
 from memory import PreferenceStore
 from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
 from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model, ollama_binary, ollama_status, MODEL
-from tools.update_windows import check_update, install_update, installed_commit, UpdateError
+from tools.update_windows import check_update, install_update, installed_commit, UpdateError, GitHubAuthenticationRequired, github_cli, launch_github_login
 from sandbox_chat import SandboxWindow, SandboxSession
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
@@ -310,11 +310,41 @@ class App:
                 return
         threading.Thread(target=check, daemon=True).start()
 
+    def connect_github(self):
+        """Offer official GitHub CLI install or browser sign-in, no copied tokens."""
+        executable = github_cli()
+        if not executable:
+            if messagebox.askyesno(
+                'Connect private GitHub',
+                'Jarvis repo PRIVATE hai. Update ke liye authenticated GitHub access chahiye.\n\n'
+                'Official GitHub CLI install karne ki website kholun?\n'
+                'Install ke baad Jarvis restart karke Connect GitHub dobara dabayein.\n\n'
+                'Apna password ya access token Jarvis chat mein kabhi share na karein.',
+                parent=self.root
+            ):
+                webbrowser.open('https://cli.github.com/')
+            return
+        if not messagebox.askyesno(
+            'Connect private GitHub',
+            'Official GitHub CLI ki browser sign-in window kholun?\n\n'
+            'Apne haseeb77758 GitHub account se sign in karein.\n'
+            'GitHub CLI apna login Windows credential storage mein manage karta hai.\n'
+            'Jarvis is login ko sirf private repo update read karne ke liye use karega.\n\n'
+            'Sign in abhi shuru karein?',
+            parent=self.root
+        ):
+            return
+        try:
+            launch_github_login()
+            self.say('UPDATE', 'GitHub CLI browser sign-in shuru ki. Login complete karne ke baad Update Jarvis dobara dabayein.')
+        except (UpdateError, OSError) as exc:
+            self.say('ERROR', str(exc))
+
     def update_jarvis(self):
         """One-click review for a specific GitHub main commit."""
         if self.busy:
             return
-        self.say('UPDATE', 'GitHub par Jarvis source update check kar raha hoon...')
+        self.say('UPDATE', 'Private GitHub repo check ho rahi hai; GitHub CLI login required hai.')
         self.worker(lambda: check_update(Path(__file__).resolve().parent), 'update_check')
 
     def approve_update(self, result):
@@ -578,6 +608,8 @@ class App:
                 if issue:
                     self.pending.clear()
                     self.say('ERROR', issue)
+                    if kind in {'update_check', 'update_apply'} and 'PRIVATE GITHUB ACCESS' in issue:
+                        self.say('UPDATE', 'Connect GitHub dabayein. GitHub repo private hai; browser sign-in required hai.')
                 elif kind == 'voice':
                     self.review_voice(value)
                 elif kind == 'screenshot':
