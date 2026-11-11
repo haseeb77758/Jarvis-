@@ -404,7 +404,7 @@ class LocalAI:
             with self.opener.open(req, timeout=180) as r:
                 data = json.loads(r.read(2_000_000))
         except Exception as exc:
-            raise RuntimeError('Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se kholein aur qwen2.5:1.5b download confirm karein. SETUP-LOCAL-AI.bat optional hai. Direct commands chalti rahengi.') from exc
+            raise RuntimeError('Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se kholein aur qwen2.5:1.5b download confirm karein. SETUP-LOCAL-AI.bat bhi optional fallback hai. Direct commands chalti rahengi.') from exc
         content = data.get('message', {}).get('content')
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError('Local AI ne khali reply diya. Direct command try karein.')
