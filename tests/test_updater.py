@@ -52,6 +52,16 @@ class UpdateTests(unittest.TestCase):
             with self.assertRaises(u.UpdateError):
                 u.snapshot_sources(archive)
 
+    def test_windows_path_separator_and_device_name_rejected(self):
+        for value in ("tools\\..\\app.py", "tools\\file.py", "CON.py", "tools/COM1.py"):
+            with self.subTest(value=value):
+                archive = fake_zip(extra={value: b"malicious"})
+                if "\\" in value:
+                    with self.assertRaisesRegex(u.UpdateError, "Invalid archive path"):
+                        u.snapshot_sources(archive)
+                else:
+                    self.assertNotIn(value, u.snapshot_sources(archive))
+
     def test_commit_version_saved_and_compared(self):
         sha = "a" * 40
         with tempfile.TemporaryDirectory() as tmp:
