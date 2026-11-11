@@ -20,6 +20,8 @@ class SourcePackageTests(unittest.TestCase):
         self.assertIn("dashboard.py", paths)
         self.assertIn("RUN-JARVIS.py", paths)
         self.assertIn("START-JARVIS.cmd", paths)
+        self.assertIn("INSTALL-JARVIS.cmd", paths)
+        self.assertIn("tools/install_windows.py", paths)
         self.assertFalse(any(p.endswith((".exe", ".env", ".pyc", ".zip")) for p in paths))
         self.assertFalse(any(p.startswith((".git/", ".venv/", "build/", "dist/")) for p in paths))
 
@@ -32,6 +34,7 @@ class SourcePackageTests(unittest.TestCase):
             with ZipFile(destination) as archive:
                 self.assertIn(f"{FOLDER}/README-START-HERE.txt", archive.namelist())
                 self.assertIn(f"{FOLDER}/START-JARVIS.cmd", archive.namelist())
+                self.assertIn(f"{FOLDER}/INSTALL-JARVIS.cmd", archive.namelist())
                 self.assertNotIn(f"{FOLDER}/Jarvis.exe", archive.namelist())
 
 
