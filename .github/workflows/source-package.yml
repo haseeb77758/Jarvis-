@@ -38,6 +38,10 @@ jobs:
           }
       - name: Validate Microsoft Store MSIX layout offline
         run: python -m unittest discover -s tests -p test_store_msix.py -v
+      - name: Audit Microsoft Store pre-account readiness
+        run: |
+          python -m unittest discover -s tests -p test_store_readiness.py -v
+          python tools/store_readiness.py --strict
       - name: Smoke-test real Microsoft MSIX pack and unpack
         shell: pwsh
         run: |
