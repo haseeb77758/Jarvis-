@@ -52,26 +52,33 @@ def validate(action):
         raise ValueError('Action invalid hai.')
     kind = action['action']
     fields = {
-        'launch': {'app'}, 'website': {'url'}, 'folder': {'name'},
+        'launch': {'app'}, 'launch_custom': {'alias'}, 'website': {'url'}, 'folder': {'name'},
         'note': {'name', 'text'}, 'find': {'query'}, 'screenshot': set(),
         'click': {'x', 'y'}, 'type': {'text'}, 'key': {'keys'},
+        'windows': set(), 'inspect': {'title'}, 'focus': {'title'},
+        'wait_window': {'title'}, 'invoke': {'title', 'name'},
+        'type_window': {'title', 'text'}, 'key_window': {'title', 'keys'},
     }
     if kind not in fields or set(action) != fields[kind] | {'action'}:
         raise ValueError('Yeh action supported nahi; arbitrary code run nahi hota.')
     for key in fields[kind] - {'x', 'y'}:
         if not isinstance(action[key], str) or not action[key].strip():
             raise ValueError(f'{key} khali ya invalid hai.')
+    if kind in {'inspect', 'focus', 'wait_window', 'invoke', 'type_window', 'key_window'} and any(len(action[k]) > 250 for k in fields[kind] - {'text', 'keys'}):
+        raise ValueError('Window/button naam 250 characters se chhota rakhein.')
     if kind == 'launch' and action['app'] not in APP_NAMES:
         raise ValueError('Sirf supported apps khul sakti hain.')
+    if kind == 'launch_custom' and not re.fullmatch(r'[a-z0-9][a-z0-9 -]{0,39}', action['alias']):
+        raise ValueError('Invalid custom app alias.')
     if kind == 'website':
         valid_url(action['url'])
     if kind in ('folder', 'note'):
         safe_child(Path.home(), action['name'])
     if kind == 'note' and not action['name'].lower().endswith('.txt'):
         raise ValueError('Note ka naam .txt par khatam hona chahiye.')
-    if kind == 'key' and action['keys'] not in KEYS:
+    if kind in {'key', 'key_window'} and action['keys'] not in KEYS:
         raise ValueError('Yeh shortcut allowlist mein nahi.')
-    if kind == 'type' and (len(action['text']) > 1000 or not action['text'].isascii() or any(ord(c) < 32 or ord(c) > 126 for c in action['text'])):
+    if kind in {'type', 'type_window'} and (len(action['text']) > 1000 or not action['text'].isascii() or any(ord(c) < 32 or ord(c) > 126 for c in action['text'])):
         raise ValueError('Type action: single-line English/Roman Urdu, max 1,000 characters.')
     if kind == 'note' and len(action['text']) > 20000:
         raise ValueError('Note bohat lamba hai.')
@@ -85,6 +92,22 @@ def validate(action):
 def parse_command(text):
     text = text.strip()
     low = text.lower()
+    if low in ('windows', 'list windows', 'show windows'):
+        return {'action': 'windows'}
+    for prefix, kind in [('inspect:', 'inspect'), ('focus:', 'focus'), ('wait:', 'wait_window')]:
+        if low.startswith(prefix):
+            return validate({'action': kind, 'title': text[len(prefix):].strip()})
+    for prefix, kind, field in [('write:', 'type_window', 'text'), ('press:', 'key_window', 'keys')]:
+        if low.startswith(prefix):
+            parts = text[len(prefix):].split('|', 1)
+            if len(parts) != 2:
+                raise ValueError('Format: ' + prefix + ' Window title | value')
+            return validate({'action': kind, 'title': parts[0].strip(), field: parts[1].strip()})
+    if low.startswith('button:'):
+        parts = text[7:].split('|', 1)
+        if len(parts) != 2:
+            raise ValueError('Format: button: Window title | Exact button name')
+        return validate({'action': 'invoke', 'title': parts[0].strip(), 'name': parts[1].strip()})
     if low in ('screenshot', 'screen dekhao', 'screen dikhao'):
         return {'action': 'screenshot'}
     for app in APP_NAMES:
@@ -115,15 +138,16 @@ def parse_plan(raw):
         obj = json.loads(raw)
     except (TypeError, json.JSONDecodeError) as exc:
         raise ValueError('AI ka plan valid JSON nahi tha. Direct command use karein.') from exc
-    if not isinstance(obj, dict) or set(obj) != {'actions'} or not isinstance(obj['actions'], list) or not 1 <= len(obj['actions']) <= 5:
-        raise ValueError('Plan mein 1–5 supported actions chahiye.')
+    if not isinstance(obj, dict) or set(obj) != {'actions'} or not isinstance(obj['actions'], list) or not 1 <= len(obj['actions']) <= 8:
+        raise ValueError('Plan mein 1–8 supported actions chahiye.')
     return [validate(item) for item in obj['actions']]
 
 
 class Controller:
-    def __init__(self, workspace, stop=None):
+    def __init__(self, workspace, stop=None, applications=None):
         self.workspace = Path(workspace).resolve()
         self.stop = stop or threading.Event()
+        self.applications = applications if applications is not None else {}
 
     def execute(self, action):
         a = validate(action)
@@ -143,6 +167,23 @@ class Controller:
             return self.find(a['query'])
         if os.name != 'nt':
             raise RuntimeError('Yeh control Windows par chalta hai.')
+        if kind == 'launch_custom':
+            path = self.applications.get(a['alias'])
+            if not path or not Path(path).is_absolute() or Path(path).suffix.lower() != '.exe' or not Path(path).is_file():
+                raise ValueError('Registered app executable nahi mila. Add app se dobara register karein.')
+            subprocess.Popen([path], shell=False)
+            return 'Custom app launch request: ' + a['alias']
+        if kind in {'windows', 'inspect', 'focus', 'wait_window', 'invoke'}:
+            import desktop
+            if kind == 'windows':
+                return '\n'.join(desktop.windows()) or 'Koi titled window nahi mili.'
+            if kind == 'inspect':
+                return desktop.inspect(a['title'])
+            if kind == 'focus':
+                return desktop.focus(a['title'])
+            if kind == 'wait_window':
+                return desktop.wait_window(a['title'], self.stop)
+            return desktop.invoke(a['title'], a['name'])
         if kind == 'launch':
             self.launch(a['app'])
             return 'Launch request bhej di: ' + a['app']
@@ -151,6 +192,9 @@ class Controller:
             if not webbrowser.open(a['url']):
                 raise RuntimeError('Browser launch request fail hui.')
             return 'Browser ko website open request bhej di.'
+        if kind in {'type_window', 'key_window'}:
+            import desktop
+            desktop.focus(a['title'])
         import pyautogui as pg
         pg.FAILSAFE = True
         pg.PAUSE = 0.15
@@ -162,14 +206,14 @@ class Controller:
                 raise ValueError('Point primary screen ke bahar hai.')
             pg.click(a['x'], a['y'])
             return f'Click input bheja: {a["x"]}, {a["y"]}'
-        if kind == 'type':
+        if kind in {'type', 'type_window'}:
             # Single characters keep long typing cancellable. No Enter is appended.
             for character in a['text']:
                 if self.stop.is_set():
                     raise RuntimeError('Typing stop kar di.')
                 pg.write(character, interval=0.015)
             return 'Typing input bheja. Text submit nahi kiya.'
-        if kind == 'key':
+        if kind in {'key', 'key_window'}:
             pg.hotkey(*KEYS[a['keys']])
             return 'Keyboard input bheja: ' + a['keys']
         raise ValueError('Action not implemented.')
@@ -217,19 +261,30 @@ class LocalAI:
         # Never proxy local prompts through HTTP_PROXY from the environment.
         self.opener = build_opener(ProxyHandler({}))
 
-    def ask(self, messages, plan=False):
+    def ask(self, messages, plan=False, preferences=(), applications=()):
         system = ('You are HASEEB AI, created by Haseeb Crafts. Answer in concise Roman Urdu or the language requested. '
                   'You cannot control the computer from chat. Never claim an action was performed. ')
         if plan:
-            system = ('Return only JSON: {"actions":[...]}. At most five actions. Allowed schemas: '
+            system = ('Return only JSON: {"actions":[...]}. At most eight actions. Allowed schemas: '
                       '{"action":"launch","app":"chrome|edge|notepad|calculator|paint|explorer"}; '
+                      '{"action":"launch_custom","alias":"a registered alias"}; '
                       '{"action":"website","url":"https://example.com"}; '
                       '{"action":"folder","name":"simple folder name"}; '
                       '{"action":"note","name":"simple-name.txt","text":"note body"}; '
                       '{"action":"find","query":"filename fragment"}; '
-                      '{"action":"screenshot"}. No other actions. No shell commands. '
+                      '{"action":"screenshot"}; {"action":"windows"}; '
+                      '{"action":"wait_window","title":"window title"}; {"action":"focus","title":"window title"}; '
+                      '{"action":"inspect","title":"window title"}; '
+                      '{"action":"invoke","title":"window title","name":"exact observed button name"}; '
+                      '{"action":"type_window","title":"window title","text":"single line ASCII text explicitly requested by user"}. '
+                      'After launching an app, add wait_window and focus before typing. Never invent a button name. '
+                      'No other actions. No shell commands. '
                       'Do not claim success. User will review and approve each action. '
                       'If unsupported, return {"actions":[]} rather than inventing an action.')
+        if applications and plan:
+            system += '\nRegistered app aliases: ' + json.dumps(list(applications)[:20])
+        if preferences:
+            system += '\nUser-saved response preferences (not tool permissions): ' + json.dumps(list(preferences)[:20], ensure_ascii=False)
         body = {'model': self.model, 'messages': [{'role': 'system', 'content': system}] + messages[-8:],
                 'stream': False, 'options': {'num_ctx': 2048, 'num_predict': 600, 'temperature': 0.2}, 'keep_alive': '2m'}
         if plan:

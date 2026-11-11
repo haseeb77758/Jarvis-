@@ -1,26 +1,64 @@
-"""Windows-runner smoke test, no desktop input or app launches."""
+"""Windows smoke: only an isolated synthetic target receives UI input."""
 from pathlib import Path
+import os
+import subprocess
 import sys
+import tempfile
+import time
 import tkinter as tk
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 from app import App
+import desktop
+from core import Controller
 import pyautogui
+import sounddevice
+import faster_whisper
+import pythoncom
+import win32com.client
 
 root = tk.Tk()
-try:
-    app = App(root)
-    root.update_idletasks()
-    root.update()
-    assert root.winfo_exists()
-    assert app.mode.get() == 'Computer commands'
-    assert app.permission.get() is False
-    width, height = pyautogui.size()
-    assert width > 0 and height > 0
-    image = pyautogui.screenshot()
-    assert image.width > 0 and image.height > 0
-    app.halt()
-    assert app.stop.is_set()
-    print(f'Windows UI and screenshot smoke passed ({width}x{height}); no input performed.')
-finally:
-    root.destroy()
+process = None
+with tempfile.TemporaryDirectory() as data:
+    try:
+        app = App(root, data_directory=data)
+        root.update_idletasks()
+        root.update()
+        assert root.winfo_exists()
+        assert app.mode.get() == 'Computer commands'
+        assert app.permission.get() is False
+        width, height = pyautogui.size()
+        image = pyautogui.screenshot()
+        assert min(width, height, image.width, image.height) > 0
+        script = ROOT / 'tools/ui_target.ps1'
+        powershell = Path(os.environ['WINDIR']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+        process = subprocess.Popen([str(powershell), '-NoProfile', '-File', str(script)], shell=False)
+        desktop.wait_window('Jarvis CI Target', app.stop)
+        assert 'Jarvis CI Target' in '\n'.join(desktop.windows())
+        snapshot = desktop.inspect('Jarvis CI Target')
+        assert 'Jarvis Test Button' in snapshot, snapshot
+        desktop.focus('Jarvis CI Target')
+        desktop.match_window('Jarvis CI Target').descendants(title='Jarvis test input', control_type='Edit')[0].set_focus()
+        Controller(data).execute({'action': 'type_window', 'title': 'Jarvis CI Target', 'text': 'Hello Jarvis'})
+        assert 'TYPE PASSED' in desktop.inspect('Jarvis CI Target')
+        desktop.invoke('Jarvis CI Target', 'Jarvis Test Button')
+        end = time.monotonic() + 5
+        while time.monotonic() < end:
+            if 'INVOKE PASSED' in desktop.inspect('Jarvis CI Target'):
+                break
+            time.sleep(0.2)
+        else:
+            raise RuntimeError('Synthetic button invocation did not update the target label.')
+        pythoncom.CoInitialize()
+        speaker = win32com.client.Dispatch('SAPI.SpVoice')
+        assert speaker.GetVoices().Count > 0
+        app.halt()
+        assert app.stop.is_set()
+        print(f'PASS: GUI, screenshot ({width}x{height}), exact-window focus, targeted typing, exact-button invoke and SAPI voice enumeration.')
+        print('No real user microphone/audio or external desktop apps were used.')
+    finally:
+        if process and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=10)
+        root.destroy()

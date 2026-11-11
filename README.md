@@ -2,7 +2,7 @@
 
 Created by **Haseeb Crafts**.
 
-A Windows desktop assistant with local controls, optional free local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
+A Windows desktop assistant with named-window controls, offline voice input/output, explicit local memory, optional local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
 
 ## Option 2 — Browser chat from this repository
 
@@ -18,9 +18,10 @@ The standalone browser app is in **web/**. It uses Puter sign-in and the user's 
 1. Open **Actions → Windows test and build**, then the latest successful run.
 2. Download **Jarvis-Single-EXE-Windows-x64** from Artifacts and extract it.
 3. Run **Jarvis.exe**. No `_internal` folder or Python install is required for this build.
-4. Use the app's **Setup local AI** button once for optional free offline AI. If Ollama is missing, it opens the official installer page. After installation, press the button again to download `qwen2.5:1.5b` (about 986 MB). The model/runtime are separate downloads, not embedded in the EXE.
+4. Voice recognition dependencies and the tiny multilingual voice model are bundled in the new Windows EXE. Use **Test voice**, **Mic · 6 seconds**, and transcript review.
+5. Use the app's **Setup local AI** button once for optional free offline AI. If Ollama is missing, it opens the official installer page. After installation, press the button again to download `qwen2.5:1.5b` (about 986 MB). The local chatbot model/runtime are separate downloads. The smaller voice-transcription model is embedded in this build.
 
-The app is unsigned. One-file packaging extracts bundled application libraries into a temporary folder while running; it does not mean an AI model is embedded or that no temporary files are used. You must sign in to GitHub to download private-repository artifacts. Artifacts are retained for 14 days. No repository visibility or billing setting was changed.
+The app is unsigned. One-file packaging extracts bundled application libraries into a temporary folder while running; bundled voice libraries/model make startup and the download larger. The local chatbot model is still a separate download. You must sign in to GitHub to download private-repository artifacts. Artifacts are retained for 14 days. No repository visibility or billing setting was changed.
 
 ## Run from source
 
@@ -47,14 +48,16 @@ Extract/clone the repository and double-click **SETUP.bat**. It checks Python 3.
 
 - Local commands need no AI/API key. Local AI uses your hardware and the downloaded model; no per-message cloud API bill. It can be slow on an 8 GB laptop and is less capable than large hosted models.
 - Cloud chat opens the existing hosted Haseeb AI app; its free monthly allowance applies and it does not control your PC.
-- This is a limited desktop helper, not unrestricted autonomous control. Voice input, visual AI screen understanding, UAC/elevated windows and multi-monitor control are not included.
+- This is a limited desktop assistant, not unrestricted autonomous control. It supports opt-in Urdu/English voice transcription, Windows speech output, registered app launch and named UI Automation controls. Visual scene understanding, continuous listening, UAC/elevated windows and multi-monitor pixel control are not included.
 - Screenshots, file listings and file contents are not automatically uploaded. No inbound server, arbitrary shell command execution, autostart or background monitoring.
 - Mouse/keyboard input is disabled by default. Review the actual target before approving click/Enter; input does not understand financial or messaging context.
 - GitHub Actions consumes the repository owner's included build allowance. No billing upgrade or paid plan is configured by this repository.
 
 ## Validation
 
-`python -m unittest discover -s tests -v` runs the local integration/validation suite. The Windows workflow installs dependencies, runs these tests, creates the UI and verifies a runner-only screenshot in a smoke test, builds with PyInstaller and checks the resulting EXE's `--self-test` exit code before uploading it.
+Read [the desktop-first guide](DESKTOP-FIRST.md) in this order: desktop controls → local chatbot → voice → local memory/shortcuts.
+
+`python -m unittest discover -s tests -v` runs the integration/validation suite. The Windows workflow installs dependencies, runs these tests, tests its own UI, a synthetic target window, named-window typing and exact-button invocation, then synthesizes an English WAV and transcribes it with the bundled tiny model. It builds with PyInstaller and checks the resulting EXE's `--self-test` exit code before uploading it.
 
 Windows CI success demonstrates a hosted Windows runner, not successful installation or AI performance on your own laptop. Run the guide's smoke test on the target PC.
 
@@ -62,3 +65,18 @@ Windows CI success demonstrates a hosted Windows runner, not successful installa
 ## Browser test coverage
 
 The separate browser-check workflow tests sign-in gating, conversation context, new-chat reset, safe text rendering, quota errors/retry, abort and mobile layout with an explicitly mocked Puter provider. It does not claim a real Puter model reply or account sign-in was verified. That needs a user-signed-in browser.
+
+
+## New desktop capabilities
+
+| Control | Example |
+| --- | --- |
+| List/inspect windows | `windows`, `inspect: Calculator` |
+| Wait/focus window | `wait: Notepad`, `focus: Notepad` |
+| Targeted input | `write: Notepad | Hello Haseeb`, `press: Notepad | ctrl+s` |
+| Exact accessible button | `button: Calculator | Nine` (verify the name using inspect) |
+| Registered app | Add app → choose .exe → `open photoshop` |
+| Local preference | `remember: Reply in short Roman Urdu` |
+| Reviewed shortcut | Save last plan → `shortcut: work` |
+
+Preferences and saved action sequences are not self-modifying code or automatic retraining. See DESKTOP-FIRST.md for the complete limitations and target-PC smoke test.

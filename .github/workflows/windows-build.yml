@@ -16,7 +16,7 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -28,13 +28,19 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Windows UI and screen smoke test
         run: python tools/windows_smoke.py
+      - name: Prepare bundled voice model
+        env:
+          HF_HUB_DISABLE_XET: '1'
+        run: python tools/prepare_voice_model.py
+      - name: Test synthetic voice output and local recognition
+        run: python tools/voice_smoke.py
       - name: Build the Windows executable
-        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis app.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "build-assets/voice-model;voice-model" app.py
       - name: Verify the built app starts
         shell: pwsh
         run: |
           $app = Start-Process -FilePath '.\dist\Jarvis.exe' -ArgumentList '--self-test' -PassThru
-          if (-not $app.WaitForExit(90000)) {
+          if (-not $app.WaitForExit(180000)) {
             $app.Kill()
             throw 'Built app smoke test timed out.'
           }

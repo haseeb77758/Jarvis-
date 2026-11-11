@@ -5,16 +5,19 @@ from pathlib import Path
 import queue
 import threading
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import webbrowser
 import shutil
+import re
+from memory import PreferenceStore
+from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
 from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080f18', '#122231', '#e5f1f5', '#92a9b9', '#36dccf'
 
 
 class App:
-    def __init__(self, root):
+    def __init__(self, root, data_directory=None):
         self.root = root
         root.title('JARVIS | HASEEB AI — Windows 11')
         root.geometry('1240x800')
@@ -26,7 +29,12 @@ class App:
         self.generation = 0
         self.history = []
         self.pending = []
-        self.control = Controller(Path.home(), self.stop)
+        self.last_plan = []
+        self.store = PreferenceStore(data_directory)
+        self.speak_enabled = tk.BooleanVar(value=False)
+        self.voice_language = tk.StringVar(value='Auto')
+        self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)))
+        self.control = Controller(Path.home(), self.stop, self.store.apps)
         self.ai = LocalAI()
         self.mode = tk.StringVar(value='Computer commands')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
@@ -80,6 +88,19 @@ class App:
         self.button(tools, 'New chat', self.clear).pack(side='right')
         tk.Checkbutton(tools, text='Enable mouse / keyboard controls', variable=self.permission,
                        fg=TEXT, bg=BG, selectcolor=PANEL, activebackground=BG, activeforeground=TEXT).pack(side='left', padx=8)
+        voicebar = tk.Frame(self.root, bg=BG)
+        voicebar.pack(fill='x', padx=24, pady=(0, 12))
+        self.button(voicebar, 'Mic · 6 seconds', self.listen_voice, True).pack(side='left', padx=(0, 6))
+        self.button(voicebar, 'Setup voice', self.setup_voice).pack(side='left', padx=4)
+        self.button(voicebar, 'Test voice', self.test_voice).pack(side='left', padx=4)
+        ttk.Combobox(voicebar, textvariable=self.voice_language, state='readonly', width=8,
+                     values=['Auto', 'Urdu', 'English']).pack(side='left', padx=6)
+        tk.Checkbutton(voicebar, text='Speak replies', variable=self.speak_enabled,
+                       bg=BG, fg=TEXT, selectcolor=PANEL, activebackground=BG).pack(side='left', padx=5)
+        self.button(voicebar, 'Memory', self.show_memory).pack(side='right', padx=4)
+        self.button(voicebar, 'Save last plan', self.save_plan).pack(side='right', padx=4)
+        self.button(voicebar, 'Add app', self.add_app).pack(side='right', padx=4)
+        self.button(voicebar, 'Updates ↗', lambda: webbrowser.open('https://github.com/haseeb77758/Jarvis-/actions')).pack(side='right', padx=4)
         loc = tk.Frame(self.root, bg=PANEL)
         loc.pack(fill='x', padx=24)
         tk.Label(loc, text='WORKSPACE  ', fg=CYAN, bg=PANEL).pack(side='left', padx=10)
@@ -110,11 +131,114 @@ class App:
         self.log.insert('end', str(text) + '\n\n')
         self.log.configure(state='disabled')
         self.log.see('end')
+        if name in {'RESULT', 'HASEEB AI · LOCAL MODEL', 'ERROR'} and self.speak_enabled.get():
+            self.speaker.speak(str(text))
 
     def set_busy(self, on):
         self.busy = on
         self.send.configure(state='disabled' if on else 'normal')
         self.status.set('Working…' if on else ('Stopped · Resume to continue' if self.stop.is_set() else 'Ready · local controls'))
+
+    def test_voice(self):
+        if not self.busy:
+            self.speaker.speak('Jarvis ready. Aap ka desktop assistant tayyar hai.')
+
+    def listen_voice(self):
+        if self.busy or self.stop.is_set():
+            return
+        self.speaker.stop()
+        language = {'Auto': 'auto', 'Urdu': 'ur', 'English': 'en'}[self.voice_language.get()]
+        self.worker(lambda: listen(self.stop, language), 'voice')
+        self.status.set('Preparing mic / recording 6 seconds · STOP cancels')
+
+    def setup_voice(self):
+        if self.busy or self.stop.is_set():
+            return
+        if bundled_model():
+            self.say('NOTICE', 'Voice model is EXE mein included hai. Mic 6s dabayein; pehli recognition CPU par kuch seconds le sakti hai.')
+            return
+        if messagebox.askokcancel('Setup offline voice',
+            'Multilingual Whisper tiny model ek dafa internet se download hoga (approximately 75–100 MB).\nUske baad microphone audio local CPU par process hoti hai. Voice quality mic aur language par depend karegi. Download karein?', parent=self.root):
+            self.worker(lambda: setup_voice(self.stop), 'setup')
+
+    def review_voice(self, text):
+        normalized = normalize_command(text)
+        self.say('HEARD — NOT EXECUTED', text)
+        if normalized.casefold() in {'stop', 'stop jarvis', 'jarvis stop'}:
+            self.halt()
+            return
+        if messagebox.askokcancel('Review voice instruction',
+            'Heard: ' + text + '\n\nRun: ' + normalized + '\n\nCancel karke entry box mein correction kar sakte hain.', parent=self.root):
+            self.submit(normalized)
+        else:
+            self.entry.delete(0, 'end')
+            self.entry.insert(0, normalized)
+            self.entry.focus_set()
+
+    def add_app(self):
+        if self.busy:
+            return
+        executable = filedialog.askopenfilename(title='Choose an installed Windows app', filetypes=[('Application', '*.exe')])
+        if not executable:
+            return
+        alias = simpledialog.askstring('App alias', 'English naam dein, jaise photoshop:', parent=self.root)
+        if alias and messagebox.askokcancel('Register app', alias + '\n' + executable + '\n\nOnly this executable, without command-line arguments, will be launched.', parent=self.root):
+            try:
+                self.store.register_app(alias, executable)
+                self.say('RESULT', 'App registered. Command: open ' + alias.casefold())
+            except Exception as exc:
+                self.say('ERROR', str(exc))
+
+    def save_plan(self):
+        if self.busy or not self.last_plan:
+            self.say('NOTICE', 'Pehle koi valid direct action ya AI plan banayein.')
+            return
+        name = simpledialog.askstring('Save reviewed shortcut', 'Shortcut name:', parent=self.root)
+        if name and messagebox.askokcancel('Save local shortcut', json.dumps(self.last_plan, ensure_ascii=False, indent=2) + '\n\nYeh code upgrade nahi; validated actions ka shortcut hai. Har run pe approvals rahengi.', parent=self.root):
+            try:
+                self.store.shortcut(name, self.last_plan)
+                self.say('RESULT', 'Shortcut saved. Command: shortcut: ' + name)
+            except Exception as exc:
+                self.say('ERROR', str(exc))
+
+    def show_memory(self):
+        if self.busy:
+            return
+        win = tk.Toplevel(self.root)
+        win.title('Local memory — explicit preferences, shortcuts and apps')
+        win.geometry('700x440')
+        win.configure(bg=BG)
+        listing = tk.Listbox(win, bg=PANEL, fg=TEXT, font=('Segoe UI', 11), selectbackground='#245c62')
+        listing.pack(fill='both', expand=True, padx=15, pady=15)
+        items = []
+        for fact in self.store.facts:
+            listing.insert('end', 'Preference: ' + fact)
+            items.append(('fact', fact))
+        for name in self.store.shortcuts:
+            listing.insert('end', 'Shortcut: ' + name)
+            items.append(('shortcut', name))
+        for name in self.store.apps:
+            listing.insert('end', 'App: ' + name)
+            items.append(('app', name))
+        def remove():
+            selected = listing.curselection()
+            if not selected or not messagebox.askokcancel('Remove saved memory', 'Selected local preference/shortcut/app registration remove karein?', parent=win):
+                return
+            kind, value = items[selected[0]]
+            if kind == 'fact':
+                self.store.facts.remove(value)
+            elif kind == 'shortcut':
+                self.store.shortcuts.pop(value)
+            else:
+                self.store.apps.pop(value)
+            self.store.save()
+            win.destroy()
+            self.show_memory()
+        self.button(win, 'Remove selected', remove).pack(pady=(0, 12))
+
+    def next_action(self):
+        if self.pending and not self.stop.is_set():
+            self.approve(self.pending.pop(0), from_plan=True)
 
     def setup_ai(self):
         if self.busy:
@@ -150,6 +274,8 @@ class App:
         self.say('HASEEB AI', 'Nayi conversation shuru.')
 
     def halt(self):
+        if hasattr(self, 'speaker'):
+            self.speaker.stop()
         self.stop.set()
         self.generation += 1
         self.pending.clear()
@@ -164,10 +290,16 @@ class App:
         self.status.set('Ready · local controls')
 
     def submit(self, value=None):
+        if isinstance(value, str) and value.strip().casefold() in {'stop', 'jarvis stop', 'stop jarvis'}:
+            self.halt()
+            return
         if self.busy:
             return
         text = value if value is not None else self.entry.get().strip()
         if not text:
+            return
+        if text.casefold() in {'stop', 'jarvis stop', 'stop jarvis'}:
+            self.halt()
             return
         if self.stop.is_set():
             self.say('HASEEB AI', 'Stopped hai. Pehle Resume dabayein.')
@@ -178,25 +310,44 @@ class App:
             self.say('HASEEB AI', 'Message 4,000 characters se chhota rakhein.')
             return
         try:
+            if text.casefold().startswith('remember:'):
+                fact = text.split(':', 1)[1].strip()
+                if messagebox.askokcancel('Save preference locally', fact + '\n\nYeh local AI replies mein preference ke taur par use hogi. Passwords ya secrets save na karein.', parent=self.root):
+                    self.store.remember(fact)
+                    self.say('RESULT', 'Preference saved. Memory button se view/remove kar sakte hain.')
+                return
+            if text.casefold().startswith('shortcut:'):
+                name = text.split(':', 1)[1].strip().casefold()
+                if name not in self.store.shortcuts:
+                    raise ValueError('Saved shortcut nahi mila. Memory button check karein.')
+                from core import validate
+                self.pending = [validate(a) for a in self.store.shortcuts[name]]
+                self.next_action()
+                return
             action = parse_command(text)
+            if action is None:
+                alias = re.sub(r'^(?:open|launch)\s+', '', text.casefold()).removesuffix(' kholo').strip()
+                if alias in self.store.apps:
+                    action = {'action': 'launch_custom', 'alias': alias}
             if action:
+                self.last_plan = [action]
                 self.approve(action)
             elif self.mode.get() == 'Computer commands':
-                self.say('COMMAND HELP', 'chrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nFree local AI ke liye Local AI chat / AI action plan select karein.')
+                self.say('COMMAND HELP', 'windows · inspect: Window title · focus: Window title · wait: Window title\nbutton: Window title | Exact button name\nwrite: Window title | Hello Haseeb · press: Window title | ctrl+s\nremember: reply in Roman Urdu · shortcut: saved name\nchrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nFree local AI ke liye Local AI chat / AI action plan select karein.')
             else:
                 planning = self.mode.get() == 'AI action plan'
                 messages = [{'role': 'user', 'content': text}] if planning else self.history + [{'role': 'user', 'content': text}]
-                self.worker(lambda: self.ai.ask(messages, planning), 'plan' if planning else 'ai', text)
+                self.worker(lambda: self.ai.ask(messages, planning, self.store.facts, self.store.apps), 'plan' if planning else 'ai', text)
         except Exception as exc:
             self.say('ACTION ERROR', str(exc))
 
-    def approve(self, action):
-        screen = action['action'] in {'type', 'click', 'key'}
+    def approve(self, action, from_plan=False):
+        screen = action['action'] in {'type', 'click', 'key', 'focus', 'invoke', 'type_window', 'key_window'}
         if screen and not self.permission.get():
             self.pending.clear()
             self.say('PERMISSION', 'Pehle Enable mouse / keyboard controls tick karein. Har screen action ka review aur countdown hoga.')
             return
-        confirm = screen or action['action'] in {'folder', 'note'} or bool(self.pending)
+        confirm = from_plan or screen or action['action'] in {'folder', 'note', 'launch_custom'}
         if confirm:
             info = json.dumps(action, ensure_ascii=False, indent=2)
             if screen:
@@ -252,6 +403,8 @@ class App:
                 if issue:
                     self.pending.clear()
                     self.say('ERROR', issue)
+                elif kind == 'voice':
+                    self.review_voice(value)
                 elif kind == 'screenshot':
                     self.show_screen(value)
                 elif kind == 'ai':
@@ -261,18 +414,14 @@ class App:
                     try:
                         actions = parse_plan(value)
                         self.say('AI PLAN — NOT EXECUTED', json.dumps(actions, ensure_ascii=False, indent=2))
-                        self.pending = actions
+                        self.last_plan = actions
+                        self.pending = actions.copy()
                     except Exception as exc:
                         self.say('PLAN ERROR', str(exc))
                 else:
                     self.say('RESULT', value)
-                if not issue and self.pending:
-                    action = self.pending.pop(0)
-                    # Include a review for the final/single action too.
-                    if messagebox.askokcancel('AI plan — next action', json.dumps(action, ensure_ascii=False, indent=2), parent=self.root):
-                        self.approve(action)
-                    else:
-                        self.pending.clear()
+                if not issue and self.pending and not self.busy:
+                    self.next_action()
         except queue.Empty:
             pass
         self.root.after(100, self.poll)
@@ -314,6 +463,7 @@ class App:
         self.button(win, 'Save screenshot locally…', save).pack(pady=(0, 12))
 
     def close(self):
+        self.speaker.stop()
         self.stop.set()
         self.root.destroy()
 
@@ -332,6 +482,10 @@ if __name__ == '__main__':
         # Build-runner smoke test: create widgets, import bundled screen dependencies,
         # then exit. Never launch apps, capture user data or perform input here.
         import pyautogui
+        import pywinauto
+        import faster_whisper
+        import sounddevice
+        import win32com.client
         from PIL import ImageTk
         root.update_idletasks()
         root.update()

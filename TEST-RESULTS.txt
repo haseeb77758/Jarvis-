@@ -1,27 +1,16 @@
-HASEEB AI Windows 11 desktop helper — validation report
-Date: 11 November 2026
+Jarvis desktop/voice/memory update — 11 November 2026
 
-ACTUALLY RUN:
-- Python compileall: PASS.
-- python3 -m unittest discover -s tests -v: 16 tests PASS.
-- Real temporary-file note/folder creation and no-overwrite: PASS.
-- Workspace traversal, Windows reserved names, alternate data streams: blocked.
-- Symlink write/traversal checks: PASS in Linux.
-- Search results cap and stop-before-execution: PASS.
-- Malformed/unsupported AI actions and extra executable arguments: blocked.
-- Plain HTTPS URLs only; embedded credentials rejected.
-- Typing control characters and unsupported hotkeys: blocked.
-- Fixed executable launch with shell=False: mocked assertion PASS.
-- Local AI loopback request, bounded context and failure reporting: mocked PASS.
-- Screen permission gate, declined write, cancelled countdown, stop epoch: PASS.
+Local checks before commit: Python compilation and 28 integration/validation tests PASS.
+Coverage: prior controls, cancellation, window-target validation, ambiguous target refusal,
+edit-value exclusion, local memory persistence, invalid saved-action rejection,
+registered executable schema, Urdu/English command normalization and cancelled mic guard.
 
-NOT RUN / NOT CLAIMED:
-- Windows 11 installation, dependency installation on Windows.
-- Actual Windows app launch, global hotkey registration, screenshot and screen input.
-- GUI visual rendering: tkinter import succeeds, but runtime has no graphical display.
-- Local Ollama inference or performance on user's laptop.
-- BUILD-EXE.bat / signed Windows executable / SmartScreen verification.
+Windows CI for this source runs:
+1. The same test suite.
+2. Real app UI, screenshot, synthetic WinForms window focus/typing/button invocation.
+3. Installed Windows SAPI speech to a temporary WAV and local tiny-Whisper transcription.
+4. Bundled one-file EXE import/startup smoke test.
 
-The package includes source plus Windows setup and optional EXE build scripts.
-No prebuilt Windows executable or bundled AI model is included.
-Use README's Windows smoke test to validate the machine-specific integration.
+The workflow's actual result is authoritative; this file does not pre-claim a future pass.
+Live user microphone, Urdu recognition quality, user's audio output, Ollama response quality,
+and real third-party application workflows remain target-PC validation.

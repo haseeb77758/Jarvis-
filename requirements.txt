@@ -1,2 +1,6 @@
 Pillow>=10,<13
 PyAutoGUI==0.9.54
+pywinauto==0.6.9; sys_platform == 'win32'
+pywin32>=306; sys_platform == 'win32'
+faster-whisper>=1.1,<2
+sounddevice>=0.5,<1

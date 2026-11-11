@@ -53,7 +53,7 @@ Workspace default tumhara user-home folder hai. Choose folder se Desktop, Docume
 - App focused ho to Esc ya STOP button pending actions cancel karta hai. Global Ctrl+Alt+F12 stop bhi app running hone par available hai agar Windows hotkey register kar de. Status log registration failure batayega.
 - Stop pehle se bheje gaye click/key ko undo nahi karta; running Ollama inference finish ho sakti hai lekin result discard hoga. Resume worker finish hone ke baad chalega.
 - Click, Enter ya Tab apne aap context ko nahi samajhte. Message send, form submit, delete ya payment karne wala target ho to khud verify karo; automatic approval mat do. Built-in delete/send/payment action nahi hai.
-- Keyboard typing only printable single-line ASCII: English/Roman Urdu. Urdu script pasting aur voice/microphone commands is version mein included nahi.
+- Keyboard typing only printable single-line ASCII: English/Roman Urdu. Urdu script keyboard pasting included nahi. Naye EXE mein Urdu/English microphone transcription aur Windows speech output included hain; DESKTOP-FIRST.md follow karein.
 - Primary monitor controls only. Elevated/UAC/secure desktop windows supported nahi. Screen scaling / coordinates pehle Notepad mein test karo.
 
 ## Pehla Windows smoke test
@@ -88,3 +88,7 @@ https://pyautogui.readthedocs.io/en/latest/
 Repo ke README.md mein Option 2 aur Option 3 dekhein. Single-EXE app mein Setup local AI button included hai, is liye EXE ke saath setup BAT carry karna zaroori nahi. Ollama aur model phir bhi first-time download/install hote hain.
 
 GitHub Pages ke liye repo plan/Pages settings configure honi chahiye; private repo ko public is update mein nahi kiya gaya. Private Codespaces preview bhi configured hai. Browser Puter sign-in use karta hai; desktop local chat Ollama use karti hai. Dono ki capabilities aur allowances alag hain.
+
+
+## Desktop-first / voice / memory update
+Latest instructions: **DESKTOP-FIRST.md**. Naye build mein voice model bundled hai; Setup voice source-run fallback ke liye hai. Urdu mic accuracy aur spoken output target PC par verify karein. Preferences/shortcuts explicit memory hain, executable self-upgrade nahi.
