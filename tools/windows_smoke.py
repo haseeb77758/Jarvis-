@@ -35,6 +35,14 @@ with tempfile.TemporaryDirectory() as data:
         assert hasattr(app, 'activity_log'), 'Dashboard activity panel missing'
         assert app.entry.winfo_exists() and app.log.winfo_exists()
         assert app.send.winfo_exists() and app.select.winfo_exists()
+        app.open_sandbox()
+        root.update_idletasks()
+        root.update()
+        assert app.sandbox_window.window.winfo_exists(), 'AI sandbox window did not open'
+        assert app.sandbox_window.entry.winfo_exists(), 'Sandbox message input missing'
+        assert app.sandbox_window.send_button.winfo_exists(), 'Sandbox SEND missing'
+        assert app.sandbox_window.session.history == [], 'Sandbox should start with no stored messages'
+        app.sandbox_window.close()
         app.say('RESULT', 'Dashboard activity check')
         assert 'Dashboard activity check' in app.activity_log.get('1.0', 'end')
         width, height = pyautogui.size()
