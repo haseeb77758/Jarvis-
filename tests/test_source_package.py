@@ -21,6 +21,7 @@ class SourcePackageTests(unittest.TestCase):
         self.assertIn("RUN-JARVIS.py", paths)
         self.assertIn("START-JARVIS.cmd", paths)
         self.assertIn("INSTALL-JARVIS.cmd", paths)
+        self.assertIn("START-JARVIS-GUI.pyw", paths)
         self.assertIn("tools/install_windows.py", paths)
         self.assertFalse(any(p.endswith((".exe", ".env", ".pyc", ".zip")) for p in paths))
         self.assertFalse(any(p.startswith((".git/", ".venv/", "build/", "dist/")) for p in paths))
@@ -35,6 +36,7 @@ class SourcePackageTests(unittest.TestCase):
                 self.assertIn(f"{FOLDER}/README-START-HERE.txt", archive.namelist())
                 self.assertIn(f"{FOLDER}/START-JARVIS.cmd", archive.namelist())
                 self.assertIn(f"{FOLDER}/INSTALL-JARVIS.cmd", archive.namelist())
+                self.assertIn(f"{FOLDER}/START-JARVIS-GUI.pyw", archive.namelist())
                 self.assertNotIn(f"{FOLDER}/Jarvis.exe", archive.namelist())
 
 
