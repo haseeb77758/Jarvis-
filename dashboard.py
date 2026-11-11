@@ -224,10 +224,17 @@ def make_dashboard(app):
         b.pack(fill='x', padx=5)
     label(sidebar, 'OPEN APP', 9, MUTED, True).pack(anchor='w', padx=15, pady=(16, 4))
     for name, command in [('Google Chrome', 'chrome kholo'), ('Microsoft Edge', 'edge kholo'),
-                          ('Calculator', 'calculator kholo'), ('Notepad', 'notepad kholo')]:
+                          ('Calculator', 'calculator kholo'), ('Notepad', 'notepad kholo'),
+                          ('YouTube', 'youtube kholo'), ('WhatsApp Web', 'whatsapp kholo')]:
         tk.Button(sidebar, text='◫  ' + name, anchor='w', command=lambda c=command: app.submit(c),
                   bg=PANEL, fg=TEXT, activebackground=PANEL_2, activeforeground=CYAN,
                   relief='flat', bd=0, cursor='hand2', font=('Segoe UI', 9), padx=15, pady=6).pack(fill='x', padx=6)
+
+    label(sidebar, 'MEDIA CONTROLS', 9, MUTED, True).pack(anchor='w', padx=15, pady=(13, 4))
+    media = tk.Frame(sidebar, bg=PANEL)
+    media.pack(fill='x', padx=10)
+    for title, command in [('◀', 'previous song'), ('⏯', 'play pause'), ('▶', 'next song')]:
+        btn(media, title, lambda c=command: app.submit(c), compact=True).pack(side='left', padx=2, pady=2)
 
     center = tk.Frame(body, bg=BG)
     center.grid(row=0, column=1, sticky='nsew')
