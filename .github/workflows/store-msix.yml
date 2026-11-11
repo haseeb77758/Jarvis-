@@ -1,0 +1,84 @@
+name: Microsoft Store MSIX submission candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_identity:
+        description: 'Exact Package identity from Microsoft Partner Center'
+        required: true
+        type: string
+      publisher:
+        description: 'Exact Publisher CN=... value from Partner Center'
+        required: true
+        type: string
+      version:
+        description: 'Four-part Store version, e.g. 1.0.0.0'
+        required: true
+        default: '1.0.0.0'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  store-candidate:
+    runs-on: windows-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate packaging code without Store credentials
+        run: python -m unittest discover -s tests -p test_store_msix.py -v
+      - name: Install desktop build dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: Run Jarvis regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Windows UI automation smoke test
+        run: python tools/windows_smoke.py
+      - name: Bundle local voice model
+        env:
+          HF_HUB_DISABLE_XET: '1'
+        run: python tools/prepare_voice_model.py
+      - name: Verify synthetic voice
+        run: python tools/voice_smoke.py
+      - name: Build Windows onedir distribution
+        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name Jarvis --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "build-assets/voice-model;voice-model" app.py
+      - name: Verify built Windows app starts
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath '.\dist\Jarvis\Jarvis.exe' -ArgumentList '--self-test' -PassThru
+          if (-not $app.WaitForExit(180000)) {
+            $app.Kill()
+            throw 'Jarvis startup self-test timed out.'
+          }
+          if ($app.ExitCode -ne 0) { throw "Jarvis startup self-test failed: $($app.ExitCode)" }
+      - name: Generate Partner Center package layout
+        shell: pwsh
+        env:
+          STORE_IDENTITY: ${{ inputs.package_identity }}
+          STORE_PUBLISHER: ${{ inputs.publisher }}
+          STORE_VERSION: ${{ inputs.version }}
+        run: |
+          python tools/prepare_store_msix.py --source dist/Jarvis --output dist/store-layout --identity $env:STORE_IDENTITY --publisher $env:STORE_PUBLISHER --version $env:STORE_VERSION
+      - name: Package unsigned MSIX for Microsoft Store submission ONLY
+        shell: pwsh
+        run: |
+          $kitsRoot = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
+          $makeappx = Get-ChildItem $kitsRoot -Filter makeappx.exe -File -Recurse |
+            Where-Object { $_.FullName -match '\x64\makeappx\.exe$' } |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $makeappx) { throw 'Microsoft Windows SDK makeappx.exe is unavailable.' }
+          & $makeappx.FullName pack /d dist/store-layout /p dist/Jarvis-STORE-SUBMISSION-ONLY.msix /o
+          if ($LASTEXITCODE -ne 0) { throw 'MSIX packaging failed.' }
+          & $makeappx.FullName unpack /p dist/Jarvis-STORE-SUBMISSION-ONLY.msix /d dist/msix-verify /o
+          if ($LASTEXITCODE -ne 0) { throw 'MSIX integrity verification failed.' }
+          if (-not (Test-Path 'dist/msix-verify/Jarvis.exe')) { throw 'Jarvis.exe missing from MSIX.' }
+      - name: Upload ONLY Store submission candidate; not for sideload
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jarvis-UNSIGNED-Microsoft-Store-SUBMISSION-ONLY
+          path: dist/Jarvis-STORE-SUBMISSION-ONLY.msix
+          if-no-files-found: error
+          retention-days: 14
