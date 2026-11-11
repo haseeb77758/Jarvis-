@@ -182,7 +182,7 @@ def make_dashboard(app):
     btn(header, 'STOP  /  Esc', app.halt, True, True).pack(side='right', padx=(6, 16), pady=10)
     btn(header, 'Resume', app.resume, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=4, pady=10)
-    label(header, '●  Local control', 9, MUTED, bg=DEEP).pack(side='right', padx=(6, 12))
+    label(header, '', 9, CYAN, bg=DEEP, textvariable=app.ai_status).pack(side='right', padx=(6, 12))
 
     body = tk.Frame(root, bg=BG)
     body.pack(fill='both', expand=True, padx=12, pady=(12, 10))
@@ -256,7 +256,7 @@ def make_dashboard(app):
         item.pack(fill='x', pady=4)
         label(item, '●  ' + heading, 9, color, True, bg=PANEL_2).pack(anchor='w', padx=10, pady=(8, 2))
         label(item, body_text, 8, MUTED, bg=PANEL_2, wraplength=169, justify='left').pack(anchor='w', padx=11, pady=(0, 8))
-    indicator(left_status, 'AI provider', 'Local model optional\nSetup AI to configure', AMBER)
+    indicator(left_status, 'AI provider', 'Ollama runs on this PC\nUse Setup AI to activate', AMBER)
     indicator(left_status, 'Speech-to-text', 'Mic · 6 seconds\nTranscript review required')
     indicator(left_status, 'Web search', 'Browser-based results')
     indicator(right_status, 'App launcher', 'Built-in allowlist\nCustom apps need registration', GREEN)
