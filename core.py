@@ -192,8 +192,11 @@ class Controller:
             if not webbrowser.open(a['url']):
                 raise RuntimeError('Browser launch request fail hui.')
             return 'Browser ko website open request bhej di.'
+        target_handle = None
         if kind in {'type_window', 'key_window'}:
             import desktop
+            import ctypes
+            target_handle = desktop.match_window(a['title']).handle
             desktop.focus(a['title'])
         import pyautogui as pg
         pg.FAILSAFE = True
@@ -211,9 +214,13 @@ class Controller:
             for character in a['text']:
                 if self.stop.is_set():
                     raise RuntimeError('Typing stop kar di.')
+                if target_handle is not None and ctypes.windll.user32.GetForegroundWindow() != target_handle:
+                    raise RuntimeError('Target window ka focus badal gaya. Typing rok di; window select karke retry karein.')
                 pg.write(character, interval=0.015)
             return 'Typing input bheja. Text submit nahi kiya.'
         if kind in {'key', 'key_window'}:
+            if target_handle is not None and ctypes.windll.user32.GetForegroundWindow() != target_handle:
+                raise RuntimeError('Target window ka focus badal gaya. Shortcut send nahi kiya.')
             pg.hotkey(*KEYS[a['keys']])
             return 'Keyboard input bheja: ' + a['keys']
         raise ValueError('Action not implemented.')
