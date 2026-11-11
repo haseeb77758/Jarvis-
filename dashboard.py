@@ -182,6 +182,7 @@ def make_dashboard(app):
         tab.pack(side='left')
     btn(header, 'STOP  /  Esc', app.halt, True, True).pack(side='right', padx=(6, 16), pady=10)
     btn(header, 'Resume', app.resume, compact=True).pack(side='right', padx=4, pady=10)
+    btn(header, 'Connect GitHub', app.connect_github, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Update Jarvis', app.update_jarvis, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'AI Sandbox', app.open_sandbox, compact=True).pack(side='right', padx=4, pady=10)
