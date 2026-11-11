@@ -365,7 +365,7 @@ def _looks_like_echo(user_text, answer):
     import difflib
     import re
     def compact(value):
-        return " ".join(re.findall(r"\\w+", value.casefold()))
+        return " ".join(re.findall(r"\w+", value.casefold()))
     question = compact(user_text)
     response = compact(answer)
     if not question or not response:
