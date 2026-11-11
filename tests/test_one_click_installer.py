@@ -34,6 +34,34 @@ class OneClickInstallerTests(unittest.TestCase):
             self.assertFalse((destination / "Jarvis.exe").exists())
             self.assertFalse((destination / ".env").exists())
 
+    def test_local_runtime_test_selection_does_not_run_store_or_release_audits(self):
+        patterns = installer.LOCAL_RUNTIME_TESTS
+        self.assertIn("test_core.py", patterns)
+        self.assertIn("test_desktop_voice_memory.py", patterns)
+        self.assertTrue(all("store" not in item for item in patterns))
+        self.assertTrue(all("source_package" not in item for item in patterns))
+        self.assertTrue(all("one_click_installer" not in item for item in patterns))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "tests").mkdir()
+            for name in patterns:
+                (root / "tests" / name).write_text("import unittest\\n", encoding="utf-8")
+            with patch.object(installer, "run") as runner:
+                installer.run_local_tests(Path("python.exe"), root)
+            self.assertEqual(runner.call_count, len(patterns))
+            for call in runner.call_args_list:
+                self.assertEqual(call.args[0:6], ("python.exe", "-m", "unittest", "discover", "-s", "tests"))
+                self.assertIn(call.args[7], patterns)
+
+    def test_missing_runtime_test_fails_without_creating_shortcuts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "tests").mkdir()
+            with patch.object(installer, "run") as runner:
+                with self.assertRaises(FileNotFoundError):
+                    installer.run_local_tests(Path("python.exe"), root)
+                runner.assert_not_called()
+
     def test_runtime_uses_virtual_environment_not_unsigned_exe(self):
         path = Path("C:/Jarvis")
         self.assertEqual(installer.installed_python(path), path / ".venv" / "Scripts" / "python.exe")
