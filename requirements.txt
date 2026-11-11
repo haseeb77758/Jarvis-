@@ -2,5 +2,7 @@ Pillow>=10,<13
 PyAutoGUI==0.9.54
 pywinauto==0.6.9; sys_platform == 'win32'
 pywin32>=306; sys_platform == 'win32'
-faster-whisper>=1.1,<2
+faster-whisper==1.2.1
+# PyAV 19 removed metadata_errors, still used by faster-whisper 1.2.1.
+av>=18,<19
 sounddevice>=0.5,<1
