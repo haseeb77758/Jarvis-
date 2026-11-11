@@ -9,7 +9,8 @@ import shutil
 import tempfile
 import threading
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
+from datetime import datetime
 from urllib.request import Request, build_opener, ProxyHandler
 
 MODEL = 'qwen2.5:1.5b'
@@ -54,7 +55,8 @@ def validate(action):
     fields = {
         'launch': {'app'}, 'launch_custom': {'alias'}, 'website': {'url'}, 'folder': {'name'},
         'note': {'name', 'text'}, 'find': {'query'}, 'screenshot': set(),
-        'volume': {'direction'},
+        'volume': {'direction'}, 'web_search': {'query'}, 'youtube_search': {'query'},
+        'clock': set(),
         'click': {'x', 'y'}, 'type': {'text'}, 'key': {'keys'},
         'windows': set(), 'inspect': {'title'}, 'focus': {'title'},
         'wait_window': {'title'}, 'invoke': {'title', 'name'},
@@ -67,6 +69,8 @@ def validate(action):
             raise ValueError(f'{key} khali ya invalid hai.')
     if kind in {'inspect', 'focus', 'wait_window', 'invoke', 'type_window', 'key_window'} and any(len(action[k]) > 250 for k in fields[kind] - {'text', 'keys'}):
         raise ValueError('Window/button naam 250 characters se chhota rakhein.')
+    if kind in {'web_search', 'youtube_search'} and (len(action['query']) > 180 or any(ord(c) < 32 for c in action['query'])):
+        raise ValueError('Search query invalid ya bohat lambi hai.')
     if kind == 'volume' and action['direction'] not in {'up', 'down', 'mute'}:
         raise ValueError('Volume direction invalid hai.')
     if kind == 'launch' and action['app'] not in APP_NAMES:
@@ -97,6 +101,12 @@ def parse_command(text):
     low = text.lower()
     volume_commands = {'volume up': 'up', 'volume down': 'down', 'volume mute': 'mute',
                        'awaz barhao': 'up', 'awaz kam karo': 'down', 'awaz band karo': 'mute'}
+    if low in ('time', 'what time is it', 'kitne baje hain', 'date', 'aaj ki date'):
+        return {'action': 'clock'}
+    for prefix, kind in [('google:', 'web_search'), ('search web:', 'web_search'),
+                         ('youtube:', 'youtube_search'), ('play youtube:', 'youtube_search')]:
+        if low.startswith(prefix):
+            return validate({'action': kind, 'query': text[len(prefix):].strip()})
     if low in volume_commands:
         return validate({'action': 'volume', 'direction': volume_commands[low]})
     if low in ('windows', 'list windows', 'show windows'):
@@ -161,6 +171,8 @@ class Controller:
         if self.stop.is_set():
             raise RuntimeError('Stopped. Resume dabayein.')
         kind = a['action']
+        if kind == 'clock':
+            return datetime.now().astimezone().strftime('Local time: %Y-%m-%d %I:%M %p %Z')
         if kind == 'folder':
             p = safe_child(self.workspace, a['name'])
             p.mkdir(exist_ok=False)
@@ -194,9 +206,12 @@ class Controller:
         if kind == 'launch':
             self.launch(a['app'])
             return 'Launch request bhej di: ' + a['app']
-        if kind == 'website':
+        if kind in {'website', 'web_search', 'youtube_search'}:
             import webbrowser
-            if not webbrowser.open(a['url']):
+            url = a['url'] if kind == 'website' else (
+                'https://www.google.com/search?' + urlencode({'q': a['query']}) if kind == 'web_search'
+                else 'https://www.youtube.com/results?' + urlencode({'search_query': a['query']}))
+            if not webbrowser.open(url):
                 raise RuntimeError('Browser launch request fail hui.')
             return 'Browser ko website open request bhej di.'
         target_handle = None
@@ -294,6 +309,9 @@ class LocalAI:
                       '{"action":"inspect","title":"window title"}; '
                       '{"action":"invoke","title":"window title","name":"exact observed button name"}; '
                       '{"action":"type_window","title":"window title","text":"single line ASCII text explicitly requested by user"}. '
+                      '{"action":"web_search","query":"search words"}; '
+                      '{"action":"youtube_search","query":"video words"}; '
+                      '{"action":"clock"}; {"action":"volume","direction":"up|down|mute"}. '
                       'After launching an app, add wait_window and focus before typing. Never invent a button name. '
                       'No other actions. No shell commands. '
                       'Do not claim success. User will review and approve each action. '
