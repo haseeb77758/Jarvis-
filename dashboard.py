@@ -9,6 +9,7 @@ from pathlib import Path
 import platform
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
+from chat_ui import ChatComposer, on_return, preset_prompt
 
 BG = '#07111d'
 PANEL = '#101e2d'
@@ -162,8 +163,8 @@ def make_dashboard(app):
     root = app.root
     root.configure(bg=BG)
     root.title('HASEEB AI  |  JARVIS — Desktop Intelligence')
-    root.geometry('1280x720')
-    root.minsize(1040, 620)
+    root.geometry('1260x780')
+    root.minsize(980, 620)
 
     header = tk.Frame(root, bg=DEEP, height=54, highlightbackground=LINE, highlightthickness=1)
     header.pack(fill='x')
@@ -172,7 +173,7 @@ def make_dashboard(app):
     identity.pack(side='left', padx=(18, 30), pady=7)
     label(identity, 'H A S E E B  A I', 13, CYAN, True, bg=DEEP).pack(anchor='w')
     label(identity, 'Created by Haseeb Crafts', 8, MUTED, bg=DEEP).pack(anchor='w')
-    for title, command in [('Intelligence', lambda: app.entry.focus_set()),
+    for title, command in [('AI Chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set())),
                            ('Notes', lambda: note_window(app)),
                            ('Tasks', lambda: tasks_window(app))]:
         tab = tk.Button(header, text=title, command=command, bg=DEEP, fg=CYAN if title == 'Intelligence' else MUTED,
@@ -187,15 +188,15 @@ def make_dashboard(app):
 
     body = tk.Frame(root, bg=BG)
     body.pack(fill='both', expand=True, padx=12, pady=(12, 10))
-    body.grid_columnconfigure(0, minsize=210)
+    body.grid_columnconfigure(0, minsize=194)
     body.grid_columnconfigure(1, weight=1)
-    body.grid_columnconfigure(2, minsize=240)
+    body.grid_columnconfigure(2, minsize=207)
     body.grid_rowconfigure(0, weight=1)
 
     sidebar = panel(body)
     sidebar.grid(row=0, column=0, sticky='nsew', padx=(0, 11))
     sidebar.grid_propagate(False)
-    sidebar.configure(width=214)
+    sidebar.configure(width=198)
     clock = label(sidebar, '--:--', 25, TEXT)
     clock.pack(anchor='w', padx=15, pady=(16, 0))
     date_label = label(sidebar, '', 9, MUTED, wraplength=185, justify='left')
@@ -239,65 +240,61 @@ def make_dashboard(app):
 
     center = tk.Frame(body, bg=BG)
     center.grid(row=0, column=1, sticky='nsew')
-    hub = panel(center)
-    hub.pack(fill='x')
-    label(hub, 'ASSISTANT CORE', 9, CYAN, True).pack(anchor='w', padx=14, pady=(11, 1))
-    top = tk.Frame(hub, bg=PANEL)
-    top.pack(fill='x', padx=10, pady=(0, 6))
-    left_status = tk.Frame(top, bg=PANEL, width=196)
-    left_status.pack(side='left', fill='y')
-    left_status.pack_propagate(False)
-    orb_wrap = tk.Frame(top, bg=PANEL)
-    orb_wrap.pack(side='left', fill='both', expand=True)
-    right_status = tk.Frame(top, bg=PANEL, width=196)
-    right_status.pack(side='right', fill='y')
-    right_status.pack_propagate(False)
-    def indicator(target, heading, body_text, color=CYAN):
-        item = panel(target, PANEL_2)
-        item.pack(fill='x', pady=4)
-        label(item, '●  ' + heading, 9, color, True, bg=PANEL_2).pack(anchor='w', padx=10, pady=(8, 2))
-        label(item, body_text, 8, MUTED, bg=PANEL_2, wraplength=169, justify='left').pack(anchor='w', padx=11, pady=(0, 8))
-    indicator(left_status, 'AI provider', 'Ollama runs on this PC\nUse Setup AI to activate', AMBER)
-    indicator(left_status, 'Speech-to-text', 'Mic · 6 seconds\nTranscript review required')
-    indicator(left_status, 'Web search', 'Browser-based results')
-    indicator(right_status, 'App launcher', 'Built-in allowlist\nCustom apps need registration', GREEN)
-    indicator(right_status, 'Screen input', 'Off by default\nReview + countdown', AMBER)
-    indicator(right_status, 'Local memory', 'Explicit preferences\nand reviewed shortcuts', GREEN)
-    draw_orb(orb_wrap)
-    label(hub, 'Desktop actions run only after the existing permission checks.', 9, MUTED).pack(anchor='w', padx=14, pady=(0, 10))
-
     conversation = panel(center, DEEP)
-    conversation.pack(fill='both', expand=True, pady=(10, 0))
+    conversation.pack(fill='both', expand=True)
+    intro = tk.Frame(conversation, bg=DEEP)
+    intro.pack(fill='x', padx=17, pady=(15, 2))
+    label(intro, 'JARVIS  /  AI CHAT', 15, CYAN, True, bg=DEEP).pack(anchor='w')
+    label(intro, 'Ask anything in Roman Urdu or English. Answers come from your Ollama model on this PC.',
+          9, MUTED, bg=DEEP, wraplength=650, justify='left').pack(anchor='w', pady=(2, 0))
     controls = tk.Frame(conversation, bg=DEEP)
-    controls.pack(fill='x', padx=12, pady=(10, 4))
-    label(controls, 'CONVERSATION', 9, CYAN, True, bg=DEEP).pack(side='left', padx=(0, 10))
-    app.mode.set('Computer commands')
+    controls.pack(fill='x', padx=14, pady=(7, 7))
+    app.mode.set('Local AI chat')
     style = ttk.Style()
     style.theme_use('clam')
     style.configure('Jarvis.TCombobox', fieldbackground=PANEL_2, background=PANEL_2, foreground=TEXT)
     app.select = ttk.Combobox(controls, textvariable=app.mode, state='readonly', width=19,
                               style='Jarvis.TCombobox',
-                              values=['Computer commands', 'Local AI chat', 'AI action plan'])
+                              values=['Local AI chat', 'Computer commands', 'AI action plan'])
     app.select.pack(side='left', padx=4)
     btn(controls, 'New chat', app.clear, compact=True).pack(side='right', padx=3)
-    btn(controls, 'Save plan', app.save_plan, compact=True).pack(side='right', padx=3)
-    btn(controls, 'Memory', app.show_memory, compact=True).pack(side='right', padx=3)
-    app.log = tk.Text(conversation, bg=DEEP, fg=TEXT, insertbackground=CYAN,
-                      relief='flat', wrap='word', font=('Segoe UI', 10),
-                      padx=16, pady=10, state='disabled', spacing3=5,
-                      selectbackground='#235265', highlightthickness=0)
-    app.log.pack(fill='both', expand=True, padx=10, pady=3)
-    app.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 9, 'bold'))
+    btn(controls, 'Desktop mode', lambda: (app.mode.set('Computer commands'), app.entry.focus_set()),
+        compact=True).pack(side='right', padx=3)
+    btn(controls, 'AI chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set()),
+        compact=True).pack(side='right', padx=3)
+    app.log = tk.Text(conversation, bg=PANEL, fg=TEXT, insertbackground=CYAN,
+                      relief='flat', wrap='word', font=('Segoe UI', 11),
+                      padx=19, pady=14, state='disabled', spacing3=9,
+                      selectbackground='#235265', highlightthickness=1,
+                      highlightbackground=LINE)
+    app.log.pack(fill='both', expand=True, padx=13, pady=(3, 7))
+    app.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=12)
+    app.log.tag_config('user', foreground='#a8beec', font=('Segoe UI', 10, 'bold'))
+    app.log.tag_config('error', foreground='#ffab9f')
+    prompts = tk.Frame(conversation, bg=DEEP)
+    prompts.pack(fill='x', padx=14, pady=(0, 4))
+    label(prompts, 'TRY:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
+    for title, prompt in [
+        ('Salam Jarvis', 'Salam Jarvis, mujhe apna introduction do.'),
+        ('Website ideas', 'Mujhe ek business website ke 3 creative ideas do.'),
+        ('Content script', 'Haseeb Crafts ke liye 15 second ki video script likho.'),
+    ]:
+        btn(prompts, title, lambda p=prompt: (app.mode.set('Local AI chat'), preset_prompt(app.entry, p)),
+            compact=True).pack(side='left', padx=3)
     footer = tk.Frame(conversation, bg=DEEP)
-    footer.pack(fill='x', padx=12, pady=(6, 10))
-    app.entry = tk.Entry(footer, bg=PANEL, fg=TEXT, insertbackground=CYAN,
-                         relief='flat', font=('Segoe UI', 11), highlightthickness=1,
-                         highlightbackground=LINE, highlightcolor=CYAN)
-    app.entry.pack(side='left', fill='x', expand=True, ipady=11)
-    app.entry.bind('<Return>', lambda _e: app.submit())
-    app.send = btn(footer, '➤  Send', app.submit, accent=True)
+    footer.pack(fill='x', padx=13, pady=(3, 5))
+    app.entry = ChatComposer(footer, bg=PANEL_2, fg=TEXT, insertbackground=CYAN,
+                            relief='flat', font=('Segoe UI', 11), height=3, wrap='word',
+                            padx=12, pady=9, highlightthickness=1,
+                            highlightbackground=LINE, highlightcolor=CYAN,
+                            undo=True)
+    app.entry.pack(side='left', fill='both', expand=True)
+    app.entry.bind('<Return>', lambda event: on_return(event, app.submit))
+    app.send = btn(footer, 'SEND', app.submit, accent=True)
     app.send.pack(side='right', padx=(9, 0))
     btn(footer, 'Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
+    label(conversation, 'ENTER to send   ·   SHIFT+ENTER for new line   ·   No cloud API key needed',
+          8, MUTED, bg=DEEP).pack(anchor='w', padx=15, pady=(0, 7))
     voice_footer = tk.Frame(conversation, bg=DEEP)
     voice_footer.pack(fill='x', padx=12, pady=(0, 8))
     btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=3)
@@ -311,7 +308,7 @@ def make_dashboard(app):
 
     activity = panel(body)
     activity.grid(row=0, column=2, sticky='nsew', padx=(11, 0))
-    activity.configure(width=238)
+    activity.configure(width=218)
     activity.grid_propagate(False)
     label(activity, 'ACTIVITY', 13, TEXT, True).pack(anchor='w', padx=15, pady=(16, 10))
     label(activity, 'Only actual outcomes appear here.\nNo background monitoring.', 9, MUTED,
