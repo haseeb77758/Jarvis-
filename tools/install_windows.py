@@ -18,6 +18,18 @@ from package_source import source_files
 
 APP_NAME = "HASEEB AI - Jarvis"
 
+# These suites exercise desktop/voice/safety behavior. Store publishing, GitHub
+# packaging and release tests require repository-only documents and CI files;
+# those must stay in GitHub Actions, not block a user's local installation.
+LOCAL_RUNTIME_TESTS = (
+    "test_core.py",
+    "test_desktop_voice_memory.py",
+    "test_safety_regressions.py",
+    "test_stonic_tools.py",
+    "test_stonic_volume.py",
+    "test_video_desktop_features.py",
+)
+
 
 def target_directory() -> Path:
     local = os.environ.get("LOCALAPPDATA")
@@ -46,6 +58,16 @@ def copy_source(destination: Path) -> int:
         shutil.copy2(origin, target)
         copied += 1
     return copied
+
+
+def run_local_tests(python: Path, destination: Path) -> None:
+    """Validate installed Jarvis runtime without unrelated Store/CI release tests."""
+    for test_file in LOCAL_RUNTIME_TESTS:
+        if not (destination / "tests" / test_file).is_file():
+            raise FileNotFoundError("Required Jarvis runtime test missing: " + test_file)
+        run(str(python), "-m", "unittest", "discover", "-s", "tests",
+            "-p", test_file, "-v", cwd=destination)
+    print("PASS: All local Jarvis runtime checks completed.")
 
 
 def create_shortcuts(destination: Path, pythonw: Path) -> list[Path]:
@@ -90,8 +112,8 @@ def install(agree: bool = False) -> Path:
     if not python.is_file():
         run(sys.executable, "-m", "venv", str(destination / ".venv"), cwd=destination)
     run(str(python), "-m", "pip", "install", "-r", str(destination / "requirements.txt"), cwd=destination)
-    print("Running local unit tests before installing shortcuts...")
-    run(str(python), "-m", "unittest", "discover", "-s", "tests", "-v", cwd=destination)
+    print("Running Jarvis runtime tests before installing shortcuts (Store publishing tests stay in GitHub CI)...")
+    run_local_tests(python, destination)
     # Check the application compiles before a shortcut could launch it.
     import compileall
     if not compileall.compile_file(str(destination / "app.py"), quiet=1):
