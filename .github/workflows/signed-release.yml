@@ -1,0 +1,71 @@
+name: Trusted signed Jarvis Windows release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Require publisher signing certificate
+        shell: pwsh
+        env:
+          JARVIS_SIGN_PFX_BASE64: ${{ secrets.JARVIS_SIGN_PFX_BASE64 }}
+          JARVIS_SIGN_PFX_PASSWORD: ${{ secrets.JARVIS_SIGN_PFX_PASSWORD }}
+        run: |
+          if (-not $env:JARVIS_SIGN_PFX_BASE64 -or -not $env:JARVIS_SIGN_PFX_PASSWORD) {
+            throw 'Cannot produce trusted signed release: set JARVIS_SIGN_PFX_BASE64 and JARVIS_SIGN_PFX_PASSWORD repository secrets to a valid publicly trusted publisher code-signing certificate. Unsigned outputs are never uploaded by this workflow.'
+          }
+          Write-Host 'Publisher signing secrets are configured (certificate will be validated before use).'
+      - name: Install trusted-release dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: Test commands and desktop safety
+        run: python -m unittest discover -s tests -v
+      - name: Verify Windows desktop smoke test
+        run: python tools/windows_smoke.py
+      - name: Prepare bundled voice model
+        env:
+          HF_HUB_DISABLE_XET: '1'
+        run: python tools/prepare_voice_model.py
+      - name: Verify synthetic speech and recognition
+        run: python tools/voice_smoke.py
+      - name: Build inspectable Windows distribution
+        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name Jarvis --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "build-assets/voice-model;voice-model" app.py
+      - name: Verify executable startup
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath '.\dist\Jarvis\Jarvis.exe' -ArgumentList '--self-test' -PassThru
+          if (-not $app.WaitForExit(180000)) {
+            $app.Kill()
+            throw 'Jarvis built executable self-test timed out.'
+          }
+          if ($app.ExitCode -ne 0) {
+            throw "Jarvis executable self-test failed: $($app.ExitCode)"
+          }
+      - name: Sign every bundled EXE DLL and PYD and verify
+        shell: pwsh
+        env:
+          JARVIS_SIGN_PFX_BASE64: ${{ secrets.JARVIS_SIGN_PFX_BASE64 }}
+          JARVIS_SIGN_PFX_PASSWORD: ${{ secrets.JARVIS_SIGN_PFX_PASSWORD }}
+        run: |
+          ./tools/sign_release.ps1 -Distribution 'dist/Jarvis' -CertificateBase64 $env:JARVIS_SIGN_PFX_BASE64 -CertificatePassword $env:JARVIS_SIGN_PFX_PASSWORD
+      - name: Archive only after signature checks pass
+        shell: pwsh
+        run: |
+          Compress-Archive -LiteralPath 'dist/Jarvis' -DestinationPath 'dist/Jarvis-SIGNED-Windows-x64.zip' -CompressionLevel Optimal -Force
+          Get-FileHash 'dist/Jarvis-SIGNED-Windows-x64.zip' -Algorithm SHA256 | Format-List
+      - name: Upload signed Windows distribution
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jarvis-TRUSTED-SIGNED-Windows-x64
+          path: dist/Jarvis-SIGNED-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14

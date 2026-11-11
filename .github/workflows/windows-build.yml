@@ -59,7 +59,7 @@ jobs:
       - name: Upload Windows application
         uses: actions/upload-artifact@v7
         with:
-          name: Jarvis-Single-EXE-Windows-x64
+          name: Jarvis-UNSIGNED-Development-Windows-x64
           path: dist/Jarvis.exe
           if-no-files-found: error
           retention-days: 14
