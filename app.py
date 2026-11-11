@@ -8,10 +8,11 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 import webbrowser
 import shutil
+import subprocess
 import re
 from memory import PreferenceStore
 from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
-from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model
+from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model, ollama_binary, ollama_status, MODEL
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
 BORDER, SURFACE, DEEP = '#253b4d', '#142537', '#0b1521'
@@ -38,6 +39,7 @@ class App:
         self.control = Controller(Path.home(), self.stop, self.store.apps)
         self.ai = LocalAI()
         self.mode = tk.StringVar(value='Computer commands')
+        self.ai_status = tk.StringVar(value='OLLAMA · CHECKING')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
         self.permission = tk.BooleanVar(value=False)
@@ -46,6 +48,7 @@ class App:
         root.bind('<Escape>', lambda e: self.halt())
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(100, self.poll)
+        root.after(600, self.check_ollama)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
         self.say('HASEEB AI', 'Salam Haseeb bhai! Chrome kholo, calculator kholo, folder banao: Client Work, find: invoice, ya screenshot likhein.\nFree local AI ke liye Setup local AI button use karein. Cloud chat button pehle wali online app kholta hai; woh computer control nahi karti.')
@@ -270,21 +273,77 @@ class App:
         if self.pending and not self.stop.is_set():
             self.approve(self.pending.pop(0), from_plan=True)
 
+    def check_ollama(self):
+        """Refresh the local status label without blocking the tkinter UI."""
+        if not self.root.winfo_exists():
+            return
+        def check():
+            state = ollama_status()
+            self.events.put((self.generation, 'ollama_status', state, '', None))
+        threading.Thread(target=check, daemon=True).start()
+
     def setup_ai(self):
+        """Guided local setup: explicit approval for official Ollama and model."""
         if self.busy:
             return
         if self.stop.is_set():
             self.say('HASEEB AI', 'Pehle Resume dabayein.')
             return
-        installed = Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs/Ollama/ollama.exe'
-        if not installed.is_file() and not shutil.which('ollama.exe'):
-            if messagebox.askokcancel('Install local AI runtime',
-                'Local AI ke liye Ollama install karna hoga. Official download page kholun?\nInstallation ke baad isi Setup local AI button ko dobara dabayein.', parent=self.root):
+        executable = ollama_binary()
+        if not executable:
+            self.ai_status.set('OLLAMA · INSTALL REQUIRED')
+            if messagebox.askokcancel(
+                'Install official Ollama',
+                'AI jawabat ke liye Ollama alag se install hoga.\n'
+                'Official website kholun? Installer ko apne Windows par confirm karna hoga.\n'
+                'Windows Security settings change nahi hongi.',
+                parent=self.root
+            ):
                 webbrowser.open('https://ollama.com/download/windows')
             return
-        if messagebox.askokcancel('Download free local AI',
-            'qwen2.5:1.5b model approximately 986 MB download hoga. Internet aur disk space chahiye.\nAPI key ya paid plan nahi chahiye. Download shuru karein?', parent=self.root):
-            self.worker(lambda: setup_local_model(self.stop), 'setup')
+        self.ai_status.set('OLLAMA · CHECKING')
+        self.worker(lambda: ollama_status(executable=executable), 'setup_status')
+
+    def confirm_model_setup(self, state):
+        if state == 'ready':
+            self.ai_status.set('OLLAMA · READY')
+            self.mode.set('Local AI chat')
+            self.say('HASEEB AI', 'Ollama model ready hai. Ab neeche apna sawal likhein.')
+            self.entry.focus_set()
+            return
+        if state == 'stopped':
+            self.ai_status.set('OLLAMA · OPEN APP')
+            self.say('AI SETUP', 'Ollama install hai magar background service available nahi. Windows Start menu se Ollama khol kar Setup AI dobara dabayein.')
+            if messagebox.askokcancel(
+                'Ollama is not running',
+                'Ollama Start menu se kholna hoga. Kya Ollama app ko abhi launch karun?',
+                parent=self.root
+            ):
+                executable = ollama_binary()
+                if not executable:
+                    self.say('ERROR', 'Ollama executable nahi mila. Setup AI dabayein.')
+                    return
+                try:
+                    subprocess.Popen([executable, 'serve'], shell=False,
+                                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+                    self.say('AI SETUP', 'Ollama local server start karne ki request bhej di. Setup AI dobara dabayein.')
+                except OSError as exc:
+                    self.say('ERROR', 'Ollama start nahi hua: ' + str(exc))
+            return
+        if state == 'model_missing':
+            self.ai_status.set('OLLAMA · MODEL NEEDED')
+            if messagebox.askokcancel(
+                'Install local AI model',
+                'Ollama chal raha hai, lekin ' + MODEL + ' model missing hai.\n'
+                'Lagbhag 1 GB model download hoga. Internet aur disk space required.\n'
+                'Model apne PC par chalega; cloud API key nahi chahiye.\n'
+                'Download shuru karun?',
+                parent=self.root
+            ):
+                self.worker(lambda: setup_local_model(self.stop), 'setup')
+            return
+        self.ai_status.set('OLLAMA · NOT INSTALLED')
+        self.say('AI SETUP', 'Ollama install nahi. Setup AI button se official site kholo.')
 
     def choose(self):
         if self.busy:
@@ -422,6 +481,14 @@ class App:
                     self.halt()
                     self.root.deiconify()
                     continue
+                if kind == 'ollama_status':
+                    self.ai_status.set({
+                        'ready': 'OLLAMA · READY',
+                        'model_missing': 'OLLAMA · MODEL NEEDED',
+                        'missing': 'OLLAMA · INSTALL REQUIRED',
+                        'stopped': 'OLLAMA · OPEN APP',
+                    }.get(value, 'OLLAMA · CHECKING'))
+                    continue
                 if kind == 'voice_status':
                     if generation == self.generation and not self.stop.is_set():
                         self.status.set(value)
@@ -441,6 +508,13 @@ class App:
                     self.review_voice(value)
                 elif kind == 'screenshot':
                     self.show_screen(value)
+                elif kind == 'setup_status':
+                    self.confirm_model_setup(value)
+                elif kind == 'setup':
+                    self.ai_status.set('OLLAMA · READY')
+                    self.mode.set('Local AI chat')
+                    self.say('AI SETUP', value)
+                    self.entry.focus_set()
                 elif kind == 'ai':
                     self.history = (self.history + [{'role': 'user', 'content': user}, {'role': 'assistant', 'content': value}])[-8:]
                     self.say('HASEEB AI · LOCAL MODEL', value)
