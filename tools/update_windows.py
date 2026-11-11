@@ -37,6 +37,7 @@ REQUIRED = frozenset({
     "tests/test_updater.py",
 })
 LOCAL_TESTS = (
+    "test_private_github_auth.py",
     "test_sandbox_chat.py",
     "test_chat_ui.py", "test_core.py", "test_desktop_voice_memory.py",
     "test_safety_regressions.py", "test_stonic_tools.py",
