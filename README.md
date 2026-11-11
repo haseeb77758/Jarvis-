@@ -29,6 +29,23 @@ The app is unsigned. One-file packaging extracts bundled application libraries i
 
 Extract/clone the repository and double-click **SETUP.bat**. It checks Python 3.10+, creates a local environment, installs dependencies and runs tests. Later, use **START.bat**. Read [the Roman Urdu guide](README-ROMAN-URDU.md) for setup and machine-specific checks.
 
+## Video reference: Stonic-style local desktop control
+
+This update is implemented **in this GitHub Windows desktop project, not AppDeploy**. It adds quick buttons and natural Roman Urdu/English commands alongside existing local voice recognition and safe UI Automation.
+
+| Say or type | Real action |
+| --- | --- |
+| `youtube kholo` / `whatsapp kholo` | Opens the respective HTTPS site in the default browser |
+| `google par search karo: website design` | Opens Google search results |
+| `youtube par dhoondo: Python tutorial` | Opens YouTube search results; it does not auto-select a video |
+| `play pause` / `next song` / `previous song` | Sends standard Windows multimedia keys to the active media player |
+| `whatsapp draft: Assalamualaikum` | Opens a WhatsApp draft link; the user chooses a recipient and manually sends |
+| `windows` / `inspect: Notepad` | Lists/inspects titled Windows apps within defined bounds |
+
+Mic recording is **opt-in** and the recognized transcript must be reviewed before any command executes. The AI plan is bounded to supported actions and sensitive screen input requires explicit permission. This assistant is **not** autonomous full-PC control, always-listening surveillance, a hidden keylogger, or a self-upgrading agent. Actions involving payment, deleting files, or sending messages are not run automatically.
+
+Windows Smart App Control may block unsigned EXE or downloaded CMD files even if GitHub CI passes. Keep Windows security on. Trusted code signing remains necessary for a conventional distributed installer.
+
 ## What works
 
 | Command / mode | Function |
