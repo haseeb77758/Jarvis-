@@ -2,6 +2,8 @@
 
 Created by **Haseeb Crafts**.
 
+> **PERSONAL LOCAL TEST — NO STORE ACCOUNT NEEDED:** Install official Python 3.12, extract the GitHub repository ZIP and open `START-JARVIS-GUI.pyw` using Python. The graphical setup asks permission, installs requirements in an isolated user folder, runs tests and creates Desktop/Start Menu shortcuts. **Do not use the unsigned EXE/CMD** on the PC where Smart App Control blocked them. See [LOCAL-TEST-NO-ID.md](LOCAL-TEST-NO-ID.md). Windows security policies may still block Python source or other components.
+
 > **Personal testing first (Individual developer):** Haseeb Crafts is an unregistered brand, so use your own real identity for Microsoft Partner Center. The [Personal Store Test Guide](PERSONAL-STORE-TEST.md) describes the private/limited audience path, exact Partner Center details needed for the GitHub MSIX workflow, and later commercial options. Do not install the unsigned EXE/CMD on a Smart App Control protected PC. Store approval is not yet complete.
 
 > **Windows 11 Smart App Control update:** The ordinary EXE remains unsigned and may be blocked on protected computers. The new manual **Trusted signed Jarvis Windows release** workflow can create a signed distribution only after the publisher supplies a valid publicly trusted code-signing certificate via secure GitHub Actions secrets. Read [TRUSTED-WINDOWS-RELEASE.md](TRUSTED-WINDOWS-RELEASE.md). A successful unsigned CI build does not resolve Smart App Control.
