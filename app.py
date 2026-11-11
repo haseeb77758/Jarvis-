@@ -23,7 +23,6 @@ class App:
         root.title('JARVIS | HASEEB AI — Windows 11')
         root.geometry('1320x840')
         root.minsize(1060, 650)
-        root.option_add('*Font', 'Segoe UI 10')
         root.configure(bg=BG)
         self.events = queue.Queue()
         self.stop = threading.Event()
