@@ -182,6 +182,7 @@ def make_dashboard(app):
         tab.pack(side='left')
     btn(header, 'STOP  /  Esc', app.halt, True, True).pack(side='right', padx=(6, 16), pady=10)
     btn(header, 'Resume', app.resume, compact=True).pack(side='right', padx=4, pady=10)
+    btn(header, 'Update Jarvis', app.update_jarvis, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Ask Jarvis', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set()), compact=True).pack(side='right', padx=4, pady=10)
     label(header, '', 9, CYAN, bg=DEEP, textvariable=app.ai_status).pack(side='right', padx=(6, 12))
