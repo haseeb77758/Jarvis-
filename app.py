@@ -41,7 +41,8 @@ class App:
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
         self.permission = tk.BooleanVar(value=False)
-        self.make_ui()
+        from dashboard import make_dashboard
+        make_dashboard(self)
         root.bind('<Escape>', lambda e: self.halt())
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(100, self.poll)
@@ -153,6 +154,11 @@ class App:
         self.log.insert('end', str(text) + '\n\n')
         self.log.configure(state='disabled')
         self.log.see('end')
+        if hasattr(self, 'activity_log') and (name in {'RESULT', 'ERROR', 'ACTION ERROR', 'SCREENSHOT', 'PERMISSION'} or name.startswith('PLAN ERROR')):
+            self.activity_log.configure(state='normal')
+            self.activity_log.insert('end', name + '  ·  ' + str(text)[:240] + '\n\n')
+            self.activity_log.configure(state='disabled')
+            self.activity_log.see('end')
         if name in {'RESULT', 'HASEEB AI · LOCAL MODEL', 'ERROR'} and self.speak_enabled.get():
             self.speaker.speak(str(text))
 
