@@ -2,6 +2,8 @@
 
 Created by **Haseeb Crafts**.
 
+> **OFFLINE ANSWERS VIA OLLAMA:** Open Jarvis → **Setup AI** → install official Ollama when prompted, then approve the small `qwen2.5:1.5b` local model download. Jarvis shows local readiness and switches to **Local AI chat** when ready. [No-code Ollama setup](OLLAMA-NO-CODE-SETUP.md). No Smart App Control changes or cloud API key required. The Ollama app must be installed and running separately.
+
 > **PERSONAL LOCAL TEST — NO STORE ACCOUNT NEEDED:** Install official Python 3.12, extract the GitHub repository ZIP and open `START-JARVIS-GUI.pyw` using Python. The graphical setup asks permission, installs requirements in an isolated user folder, runs tests and creates Desktop/Start Menu shortcuts. **Do not use the unsigned EXE/CMD** on the PC where Smart App Control blocked them. See [LOCAL-TEST-NO-ID.md](LOCAL-TEST-NO-ID.md). Windows security policies may still block Python source or other components.
 
 > **Personal testing first (Individual developer):** Haseeb Crafts is an unregistered brand, so use your own real identity for Microsoft Partner Center. The [Personal Store Test Guide](PERSONAL-STORE-TEST.md) describes the private/limited audience path, exact Partner Center details needed for the GitHub MSIX workflow, and later commercial options. Do not install the unsigned EXE/CMD on a Smart App Control protected PC. Store approval is not yet complete.
