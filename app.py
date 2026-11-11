@@ -14,6 +14,7 @@ from memory import PreferenceStore
 from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
 from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model, ollama_binary, ollama_status, MODEL
 from tools.update_windows import check_update, install_update, installed_commit, UpdateError
+from sandbox_chat import SandboxWindow, SandboxSession
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
 BORDER, SURFACE, DEEP = '#253b4d', '#142537', '#0b1521'
@@ -31,6 +32,8 @@ class App:
         self.busy = False
         self.generation = 0
         self.history = []
+        self.sandbox_session = SandboxSession()
+        self.sandbox_window = None
         self.pending = []
         self.last_plan = []
         self.store = PreferenceStore(data_directory)
@@ -83,6 +86,16 @@ class App:
         item.bind('<Enter>', lambda _e: item.configure(bg=hover) if str(item['state']) != 'disabled' else None)
         item.bind('<Leave>', lambda _e: item.configure(bg=base))
         return item
+
+    def open_sandbox(self):
+        """Open the chat-only Ollama conversation space, never desktop controls."""
+        if self.sandbox_window is not None and not self.sandbox_window.closed:
+            if self.sandbox_window.window.winfo_exists():
+                self.sandbox_window.window.deiconify()
+                self.sandbox_window.window.lift()
+                self.sandbox_window.entry.focus_set()
+                return
+        self.sandbox_window = SandboxWindow(self.root, self, self.sandbox_session)
 
     def make_ui(self):
         tk.Frame(self.root, bg=CYAN, height=3).pack(fill='x')
@@ -640,6 +653,8 @@ class App:
         self.button(win, 'Save screenshot locally…', save).pack(pady=(0, 12))
 
     def close(self):
+        if self.sandbox_window is not None and not self.sandbox_window.closed:
+            self.sandbox_window.close()
         self.speaker.stop()
         self.stop.set()
         self.root.destroy()
