@@ -2,6 +2,8 @@
 
 Created by **Haseeb Crafts**.
 
+> **Personal testing first (Individual developer):** Haseeb Crafts is an unregistered brand, so use your own real identity for Microsoft Partner Center. The [Personal Store Test Guide](PERSONAL-STORE-TEST.md) describes the private/limited audience path, exact Partner Center details needed for the GitHub MSIX workflow, and later commercial options. Do not install the unsigned EXE/CMD on a Smart App Control protected PC. Store approval is not yet complete.
+
 > **Windows 11 Smart App Control update:** The ordinary EXE remains unsigned and may be blocked on protected computers. The new manual **Trusted signed Jarvis Windows release** workflow can create a signed distribution only after the publisher supplies a valid publicly trusted code-signing certificate via secure GitHub Actions secrets. Read [TRUSTED-WINDOWS-RELEASE.md](TRUSTED-WINDOWS-RELEASE.md). A successful unsigned CI build does not resolve Smart App Control.
 
 > **Windows 11 Smart App Control blocked Jarvis.exe?** The executable is unsigned. Do **not** disable Windows security. Download the **Jarvis-Source-Windows** ZIP from the latest successful **Windows source package (no unsigned EXE)** GitHub Actions run, extract it, install official Python 3.10+ and run `py -3 RUN-JARVIS.py` inside the extracted source folder. This requires explicit approval for dependency installation, and does not guarantee every PC's security policy allows execution. See [SMART-APP-CONTROL.md](SMART-APP-CONTROL.md). For publicly distributable EXE releases, use a legitimate trusted code-signing certificate.
