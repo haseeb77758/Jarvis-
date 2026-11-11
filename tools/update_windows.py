@@ -28,7 +28,7 @@ MAX_SOURCE_BYTES = 12_000_000
 MAX_SINGLE_FILE = 1_000_000
 MAX_FILES = 250
 REQUIRED = frozenset({
-    "app.py", "chat_ui.py", "core.py", "dashboard.py", "memory.py", "voice.py",
+    "app.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "memory.py", "voice.py",
     "requirements.txt", "tools/install_windows.py", "tools/create_shortcuts.py",
     "tools/update_windows.py", "tests/test_core.py", "tests/test_chat_ui.py",
     "tests/test_updater.py",
