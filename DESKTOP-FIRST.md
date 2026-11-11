@@ -32,7 +32,7 @@ The small model may misunderstand Roman Urdu or complex requests. Unsupported ta
 
 - **Test voice** uses a Windows installed SAPI voice. **Speak replies** reads result/error/chat replies aloud. Urdu/Roman Urdu pronunciation depends on installed voices and may not sound natural.
 - **Mic · 6 seconds** records only after you press it. Choose Auto, Urdu or English. Recording and Whisper transcription happen locally; microphone audio is not uploaded.
-- A transcript appears for review before execution. Cancel lets you edit it. Example English: `Open calculator.` Common Urdu examples include `کروم کھول دو` and `رک جاؤ`.
+- After model preparation, a short beep and Listening now status mark the start of the six-second recording. A transcript appears for review before execution. Cancel lets you edit it. Example English: `Open calculator.` Common Urdu examples include `کروم کھول دو` and `رک جاؤ`.
 - Complex voice instructions use the selected mode. Select AI action plan for generated multi-step actions; select Local AI chat for conversation. The same permission/approval controls apply to spoken commands.
 - No wake word or continuous listening is active. Use the physical/global stop controls while a voice recognition job is busy; saying stop is only recognized during an explicit recording.
 - Tiny Whisper has limited accuracy, especially with noise, accents or mixed Urdu/English. Live-mic and Urdu quality must be tested on your laptop. The build's English test uses synthetic speech, not your microphone.

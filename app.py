@@ -148,7 +148,9 @@ class App:
             return
         self.speaker.stop()
         language = {'Auto': 'auto', 'Urdu': 'ur', 'English': 'en'}[self.voice_language.get()]
-        self.worker(lambda: listen(self.stop, language), 'voice')
+        generation = self.generation
+        notify = lambda text: self.events.put((generation, 'voice_status', text, '', None))
+        self.worker(lambda: listen(self.stop, language, notify), 'voice')
         self.status.set('Preparing mic / recording 6 seconds · STOP cancels')
 
     def setup_voice(self):
@@ -391,6 +393,10 @@ class App:
                 if kind == 'hotkey':
                     self.halt()
                     self.root.deiconify()
+                    continue
+                if kind == 'voice_status':
+                    if generation == self.generation and not self.stop.is_set():
+                        self.status.set(value)
                     continue
                 if kind == 'notice':
                     self.say('NOTICE', value)

@@ -15,13 +15,21 @@ def bundled_model():
     return path if (path / 'model.bin').is_file() else None
 
 
+_MODEL = None
+
+
 def voice_model(download=False):
+    global _MODEL
+    if _MODEL is not None:
+        return _MODEL
     from faster_whisper import WhisperModel
     bundled = bundled_model()
     if bundled:
-        return WhisperModel(str(bundled), device='cpu', compute_type='int8', cpu_threads=2)
-    return WhisperModel('tiny', device='cpu', compute_type='int8', cpu_threads=2,
-                        download_root=str(data_dir()), local_files_only=not download)
+        _MODEL = WhisperModel(str(bundled), device='cpu', compute_type='int8', cpu_threads=2)
+        return _MODEL
+    _MODEL = WhisperModel('tiny', device='cpu', compute_type='int8', cpu_threads=2,
+                          download_root=str(data_dir()), local_files_only=not download)
+    return _MODEL
 
 
 def setup_voice(stop):
@@ -33,7 +41,7 @@ def setup_voice(stop):
     return 'Voice model ready. Mic 6s dabayein; transcript review ke baad Run karein.'
 
 
-def listen(stop, language='auto'):
+def listen(stop, language='auto', notify=None):
     import numpy as np
     import sounddevice as sd
     if stop.is_set():
@@ -43,6 +51,11 @@ def listen(stop, language='auto'):
     except Exception as exc:
         raise RuntimeError('Pehle Setup voice dabayein. Voice model ek dafa download hota hai.') from exc
     try:
+        if notify:
+            notify('Listening now · 6 seconds · STOP cancels')
+        if os.name == 'nt':
+            import winsound
+            winsound.Beep(1000, 120)
         audio = sd.rec(6 * 16000, samplerate=16000, channels=1, dtype='float32')
         deadline = time.monotonic() + 6
         while time.monotonic() < deadline:
@@ -59,6 +72,8 @@ def listen(stop, language='auto'):
         raise RuntimeError('Stopped.')
     if float(np.max(np.abs(audio))) < 0.008:
         raise RuntimeError('Awaaz bohat kam hai. Mic level check karke dobara try karein.')
+    if notify:
+        notify('Transcribing locally · audio stays on this PC')
     segments, info = model.transcribe(audio.reshape(-1), language=None if language == 'auto' else language,
                                       task='transcribe', beam_size=1, vad_filter=False,
                                       condition_on_previous_text=False)
