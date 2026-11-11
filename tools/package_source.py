@@ -49,7 +49,7 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
         "This manifest checks contents, not publisher identity or malware safety.",
         "These files do not include Jarvis.exe. Do not disable Smart App Control.",
         "Official Python required: https://www.python.org/downloads/windows/",
-        "First step: README-START-HERE.txt, then py -3 RUN-JARVIS.py",
+        "First step: README-START-HERE.txt, then double-click INSTALL-JARVIS.cmd",
         "",
         "SHA256   RELATIVE PATH",
     ]
@@ -59,21 +59,19 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
             archive.writestr(f"{FOLDER}/{item.as_posix()}", data)
             manifest.append(f"{hashlib.sha256(data).hexdigest()}   {item.as_posix()}")
         help_text = (
-            "HASEEB AI / JARVIS — SOURCE EDITION FOR WINDOWS 11\n\n"
-            "1. This package contains source files, not an unsigned Jarvis.exe.\n"
-            "2. Extract the complete ZIP into a normal folder.\n"
-            "3. Install official Python 3.10+ with tkinter from:\n"
-            "   https://www.python.org/downloads/windows/\n"
-            "4. Open Terminal in the extracted Jarvis-Source-Windows folder.\n"
-            "5. Run: py -3 RUN-JARVIS.py --check\n"
-            "6. Run: py -3 RUN-JARVIS.py\n"
-            "7. Type YES only if you approve installing the dependencies listed\n"
-            "   in requirements.txt. The launcher runs tests before starting Jarvis.\n"
-            "8. Later, use the same command, or START-JARVIS.cmd if allowed.\n\n"
-            "IMPORTANT: Running Python source does not guarantee that Windows\n"
-            "security policy will permit all components. Do not disable system\n"
-            "protections. Do not run Jarvis as Administrator.\n"
-            "For errors and publisher signing, read SMART-APP-CONTROL.md.\n"
+            "HASEEB AI / JARVIS — WINDOWS 11 ONE-CLICK SETUP\n\n"
+            "1. Extract the complete ZIP (do not launch files inside the ZIP).\n"
+            "2. Open the Jarvis-Source-Windows folder.\n"
+            "3. Double-click INSTALL-JARVIS.cmd. No coding or terminal is needed.\n"
+            "4. If Python 3.12 is missing, approve its official winget install.\n"
+            "5. Type YES to approve Jarvis dependencies and shortcut creation.\n"
+            "6. After setup, double-click HASEEB AI - Jarvis on your Desktop.\n"
+            "7. Optional AI chat still requires local Ollama/model setup.\n\n"
+            "IMPORTANT: This source-based installer does NOT disable Windows\n"
+            "Smart App Control or Defender, and contains no unsigned Jarvis.exe.\n"
+            "Windows policies may still block a component or installation.\n"
+            "Never disable protections or run as Administrator to force it.\n"
+            "Read SMART-APP-CONTROL.md if your PC refuses the installation.\n"
         )
         archive.writestr(f"{FOLDER}/README-START-HERE.txt", help_text)
         archive.writestr(f"{FOLDER}/PACKAGE-MANIFEST.txt", "\n".join(manifest) + "\n")
