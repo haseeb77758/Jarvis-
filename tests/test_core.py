@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch, Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core import Controller, LocalAI, parse_command, parse_plan, safe_child, validate
+from core import Controller, LocalAI, parse_command, parse_plan, safe_child, validate, ollama_status, MODEL
 
 
 class DesktopTests(unittest.TestCase):
@@ -107,6 +107,28 @@ class DesktopTests(unittest.TestCase):
             with patch.dict(os.environ, {'WINDIR': folder}), patch('core.subprocess.Popen') as popen:
                 Controller.launch('notepad')
                 popen.assert_called_once_with([str(target)], shell=False)
+
+    def test_ollama_status_detects_installed_local_model(self):
+        def client(models):
+            fake = Mock()
+            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps({'models': models}).encode()))
+            fake.__exit__ = Mock(return_value=False)
+            transport = Mock()
+            transport.open.return_value = fake
+            return transport
+        ready = client([{'name': MODEL}])
+        self.assertEqual(ollama_status(opener=ready, executable="ollama.exe"), 'ready')
+        request = ready.open.call_args.args[0]
+        self.assertEqual(request.full_url, 'http://127.0.0.1:11434/api/tags')
+        self.assertEqual(ready.open.call_args.kwargs['timeout'], 3)
+        self.assertEqual(ollama_status(opener=client([{'name': 'other:latest'}]), executable="ollama.exe"), 'model_missing')
+        self.assertEqual(ollama_status(opener=client([{'model': MODEL}]), executable="ollama.exe"), 'ready')
+
+    def test_ollama_status_handles_missing_and_stopped_server(self):
+        self.assertEqual(ollama_status(executable=""), 'missing')
+        transport = Mock()
+        transport.open.side_effect = ConnectionError("refused")
+        self.assertEqual(ollama_status(opener=transport, executable="ollama.exe"), 'stopped')
 
     def test_local_ai_protocol_has_fixed_local_url_and_bounded_context(self):
         ai = LocalAI()
