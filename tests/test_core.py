@@ -180,12 +180,14 @@ class DesktopTests(unittest.TestCase):
     def test_chat_never_displays_repeated_echo_as_success(self):
         ai = LocalAI()
         ai.opener = Mock()
-        fake = Mock()
-        fake.__enter__ = Mock(return_value=io.BytesIO(
-            json.dumps({"message": {"content": "Aur sunao!"}}).encode()
-        ))
-        fake.__exit__ = Mock(return_value=False)
-        ai.opener.open.return_value = fake
+        def repeated_response(*_args, **_kwargs):
+            fake = Mock()
+            fake.__enter__ = Mock(return_value=io.BytesIO(
+                json.dumps({"message": {"content": "Aur sunao!"}}).encode()
+            ))
+            fake.__exit__ = Mock(return_value=False)
+            return fake
+        ai.opener.open.side_effect = repeated_response
         with self.assertRaisesRegex(RuntimeError, "repeat"):
             ai.ask([{"role": "user", "content": "aur sunao"}])
         self.assertEqual(ai.opener.open.call_count, 2)
