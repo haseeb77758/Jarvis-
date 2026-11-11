@@ -13,15 +13,16 @@ from memory import PreferenceStore
 from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
 from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model
 
-BG, PANEL, TEXT, MUTED, CYAN = '#080f18', '#122231', '#e5f1f5', '#92a9b9', '#36dccf'
+BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
+BORDER, SURFACE, DEEP = '#253b4d', '#142537', '#0b1521'
 
 
 class App:
     def __init__(self, root, data_directory=None):
         self.root = root
         root.title('JARVIS | HASEEB AI — Windows 11')
-        root.geometry('1240x800')
-        root.minsize(1060, 620)
+        root.geometry('1320x840')
+        root.minsize(1060, 650)
         root.configure(bg=BG)
         self.events = queue.Queue()
         self.stop = threading.Event()
@@ -40,7 +41,8 @@ class App:
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
         self.permission = tk.BooleanVar(value=False)
-        self.make_ui()
+        from dashboard import make_dashboard
+        make_dashboard(self)
         root.bind('<Escape>', lambda e: self.halt())
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(100, self.poll)
@@ -65,23 +67,38 @@ class App:
             user32.UnregisterHotKey(None, 1)
 
     def button(self, parent, text, command, accent=False):
-        return tk.Button(parent, text=text, command=command, bg=CYAN if accent else PANEL,
-                         fg=BG if accent else TEXT, activebackground=CYAN,
-                         relief='flat', padx=13, pady=9, cursor='hand2', font=('Segoe UI', 10))
+        base = CYAN if accent else SURFACE
+        hover = '#a1fff1' if accent else '#204052'
+        item = tk.Button(parent, text=text, command=command, bg=base,
+                         fg=BG if accent else TEXT, activebackground=hover,
+                         activeforeground=BG if accent else TEXT,
+                         relief='flat', bd=0, highlightthickness=1,
+                         highlightbackground=CYAN if accent else BORDER,
+                         padx=15, pady=10, cursor='hand2', font=('Segoe UI', 10, 'bold' if accent else 'normal'))
+        item.bind('<Enter>', lambda _e: item.configure(bg=hover) if str(item['state']) != 'disabled' else None)
+        item.bind('<Leave>', lambda _e: item.configure(bg=base))
+        return item
 
     def make_ui(self):
+        tk.Frame(self.root, bg=CYAN, height=3).pack(fill='x')
         header = tk.Frame(self.root, bg=BG)
         header.pack(fill='x', padx=24, pady=(18, 10))
-        tk.Label(header, text='JARVIS', fg=CYAN, bg=BG, font=('Segoe UI', 23, 'bold')).pack(side='left')
-        tk.Label(header, text='  WINDOWS WORKSPACE\n  Created by Haseeb Crafts', fg=MUTED, bg=BG,
+        tk.Label(header, text='◉', fg=CYAN, bg=BG, font=('Segoe UI', 26)).pack(side='left', padx=(0, 10))
+        tk.Label(header, text='JARVIS', fg=TEXT, bg=BG, font=('Segoe UI', 25, 'bold')).pack(side='left')
+        tk.Label(header, text='  DESKTOP INTELLIGENCE  /  WINDOWS 11\n  Created by Haseeb Crafts', fg=MUTED, bg=BG,
                  justify='left', font=('Segoe UI', 9)).pack(side='left')
         self.button(header, 'STOP / Esc', self.halt, True).pack(side='right', padx=5)
         self.button(header, 'Resume', self.resume).pack(side='right', padx=5)
         self.button(header, 'Setup local AI', self.setup_ai).pack(side='right', padx=5)
         self.button(header, 'Cloud chat ↗', lambda: webbrowser.open(CLOUD_URL)).pack(side='right', padx=5)
-        tk.Label(self.root, textvariable=self.status, fg=MUTED, bg=BG, anchor='w').pack(fill='x', padx=26)
+        statebar = tk.Frame(self.root, bg=DEEP, highlightbackground=BORDER, highlightthickness=1)
+        statebar.pack(fill='x', padx=24, pady=(2, 2))
+        tk.Label(statebar, text='●  SYSTEM STATUS', fg=CYAN, bg=DEEP, font=('Segoe UI', 9, 'bold')).pack(side='left', padx=(13, 18), pady=11)
+        tk.Label(statebar, textvariable=self.status, fg=TEXT, bg=DEEP, anchor='w', font=('Segoe UI', 9)).pack(side='left', fill='x', expand=True)
+        tk.Label(statebar, text='LOCAL  •  PRIVATE  •  REVIEWED ACTIONS', fg=MUTED, bg=DEEP, font=('Segoe UI', 8)).pack(side='right', padx=14)
         tools = tk.Frame(self.root, bg=BG)
         tools.pack(fill='x', padx=24, pady=12)
+        tk.Label(tools, text='QUICK ACTIONS', fg=MUTED, bg=BG, font=('Segoe UI', 9, 'bold')).pack(side='left', padx=(0, 14))
         for text, command in [('Chrome', 'chrome kholo'), ('Notepad', 'notepad kholo'),
                               ('Calculator', 'calculator kholo'), ('Screen', 'screenshot')]:
             self.button(tools, text, lambda c=command: self.submit(c)).pack(side='left', padx=(0, 7))
@@ -101,15 +118,19 @@ class App:
         self.button(voicebar, 'Save last plan', self.save_plan).pack(side='right', padx=4)
         self.button(voicebar, 'Add app', self.add_app).pack(side='right', padx=4)
         self.button(voicebar, 'Updates ↗', lambda: webbrowser.open('https://github.com/haseeb77758/Jarvis-/actions')).pack(side='right', padx=4)
-        loc = tk.Frame(self.root, bg=PANEL)
+        loc = tk.Frame(self.root, bg=SURFACE, highlightbackground=BORDER, highlightthickness=1)
         loc.pack(fill='x', padx=24)
-        tk.Label(loc, text='WORKSPACE  ', fg=CYAN, bg=PANEL).pack(side='left', padx=10)
-        tk.Label(loc, textvariable=self.workspace, fg=TEXT, bg=PANEL, anchor='w').pack(side='left', fill='x', expand=True)
+        tk.Label(loc, text='  WORKSPACE  ', fg=CYAN, bg=SURFACE, font=('Segoe UI', 9, 'bold')).pack(side='left', padx=10, pady=11)
+        tk.Label(loc, textvariable=self.workspace, fg=TEXT, bg=SURFACE, anchor='w').pack(side='left', fill='x', expand=True)
         self.button(loc, 'Choose folder', self.choose).pack(side='right')
-        self.log = tk.Text(self.root, bg=PANEL, fg=TEXT, insertbackground=CYAN, relief='flat', wrap='word',
-                           font=('Segoe UI', 11), padx=18, pady=18, state='disabled')
+        self.log = tk.Text(self.root, bg=DEEP, fg=TEXT, insertbackground=CYAN, relief='flat', wrap='word',
+                           highlightthickness=1, highlightbackground=BORDER,
+                           selectbackground='#245d67', selectforeground=TEXT,
+                           font=('Segoe UI', 11), padx=22, pady=20, state='disabled', spacing3=6)
         self.log.pack(fill='both', expand=True, padx=24, pady=12)
-        self.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'))
+        self.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=10)
+        self.log.tag_config('user', foreground='#a8beec')
+        self.log.tag_config('error', foreground='#ffab9f')
         bottom = tk.Frame(self.root, bg=BG)
         bottom.pack(fill='x', padx=24, pady=(0, 8))
         style = ttk.Style()
@@ -117,7 +138,9 @@ class App:
         self.select = ttk.Combobox(bottom, textvariable=self.mode, state='readonly', width=20,
                                   values=['Computer commands', 'Local AI chat', 'AI action plan'])
         self.select.pack(side='left', padx=(0, 8))
-        self.entry = tk.Entry(bottom, bg=PANEL, fg=TEXT, insertbackground=CYAN, relief='flat', font=('Segoe UI', 12))
+        self.entry = tk.Entry(bottom, bg=SURFACE, fg=TEXT, insertbackground=CYAN, relief='flat',
+                              highlightthickness=1, highlightbackground=BORDER,
+                              highlightcolor=CYAN, font=('Segoe UI', 12))
         self.entry.pack(side='left', fill='x', expand=True, ipady=10)
         self.entry.bind('<Return>', lambda e: self.submit())
         self.send = self.button(bottom, 'Send', self.submit, True)
@@ -127,10 +150,15 @@ class App:
 
     def say(self, name, text):
         self.log.configure(state='normal')
-        self.log.insert('end', name + '\n', 'name')
+        self.log.insert('end', name + '\n', 'error' if 'ERROR' in name else 'user' if name == 'YOU' else 'name')
         self.log.insert('end', str(text) + '\n\n')
         self.log.configure(state='disabled')
         self.log.see('end')
+        if hasattr(self, 'activity_log') and (name in {'RESULT', 'ERROR', 'ACTION ERROR', 'SCREENSHOT', 'PERMISSION'} or name.startswith('PLAN ERROR')):
+            self.activity_log.configure(state='normal')
+            self.activity_log.insert('end', name + '  ·  ' + str(text)[:240] + '\n\n')
+            self.activity_log.configure(state='disabled')
+            self.activity_log.see('end')
         if name in {'RESULT', 'HASEEB AI · LOCAL MODEL', 'ERROR'} and self.speak_enabled.get():
             self.speaker.speak(str(text))
 
@@ -335,7 +363,7 @@ class App:
                 self.last_plan = [action]
                 self.approve(action)
             elif self.mode.get() == 'Computer commands':
-                self.say('COMMAND HELP', 'windows · inspect: Window title · focus: Window title · wait: Window title\nbutton: Window title | Exact button name\nwrite: Window title | Hello Haseeb · press: Window title | ctrl+s\nremember: reply in Roman Urdu · shortcut: saved name\nchrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nFree local AI ke liye Local AI chat / AI action plan select karein.')
+                self.say('COMMAND HELP', 'windows · inspect: Window title · focus: Window title · wait: Window title\nbutton: Window title | Exact button name\nwrite: Window title | Hello Haseeb · press: Window title | ctrl+s\nremember: reply in Roman Urdu · shortcut: saved name\nchrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nvolume up · volume down · volume mute\ngoogle: website design · youtube: python tutorial · kitne baje hain\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nFree local AI ke liye Local AI chat / AI action plan select karein.')
             else:
                 planning = self.mode.get() == 'AI action plan'
                 messages = [{'role': 'user', 'content': text}] if planning else self.history + [{'role': 'user', 'content': text}]
