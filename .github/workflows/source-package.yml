@@ -1,4 +1,4 @@
-name: Windows source package (no unsigned EXE)
+name: Windows one-click installer package
 
 on:
   push:
@@ -24,6 +24,8 @@ jobs:
           python-version: '3.12'
       - name: Check source packaging tests (no external dependencies)
         run: python -m unittest discover -s tests -p test_source_package.py -v
+      - name: Test one-click installer without changing host
+        run: python -m unittest discover -s tests -p test_one_click_installer.py -v
       - name: Assemble source ZIP
         run: python tools/package_source.py --output dist/Jarvis-Source-Windows.zip
       - name: Verify archive file list and checksums
@@ -31,7 +33,7 @@ jobs:
       - name: Upload source ZIP
         uses: actions/upload-artifact@v7
         with:
-          name: Jarvis-Source-Windows
+          name: Jarvis-One-Click-Windows
           path: dist/Jarvis-Source-Windows.zip
           if-no-files-found: error
           retention-days: 14
