@@ -88,6 +88,40 @@ Their providers are not constructed or connected in the current runtime.
   AI-Coustics optional extra, when deliberately enabled, may need its own
   plugin and assets. This is not required to speak to Jarvis.
 
+## Fix: "LiveKit dependencies/model download nahi hui"
+
+Older installers ran `python livekit_agent.py download-files` **for every
+LiveKit GPT-Live-1 setup**, even with AI-Coustics enhancement unchecked. This
+attempted to fetch optional models/assets that the normal realtime Cloud
+voice does not use. A failure in either pip installation or the unrelated
+model download produced the same vague message, so the earlier screenshot
+does **not** identify which step actually failed.
+
+The corrected installer now:
+
+1. Installs only `livekit-agents` and `python-dotenv` in a separate Windows
+   Python 3.12 environment; previously installed packages are not deleted.
+2. Skips `download-files` in the recommended normal GPT-Live-1/marin voice
+   path. **Leave AI-Coustics unchecked** for the first successful test.
+3. Downloads optional AI-Coustics packages/assets only if you explicitly
+   check that option and approve the separate installation.
+4. Runs an offline import check of LiveKit, `sounddevice` and its SDK after
+   the install. It never starts a paid cloud session during setup.
+5. If installation fails, displays the failed stage (e.g. `pip install`,
+   `optional AI-Coustics model download`, or `SDK preflight`) and writes
+   its redacted error under `last-session.log` for **View last LiveKit
+   error / diagnostic log**. Do not share unredacted files or credentials.
+6. After setup failure, blocks the metered session prompt until **Install /
+   repair** succeeds.
+
+**Recovery:** Click **No** on the metered-session popup in the old version,
+update Jarvis from GitHub and restart. Open **LiveKit setup**, keep the
+AI-Coustics checkbox OFF, then click **Install / repair LiveKit voice tools**.
+When READY appears, select the 5-minute limit and click **Talk Live**.
+If pip fails because internet or disk space is unavailable, inspect the
+redacted local error and address that specific issue instead of repeatedly
+clicking Start.
+
 ## Windows issue: Talk Live opens and then closes in seconds
 
 If **Talk Live** flashes a Windows voice terminal and the session stops after
