@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+from urllib.parse import urlsplit
 
 ENV_KEYS = ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET")
 
@@ -27,6 +28,64 @@ def app_data_root():
 
 def credentials_path():
     return app_data_root() / ".env.local"
+
+
+def session_log_path():
+    """Local-only diagnostic log, never included in GitHub source or updates."""
+    return app_data_root() / "last-session.log"
+
+
+def _redact_secrets(content):
+    """Redact locally configured LiveKit URL/key/secret from human-readable logs."""
+    try:
+        path = credentials_path()
+        if not path.is_file() or path.stat().st_size > 8192:
+            return content
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            if "=" not in line or line.lstrip().startswith("#"):
+                continue
+            name, value = line.split("=", 1)
+            if name.strip() in ENV_KEYS:
+                secret = value.strip().strip("'\"")
+                if secret:
+                    content = content.replace(secret, "[REDACTED]")
+    except (OSError, ValueError, UnicodeError):
+        pass
+    return content
+
+
+def safe_log_tail(limit=1500):
+    """Return a small, redacted excerpt, without uploading local log contents."""
+    try:
+        path = session_log_path()
+        if not path.is_file() or path.stat().st_size > 1_000_000:
+            return ""
+        with path.open("rb") as src:
+            src.seek(max(0, path.stat().st_size - 16_000))
+            result = src.read().decode("utf-8", "replace")[-limit:]
+        return _redact_secrets(result)
+    except (OSError, UnicodeError, ValueError):
+        return ""
+
+def credential_issue():
+    """Validate the local URL shape without making any network request."""
+    if not configured():
+        return "LiveKit credentials missing: URL, API key aur secret local file mein save karein."
+    try:
+        entries = {}
+        for line in credentials_path().read_text(encoding="utf-8-sig").splitlines():
+            if "=" not in line or line.lstrip().startswith("#"):
+                continue
+            key, value = line.split("=", 1)
+            entries[key.strip()] = value.strip().strip("'\"")
+        address = urlsplit(entries["LIVEKIT_URL"])
+        if address.scheme != "wss" or not address.hostname or address.username or address.password or address.query or address.fragment:
+            return "LIVEKIT_URL must be a wss:// project URL, not the project ID or dashboard URL."
+        if any(entries[key].upper().startswith(("YOUR_", "PLACEHOLDER")) for key in ENV_KEYS):
+            return "Demo placeholders hata kar asli LiveKit project credentials save karo."
+    except (ValueError, KeyError, OSError, UnicodeError):
+        return "LiveKit local credentials file invalid hai."
+    return None
 
 
 def environment_python():
@@ -99,6 +158,32 @@ def python_command():
     )
 
 
+def preflight_runtime():
+    """Verify imports in the optional venv, without microphone or Cloud inference."""
+    python = environment_python()
+    if not python.is_file():
+        raise LiveKitSetupError("LiveKit runtime missing hai. Install / repair LiveKit voice tools dabao.")
+    try:
+        completed = subprocess.run(
+            [str(python), "-c", "from dotenv import load_dotenv; from livekit.agents import Agent, AgentServer, AgentSession, inference"],
+            cwd=str(app_data_root()), capture_output=True, timeout=25, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise LiveKitSetupError("LiveKit Python preflight fail. Install / repair tools dobara chalao.") from None
+    if completed.returncode:
+        try:
+            output = (completed.stderr or b"")[-5000:]
+            output = output.decode("utf-8", "replace") if isinstance(output, bytes) else str(output)
+            session_log_path().write_text(
+                "Offline LiveKit SDK preflight failed:\n" + _redact_secrets(output)[-4000:],
+                encoding="utf-8",
+            )
+        except (OSError, UnicodeError, ValueError):
+            pass
+        raise LiveKitSetupError("LiveKit Python packages import nahi ho rahe. Install / repair tools dabao. Error details local diagnostics mein dekho.")
+    return True
+
+
 def install_optional():
     """Explicit opt-in only: install separate dependencies, not regular Jarvis deps."""
     if os.name != "nt":
@@ -139,9 +224,32 @@ class LiveKitConsole:
         self.started_at = None
         self.max_minutes = None
         self._stop_timer = None
+        self.last_error = ""
+        self.last_exit_code = None
 
     def is_running(self):
-        return self.process is not None and self.process.poll() is None
+        process = self.process
+        if process is None:
+            return False
+        code = process.poll()
+        if code is None:
+            return True
+        if self._stop_timer is not None:
+            self._stop_timer.cancel()
+            self._stop_timer = None
+        self.last_exit_code = code
+        elapsed = (time.monotonic() - self.started_at) if self.started_at is not None else 0
+        if elapsed < 30 or code != 0:
+            self.last_error = (
+                f"LiveKit voice stopped unexpectedly after {int(elapsed)}s "
+                f"(exit code {code}). Open diagnostic log for the exact reason."
+            )
+        else:
+            self.last_error = "LiveKit voice session ended. No cloud voice is running."
+        self.process = None
+        self.started_at = None
+        self.max_minutes = None
+        return False
 
     def start(self, *, consent=False, noise_enhancement=False, max_minutes=10):
         """Start a separate console only with explicit cost consent."""
@@ -153,10 +261,9 @@ class LiveKitConsole:
             raise LiveKitSetupError("Windows console mode only.")
         if self.is_running():
             raise LiveKitSetupError("LiveKit voice already running hai.")
-        if not configured():
-            raise LiveKitSetupError(
-                "LiveKit URL, API key aur secret local credentials file mein enter karein."
-            )
+        issue = credential_issue()
+        if issue:
+            raise LiveKitSetupError(issue)
         python, agent = environment_python(), agent_path()
         if not python.is_file():
             raise LiveKitSetupError("Pehle Install LiveKit Voice dabayein.")
@@ -164,6 +271,12 @@ class LiveKitConsole:
             raise LiveKitSetupError("LiveKit agent file missing. Jarvis update karein.")
         environment = os.environ.copy()
         environment["JARVIS_LIVEKIT_ENV_FILE"] = str(credentials_path())
+        log = session_log_path()
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("Jarvis LiveKit session starting. Local diagnostics only.\n", encoding="utf-8")
+        environment["JARVIS_LIVEKIT_LOG_PATH"] = str(log)
+        self.last_error = ""
+        self.last_exit_code = None
         environment["JARVIS_LIVEKIT_AI_COUSTICS"] = "1" if noise_enhancement else "0"
         # Never embed API credentials in command line arguments.
         self.process = subprocess.Popen(

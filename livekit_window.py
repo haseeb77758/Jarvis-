@@ -12,7 +12,8 @@ import webbrowser
 
 from livekit_bridge import (
     LiveKitConsole, LiveKitSetupError, configured, create_credentials_template,
-    environment_python, install_optional,
+    environment_python, install_optional, preflight_runtime,
+    credential_issue, session_log_path, safe_log_tail,
 )
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
@@ -26,6 +27,7 @@ class LiveKitVoiceWindow:
         self.host = host
         self.closed = False
         self.busy = False
+        self.setup_issue = ""
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
         self.window.title('Jarvis · LiveKit ONLY Voice · GPT-Live-1')
@@ -91,6 +93,8 @@ class LiveKitVoiceWindow:
         self.start_button.pack(fill='x', padx=25, pady=5)
         self.stop_button = self._button('STOP LiveKit realtime voice', self.stop)
         self.stop_button.pack(fill='x', padx=25, pady=5)
+        self._button('View last LiveKit error / diagnostic log', self.open_diagnostics).pack(
+            fill='x', padx=25, pady=4)
 
         tk.Label(self.window, textvariable=self.status, bg=BG, fg=CYAN,
                  wraplength=655, font=('Segoe UI', 10), justify='left').pack(
@@ -123,9 +127,15 @@ class LiveKitVoiceWindow:
             self.start_button.configure(state='disabled')
             self.stop_button.configure(state='normal')
         else:
-            phrase = ('READY · click Talk Live to start a consented session'
-                      if configured() else
-                      'NOT CONFIGURED · get project API key, then enter local credentials')
+            issue = credential_issue()
+            if self.console.last_error:
+                phrase = 'VOICE EXITED · ' + self.console.last_error
+            elif self.setup_issue:
+                phrase = 'VOICE SETUP ERROR · ' + self.setup_issue
+            elif issue:
+                phrase = 'SETUP REQUIRED · ' + issue
+            else:
+                phrase = 'READY · click Talk Live to start a consented session'
             self.start_button.configure(state='normal')
             self.stop_button.configure(state='disabled')
         if hasattr(self.host, 'livekit_voice_state'):
@@ -135,6 +145,26 @@ class LiveKitVoiceWindow:
             button.configure(text='■ End Live Voice' if active else '● Talk Live')
         if not self.busy:
             self.status.set(phrase)
+
+    def open_diagnostics(self):
+        """Only open a local, small log, never upload API keys anywhere."""
+        try:
+            log = session_log_path()
+            log.parent.mkdir(parents=True, exist_ok=True)
+            if not log.exists():
+                log.write_text("No LiveKit session diagnostics yet.\n", encoding="utf-8")
+            # Display redacted information, NOT the unfiltered SDK raw file.
+            view = log.parent / "last-session-redacted.txt"
+            view.write_text(safe_log_tail(12000) or "No logged error details available.\n",
+                            encoding="utf-8")
+            if os.name == "nt":
+                subprocess.Popen(['notepad.exe', str(view)])
+            else:
+                self.status.set('Diagnostics: ' + str(view))
+        except OSError:
+            messagebox.showerror('LiveKit diagnostics',
+                                 'Local diagnostics file nahi khul saki.',
+                                 parent=self.window)
 
     def edit_credentials(self):
         try:
@@ -173,6 +203,7 @@ class LiveKitVoiceWindow:
                 if self.closed:
                     return
                 self.busy = False
+                self.setup_issue = error or ""
                 self.setup_button.configure(state='normal')
                 self.status.set(error or result)
             try:
@@ -220,21 +251,49 @@ class LiveKitVoiceWindow:
             parent=self.window
         ):
             return False
-        try:
-            self.console.start(
-                consent=True, noise_enhancement=self.noise_enhancement.get(),
-                max_minutes=cap,
-            )
-            self.refresh()
-            # Keep the Jarvis dashboard visible; terminal-based audio continues
-            # separately, exactly as it did in the user-tested integration.
-            self.window.withdraw()
-            self.host.root.lift()
-            return True
-        except (OSError, LiveKitSetupError) as exc:
-            self.window.deiconify()
-            messagebox.showerror('LiveKit voice', str(exc), parent=self.window)
-            return False
+        # Check imports without starting cloud inference, then launch in Tk's
+        # main thread; never freeze the UI while Python is being checked.
+        self.busy = True
+        self.start_button.configure(state='disabled')
+        self.status.set('Checking installed LiveKit engine before starting voice...')
+        noise = self.noise_enhancement.get()
+
+        def job():
+            try:
+                preflight_runtime()
+                error = None
+            except LiveKitSetupError as exc:
+                error = str(exc)
+            except Exception:
+                error = 'LiveKit preflight failed; repair voice tools.'
+
+            def finish():
+                if self.closed:
+                    return
+                self.busy = False
+                if error:
+                    self.setup_issue = error
+                    self.window.deiconify()
+                    self.window.lift()
+                    self.status.set('VOICE SETUP ERROR · ' + error)
+                    messagebox.showerror('LiveKit voice preflight', error, parent=self.window)
+                    return
+                try:
+                    self.console.start(consent=True, noise_enhancement=noise, max_minutes=cap)
+                    self.setup_issue = ""
+                    self.refresh()
+                    self.window.withdraw()
+                    self.host.root.lift()
+                except (OSError, LiveKitSetupError) as exc:
+                    self.window.deiconify()
+                    self.status.set('VOICE START FAILED · ' + str(exc))
+                    messagebox.showerror('LiveKit voice', str(exc), parent=self.window)
+            try:
+                self.window.after(0, finish)
+            except tk.TclError:
+                pass
+        threading.Thread(target=job, daemon=True).start()
+        return True
 
     def stop(self):
         self.console.stop()

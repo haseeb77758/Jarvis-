@@ -57,9 +57,26 @@ class App:
         import ctypes
         from ctypes import wintypes
         user32 = ctypes.windll.user32
-        if not user32.RegisterHotKey(None, 1, 0x0002 | 0x0001 | 0x4000, 0x7B):
-            self.events.put((self.generation, 'notice', 'Global stop unavailable: use STOP or app-focused Esc and mouse corner fail-safe.', '', None))
+        # Other applications may already own Ctrl+Alt+F12. Try a second
+        # reviewed emergency chord; never replace or intercept another app's key.
+        shortcuts = (
+            (0x0002 | 0x0001 | 0x4000, 'Ctrl+Alt+F12'),
+            (0x0002 | 0x0004 | 0x4000, 'Ctrl+Shift+F12'),
+        )
+        active = None
+        for modifiers, label in shortcuts:
+            if user32.RegisterHotKey(None, 1, modifiers, 0x7B):
+                active = label
+                break
+        if active is None:
+            self.events.put((self.generation, 'notice',
+                             'Global STOP hotkeys occupied. Use the large STOP button or app-focused Esc.',
+                             '', None))
             return
+        if active != 'Ctrl+Alt+F12':
+            self.events.put((self.generation, 'notice',
+                             'Global STOP available on ' + active +
+                             ' (Ctrl+Alt+F12 is used by another application).', '', None))
         msg = wintypes.MSG()
         try:
             while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:

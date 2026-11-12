@@ -85,6 +85,41 @@ Their providers are not constructed or connected in the current runtime.
 - A local virtualenv and downloaded models remain installed between restarts;
   the agent doesn't download models at every Talk Live click.
 
+## Windows issue: Talk Live opens and then closes in seconds
+
+If **Talk Live** flashes a Windows voice terminal and the session stops after
+a few seconds, that is **not** a successful conversation. Older Jarvis versions
+showed the misleading `READY` indicator immediately after the process died.
+
+Current Jarvis now:
+
+- Runs an **offline LiveKit SDK import preflight** before launching billable
+  voice; a missing/broken Python environment becomes a setup error instead
+  of a silently closed terminal.
+- Checks the local project URL is an actual `wss://...` connection URL, not
+  `https://cloud.livekit.io/projects/...` or a project ID.
+- Uses the saved local LiveKit credentials even if an old environment variable
+  points to a different project.
+- Displays `VOICE EXITED` and the console exit code if a short session ends
+  unexpectedly, instead of pretending that LiveKit is ready/connected.
+- Writes warning and Python exception diagnostics to
+  `%LOCALAPPDATA%\\HaseebCrafts\\Jarvis\\LiveKitVoice\\last-session.log`.
+  The **View last LiveKit error / diagnostic log** button opens a locally
+  redacted text copy. Do not share unredacted logs or API secrets.
+
+**Troubleshooting:** Update Jarvis and restart, then open **LiveKit setup**.
+Click **Install / repair LiveKit voice tools** if the preflight reports missing
+SDK packages. Check your `LIVEKIT_URL` (`wss://...`) and project usage.
+Click **Talk Live**, explicitly confirm the metered session, and speak after
+the voice console opens. If the session exits, inspect the new local log for
+the specific error. The fix cannot guarantee LiveKit Cloud quotas, network
+access, or a working physical microphone without a local device test.
+
+If the header says **Global stop unavailable**, Windows declined that
+particular system-wide hotkey registration (often because another app owns
+the shortcut). The Jarvis **STOP / Esc** button and app-focused Escape
+remain available; don't disable Windows security to fix hotkey conflicts.
+
 ## Verification and limitations
 
 GitHub Windows CI verifies the dashboard, controlled process start/stop, safe
