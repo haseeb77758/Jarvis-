@@ -32,7 +32,8 @@ MAX_SINGLE_FILE = 1_000_000
 MAX_FILES = 250
 REQUIRED = frozenset({
     "app.py", "account_chat.py", "free_voice.py", "cloud_voice.py", "voice_settings_ui.py", "diagnostics.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "memory.py", "voice.py",
-    "enhanced_tools.py", "enhanced_ui.py", "livekit_bridge.py", "livekit_window.py",
+    "enhanced_tools.py", "enhanced_ui.py", "livekit_bridge.py", "livekit_window.py", "direct_livekit.py",
+    "web/jarvis_live.html", "web/jarvis_live.css", "web/jarvis_live.js",
     "livekit_agent.py", "livekit_requirements.txt",
     "requirements.txt", "tools/install_windows.py", "tools/create_shortcuts.py",
     "tools/update_windows.py", "tests/test_core.py", "tests/test_chat_ui.py",
