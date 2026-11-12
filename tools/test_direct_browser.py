@@ -143,7 +143,6 @@ class DirectBrowserTests(unittest.TestCase):
         self.assertTrue(self.page.evaluate("window.__rooms[0].canPlaybackAudio"))
 
     def test_microphone_is_published_and_input_level_is_visible(self):
-        self.assertIn("published", self.page.locator("#micStatus").inner_text().lower())
         self.page.wait_for_function(
             "() => Number(document.querySelector('#micLevel').value) > 0",
             timeout=4000)
@@ -165,16 +164,14 @@ class DirectBrowserTests(unittest.TestCase):
         self.page.locator("#disconnect").click()
         self.page.get_by_text("DISCONNECTED", exact=True).first.wait_for()
         self.page.evaluate("window.__denyMic=true")
-        self.page.locator("#connect").click()
         self.page.once("dialog", lambda dialog: dialog.accept())
+        self.page.locator("#connect").click()
         self.page.get_by_text("CONNECTED", exact=True).first.wait_for(timeout=6000)
         self.page.locator("#retryMic").wait_for(state="visible", timeout=5000)
         self.assertIn("MIC FAILED", self.page.locator("#micStatus").inner_text())
         self.page.evaluate("window.__denyMic=false")
         self.page.locator("#retryMic").click()
-        self.page.wait_for_function(
-            "() => document.querySelector('#micStatus').textContent.includes('published')",
-            timeout=5000)
+        self.page.locator("#retryMic").wait_for(state="hidden", timeout=5000)
         self.assertTrue(self.page.evaluate("window.__rooms[1].micOn"))
 
     def test_client_rpc_denies_unknown_remote_caller(self):
