@@ -108,6 +108,7 @@ class Speaker:
         self.prepare_speech = prepare_speech
         self.cancel = threading.Event()
         self.thread = None
+        self.playback_lock = threading.Lock()
 
     def stop(self):
         self.cancel.set()
@@ -120,7 +121,9 @@ class Speaker:
         self.cancel = cancel
         def run():
             if previous:
-                previous.join(timeout=2)
+                # The old request may be waiting on a network service. Do not
+                # delay the new voice for two seconds just to join it.
+                previous.join(timeout=0.1)
             if cancel.is_set():
                 return
             if config["provider"] == "Edge Neural (free online)":
@@ -146,8 +149,9 @@ class Speaker:
                     compressed = generate_mp3(spoken, config, cancel)
                     if not cancel.is_set():
                         audio = decode_mp3(compressed, cancel)
-                        if not cancel.is_set():
-                            play_pcm(audio, cancel)
+                        with self.playback_lock:
+                            if not cancel.is_set():
+                                play_pcm(audio, cancel)
                 except VoiceError as exc:
                     if not cancel.is_set():
                         self.notify(str(exc))
@@ -159,8 +163,9 @@ class Speaker:
                 from cloud_voice import generate_pcm, play_pcm, VoiceError
                 try:
                     audio = generate_pcm(text, config, cancel)
-                    if not cancel.is_set():
-                        play_pcm(audio, cancel)
+                    with self.playback_lock:
+                        if not cancel.is_set():
+                            play_pcm(audio, cancel)
                 except VoiceError as exc:
                     if not cancel.is_set():
                         self.notify(str(exc))
@@ -173,13 +178,16 @@ class Speaker:
                 import win32com.client
                 pythoncom.CoInitialize()
                 try:
-                    engine = win32com.client.Dispatch('SAPI.SpVoice')
-                    engine.Rate = 0
-                    engine.Speak(str(text)[:1800], 1)
-                    while not engine.WaitUntilDone(100):
+                    with self.playback_lock:
                         if cancel.is_set():
-                            engine.Speak('', 3)
-                            break
+                            return
+                        engine = win32com.client.Dispatch('SAPI.SpVoice')
+                        engine.Rate = 0
+                        engine.Speak(str(text)[:1800], 1)
+                        while not engine.WaitUntilDone(100):
+                            if cancel.is_set():
+                                engine.Speak('', 3)
+                                break
                 finally:
                     pythoncom.CoUninitialize()
             except Exception:
