@@ -131,8 +131,8 @@
   async function unlockAudio() {
     if (!room) return;
     // Important: call startAudio synchronously INSIDE this actual click handler.
-    const activation = room.startAudio();
     try {
+      const activation = room.startAudio();
       await activation;
       for (const audio of knownAudios) await audio.play();
       speakerBlocked = false;
@@ -336,6 +336,13 @@
       "Start a LiveKit Cloud voice conversation? It uses your project credits. " +
       "Desktop actions still require separate native Jarvis approval. Session max 10 minutes.")) return;
     busy = true;
+    speakerBlocked = false;
+    muted = false;
+    microphoneReady = false;
+    el("agentAudio").textContent = "No remote track";
+    el("micSubscribed").textContent = "Not yet";
+    el("speakerStatus").textContent = "Checking playback";
+    el("retryMic").hidden = true;
     buttons(false, true);
     report("Generating a short-lived room token locally; no API secret sent to browser...");
     status("CONNECTING");
@@ -409,6 +416,7 @@
     for (const audio of knownAudios) audio.remove();
     knownAudios.clear();
     deadline = 0; latestRoom = null;
+    speakerBlocked = false;
     el("remaining").textContent = "Session ended";
     el("agent").textContent = "Not joined";
     buttons(false); status("DISCONNECTED");
