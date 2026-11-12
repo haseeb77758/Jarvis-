@@ -74,7 +74,7 @@ Origin/Host plus a random bearer secret, and has no permissive CORS. The
 client SDK is pinned to LiveKit 2.23.0 via jsDelivr (internet needed).
 
 The 10-minute STOP calls LiveKit's server-side RoomService DeleteRoom using
-a separate short-lived administrative token that stays on the local backend.
+a separate short-lived roomCreate-scoped token (LiveKit DeleteRoom requirement) that stays on the local backend.
 That stop can fail during network outages; the UI must not claim confirmed
 Cloud termination when LiveKit is unreachable.
 
