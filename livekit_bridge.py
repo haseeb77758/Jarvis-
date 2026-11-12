@@ -70,7 +70,7 @@ def safe_log_tail(limit=1500):
 def credential_issue():
     """Validate the local URL shape without making any network request."""
     if not configured():
-        return "LiveKit URL, API key aur secret missing hain."
+        return "LiveKit credentials missing: URL, API key aur secret local file mein save karein."
     try:
         entries = {}
         for line in credentials_path().read_text(encoding="utf-8-sig").splitlines():
