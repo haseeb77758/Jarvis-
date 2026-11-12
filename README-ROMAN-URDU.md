@@ -7,26 +7,30 @@ Created by Haseeb Crafts.
 Jarvis mein ab **Puter Connect AI, Sandbox, AI Chat, Ollama aur alternate
 voice-chat UI** nahi chalengi. Jarvis ke main dashboard par **Talk Live**
 hi ek AI conversation option hai: `GPT-Live-1`, `marin` voice.
-AI agent abhi alag LiveKit console mein bolta hai; Jarvis orb aur
-dashboard session status/STOP ko control karte hain.
+Ab Talk Live **official LiveKit Cloud Agent Console browser** mein kholta hai.
+Windows `blingfire` native DLL block hone par bhi ye browser route chal sakta hai.
+Jarvis **browser ki call ko STOP ya 5/10/15-minute timer se band nahi kar sakta**.
+Call ko browser mein khud End Call/Disconnect karna hoga.
 
 **Important:** LiveKit GPT-Live-1 usage-based billed provider hai. Free
 unlimited nahi. Session har dafa tumhari permission se start hogi.
 
-## Windows par chalane ke steps
+## Windows par chalane ke steps (recommended browser mode)
 
-1. Jarvis mein **Update Jarvis** chalao, verification pass hone par restart karo.
-2. **LiveKit setup** kholo. Pehli dafa ho to **Install / repair LiveKit voice tools**
-   click karo.
-3. `https://cloud.livekit.io/` par apna project kholo, **Manage API keys**
-   se project key aur secret lo; project ka `wss://...` URL bhi copy karo.
-4. **Open LOCAL API key + secret file** mein ye values PC par enter karo:
-   `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`. Secret chat ya
-   screenshot mein expose mat karna.
-5. Main dashboard par **Talk Live** click karo. Billing/usage prompt approve
-   karo. Voice session shuru hogi.
-6. **End Live Voice**, STOP ya Ctrl+Alt+F12 se session band karo.
-   5, 10 ya 15 minute local auto STOP milta hai; ye paison ki cap nahi.
+1. Jarvis mein **Update Jarvis** chalao aur verified update ke baad restart karo.
+2. Dashboard mein **Talk Live** click karo. Official LiveKit Cloud browser mein
+   khulegi; **local Python DLL, pip repair, API secret file ki zaroorat nahi**.
+3. LiveKit Cloud login karke apna project kholo, **Agents** mein jao,
+   **training-2057** select karo aur **Launch Console** dabao.
+4. Browser ko microphone permission do aur wahan se voice conversation start
+   karo. LiveKit Cloud credits/usage apply ho sakti hai.
+5. **Browser mein End Call/Disconnect zaroor dabao**. Jarvis STOP aur local
+   5/10/15 minute timer browser call ko band nahi kar sakte.
+
+**Advanced local Python mode** alag option rahega; woh Windows Application
+Control mein `blingfire` DLL block hone ki wajah se fail ho sakta hai.
+Windows security disable na karo. Browser mode mein local project API keys
+store karne ki bhi zaroorat nahi.
 
 Detailed help: [LIVEKIT-VOICE.md](LIVEKIT-VOICE.md).
 

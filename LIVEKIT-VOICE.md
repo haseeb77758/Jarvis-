@@ -7,12 +7,69 @@ chat modes are no longer initialized or exposed by native Jarvis. The typed
 composer now accepts **local reviewed desktop commands only**; it cannot send
 general questions to the LiveKit voice model.
 
-**What "primary" means:** a big **Talk Live** button on the main Jarvis
-dashboard launches the user-tested separate LiveKit console. The animated
-dashboard stays available, shows the session's remaining time, and its button
-becomes **End Live Voice** while running. This is a native dashboard shortcut,
-not a fully embedded voice waveform/transcript player. The LiveKit agent has
-**no desktop-control tools** and does not execute spoken PC commands.
+**What "primary" means:** the dashboard's **Talk Live** button now opens
+the **official LiveKit Cloud Agent Console in your normal web browser**.
+This is the recommended route on Windows systems where Application Control
+blocks the LiveKit Python native DLL. The voice agent runs in LiveKit Cloud;
+no local Python SDK, native DLL, installed local speech models, or local
+`LIVEKIT_API_SECRET` is required for the browser conversation. Sign in to
+LiveKit Cloud and select your deployed agent `training-2057`.
+
+**Crucial difference:** Jarvis **cannot see, stop or automatically time-limit**
+the browser voice conversation. The browser's **End Call/Disconnect** button
+must be used to end it. Jarvis's 5/10/15-minute local timer, global STOP,
+and End Live Voice button control **only the optional local Python console**.
+Opening a browser page does not itself start a billable voice session.
+The agent has **no desktop-control tools**, so it cannot execute Windows
+commands by voice.
+
+## Recommended: LiveKit Agent Console in browser (no Windows DLL issue)
+
+1. Update Jarvis from GitHub and restart.
+2. On the main Jarvis dashboard press **Talk Live**. Confirm the browser
+   disclosure. The official `https://cloud.livekit.io/` page opens.
+3. Sign in to **the same LiveKit Cloud account** that owns your deployed agent.
+4. Select your project (the one where **training-2057** is RUNNING), open
+   **Agents** and select **training-2057**.
+5. Click **Launch Console**, allow microphone access in the browser, then
+   start the voice conversation. Credits/usage can accrue once the session
+   is actually started.
+6. **End Call/Disconnect in the browser** to stop the session. Closing the
+   Jarvis dashboard or pressing Jarvis STOP is **not** a reliable way to
+   end a browser session, and its local auto-STOP timer does **not** apply.
+
+**Do NOT select Install/repair or edit LOCAL API keys for browser mode.**
+Those controls are exclusively for the optional, advanced Python console.
+The browser mode needs normal LiveKit Cloud sign-in, not project secrets
+in Jarvis. This is still **LiveKit-only** and still billed/limited by
+your LiveKit Cloud project. The official Agent Console is supported for
+deployed agents, including Agent Builder deployments.
+
+## Windows Application Control DLL block
+
+If the previous local setup log shows:
+
+```text
+from livekit import blingfire
+ImportError: DLL load failed while importing _native:
+An Application Control policy has blocked this file.
+```
+
+**Windows Code Integrity / Application Control is refusing to load native
+Python code.** The error can appear under an "optional AI-Coustics model
+download" heading simply because that step tried importing `livekit.agents`,
+which also imports `blingfire`; this does NOT prove the noise plugin is
+the cause. Re-running `pip install`, deleting/recreating the venv, or
+turning off AI-Coustics alone might not make the native module trusted.
+Jarvis now recognizes the exact policy error and directs you to the
+browser agent. **Do not disable Windows security, use an unofficial DLL
+download, or bypass your organization's policies.**
+
+If you eventually want to use local Python mode, the publisher/administrator
+must resolve the blocked library under the applicable Windows App Control
+policy (for example by obtaining trusted signed binaries or deploying
+through an authorized managed installer). The browser mode is the practical
+working alternative and does not attempt any security bypass.
 
 ## API keys — official pages
 
@@ -46,24 +103,19 @@ Existing project credentials and the separately installed voice environment
 are kept when you update Jarvis; updates don't overwrite the credentials
 file. Never paste the API secret into ChatGPT or commit it to a repository.
 
-## How to speak after updating Jarvis
+## Optional advanced: local Python console
 
-1. On Windows 11, open Jarvis and run **Update Jarvis**; restart the app.
-2. For first setup only, click **LiveKit setup** → **Install / repair LiveKit
-   voice tools**. This uses a separate Python 3.12 environment and internet.
-3. Add LiveKit Cloud credentials in the **LOCAL** file described above.
-4. On the main Jarvis chat bar, click **● Talk Live**.
-5. Confirm the cloud usage prompt for this specific session. The familiar
-   LiveKit voice console opens while the dashboard remains available.
-6. Click **■ End Live Voice**, use Jarvis global STOP / Ctrl+Alt+F12, or
-   close Jarvis to terminate the session.
+Use **Advanced 1 / 2 / 3** in the LiveKit setup window only if native
+Python modules are permitted by your Windows Application Control policy.
+This mode uses your local `.env.local` project credentials, opt-in
+separate Python installation, and user-selected 5/10/15-minute local
+automatic STOP. If DLL loading is blocked, prefer the official browser
+Console above rather than retrying or disabling security.
 
-**Talk Live** is the only AI conversation button. There is no other
-chatbot, free voice fallback or separate model chooser in the native UI.
-The legacy speech and chatbot source modules remain in the reviewable source
-only so already-installed older updaters can verify and migrate successfully.
-Their providers are not constructed or connected in the current runtime.
-
+**Talk Live on the main dashboard always opens the browser** and never
+automatically installs local packages, starts a local process, or forwards
+local secrets. Cloud conversation occurs only after you start it in
+LiveKit Agent Console.
 ### Safety and ongoing expenses
 
 - There is **no automatic cloud voice start** on Windows boot, app opening,

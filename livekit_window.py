@@ -28,11 +28,12 @@ class LiveKitVoiceWindow:
         self.closed = False
         self.busy = False
         self.setup_issue = ""
+        self.browser_opened = False
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
         self.window.title('Jarvis · LiveKit ONLY Voice · GPT-Live-1')
-        self.window.geometry('720x695')
-        self.window.minsize(660, 625)
+        self.window.geometry('760x790')
+        self.window.minsize(700, 690)
         self.window.configure(bg=BG)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
         self.status = tk.StringVar(
@@ -42,19 +43,36 @@ class LiveKitVoiceWindow:
         tk.Label(self.window, text='JARVIS · REALTIME VOICE', font=('Segoe UI', 18, 'bold'),
                  bg=BG, fg=CYAN).pack(anchor='w', padx=22, pady=(18, 8))
         description = (
-            'Primary voice: LiveKit GPT-Live-1 / marin. Natural, interruptible '
-            'conversation. Same agent and voice you tested; its audio still runs '
-            'in a separate LiveKit console for now.\n\n'
+            'Recommended: use your existing deployed training-2057 agent '
+            'in the official LiveKit Cloud Agent Console in the browser. '
+            'This does not load Python or blingfire DLLs on Windows.\n\n'
             'Important: inference is usage-metered, not unlimited free. '
             'No other chatbot or alternate voice mode runs in Jarvis. '
-            'Every new cloud session requires your approval; '
-            'no automatic voice session starts with Windows.\n\n'
+            'Opening the Cloud dashboard does NOT start a voice call. '
+            'Any call begun in the browser can use LiveKit credits; end it '
+            'in that browser tab. Jarvis STOP and its local timer CANNOT '
+            'end a browser call.\n\n'
             'The typed command box is local, not another chatbot. Voice conversation cannot execute desktop actions, '
             'access private files or use your Windows login.'
         )
         tk.Label(self.window, text=description, bg=PANEL, fg=TEXT,
                  font=('Segoe UI', 10), justify='left', wraplength=660,
                  padx=17, pady=13).pack(fill='x', padx=20, pady=4)
+
+        self.start_button = self._button(
+            '● Talk Live · LiveKit Cloud Browser (recommended)', self.start, primary=True)
+        self.start_button.pack(fill='x', padx=25, pady=(10, 9))
+        tk.Label(
+            self.window,
+            text='Browser mode: NO Python install, NO local API key, NO blocked DLL. '
+                 'Sign in to LiveKit Cloud and launch training-2057 in Agent Console.',
+            bg=BG, fg=CYAN, wraplength=660, justify='left',
+            font=('Segoe UI', 9),
+        ).pack(fill='x', padx=25, pady=(0, 8))
+        tk.Label(
+            self.window, text='ADVANCED · LOCAL PYTHON CONSOLE (OPTIONAL)',
+            bg=BG, fg=MUTED, font=('Segoe UI', 10, 'bold')
+        ).pack(anchor='w', padx=25, pady=(4, 1))
 
         self.noise_enhancement = tk.BooleanVar(master=self.window, value=False)
         tk.Checkbutton(
@@ -66,12 +84,12 @@ class LiveKitVoiceWindow:
 
         cap = tk.Frame(self.window, bg=BG)
         cap.pack(fill='x', padx=25, pady=(2, 7))
-        tk.Label(cap, text='Automatically STOP after:', bg=BG, fg=TEXT,
+        tk.Label(cap, text='Local Python STOP after:', bg=BG, fg=TEXT,
                  font=('Segoe UI', 10)).pack(side='left')
         self.max_minutes = tk.StringVar(master=self.window, value='10')
         ttk.Combobox(cap, textvariable=self.max_minutes, values=['5', '10', '15'],
                      width=4, state='readonly').pack(side='left', padx=12)
-        tk.Label(cap, text='minutes · a time limit, not a money cap',
+        tk.Label(cap, text='minutes · does NOT limit browser sessions',
                  bg=BG, fg=MUTED, font=('Segoe UI', 9)).pack(side='left')
 
         links = tk.Frame(self.window, bg=BG)
@@ -83,15 +101,15 @@ class LiveKitVoiceWindow:
         self._button('LiveKit pricing ↗',
                      lambda: webbrowser.open(LIVEKIT_PRICING)).pack(side='left', padx=3)
 
-        self.setup_button = self._button('1  Install / repair LiveKit voice tools', self.install)
+        self.setup_button = self._button('Advanced 1 · Install / repair local Python voice', self.install)
         self.setup_button.pack(fill='x', padx=25, pady=5)
-        self.credentials_button = self._button('2  Open LOCAL API key + secret file',
+        self.credentials_button = self._button('Advanced 2 · Edit local Python API key + secret file',
                                                self.edit_credentials)
         self.credentials_button.pack(fill='x', padx=25, pady=5)
-        self.start_button = self._button('3  Start LiveKit voice (metered)',
-                                         self.start, primary=True)
-        self.start_button.pack(fill='x', padx=25, pady=5)
-        self.stop_button = self._button('STOP LiveKit realtime voice', self.stop)
+        self.local_start_button = self._button(
+            'Advanced 3 · Start local Python voice (Windows may block DLL)', self.start_local)
+        self.local_start_button.pack(fill='x', padx=25, pady=4)
+        self.stop_button = self._button('STOP LOCAL VOICE ONLY · Browser sessions end in browser', self.stop)
         self.stop_button.pack(fill='x', padx=25, pady=5)
         self._button('View last LiveKit error / diagnostic log', self.open_diagnostics).pack(
             fill='x', padx=25, pady=4)
@@ -123,20 +141,23 @@ class LiveKitVoiceWindow:
         remaining = self.console.remaining_seconds() if active else 0
         if active:
             minutes, seconds = divmod(remaining, 60)
-            phrase = f'LIVE · GPT-Live-1 / marin · auto STOP in {minutes}:{seconds:02d}'
+            phrase = f'LOCAL LIVE · GPT-Live-1 / marin · auto STOP in {minutes}:{seconds:02d}'
             self.start_button.configure(state='disabled')
+            self.local_start_button.configure(state='disabled')
             self.stop_button.configure(state='normal')
         else:
-            issue = credential_issue()
-            if self.console.last_error:
-                phrase = 'VOICE EXITED · ' + self.console.last_error
+            if self.browser_opened:
+                phrase = ('BROWSER CONSOLE OPENED · call status unknown here; '
+                          'end any voice call in LiveKit browser tab')
             elif self.setup_issue:
-                phrase = 'VOICE SETUP ERROR · ' + self.setup_issue
-            elif issue:
-                phrase = 'SETUP REQUIRED · ' + issue
+                phrase = ('LOCAL SDK ISSUE · ' + self.setup_issue +
+                          ' · Browser Talk Live works without that DLL')
+            elif self.console.last_error:
+                phrase = 'LOCAL VOICE EXITED · ' + self.console.last_error
             else:
-                phrase = 'READY · click Talk Live to start a consented session'
+                phrase = 'BROWSER LIVEKIT READY · Talk Live opens official Cloud Agent Console'
             self.start_button.configure(state='normal')
+            self.local_start_button.configure(state='normal')
             self.stop_button.configure(state='disabled')
         if hasattr(self.host, 'livekit_voice_state'):
             self.host.livekit_voice_state.set(phrase)
@@ -216,7 +237,52 @@ class LiveKitVoiceWindow:
         threading.Thread(target=job, daemon=True).start()
 
     def start(self):
-        """Called from both the setup dialog and the main Jarvis Talk Live button."""
+        """Launch official deployed Agent Console without local DLLs or API secrets.
+
+        This only opens the user's browser: the user signs in and explicitly
+        starts any potentially billed LiveKit session there. There is no
+        browser session state or stop control in the Windows dashboard.
+        """
+        if self.closed or self.busy:
+            return False
+        if self.console.is_running():
+            self.window.deiconify()
+            messagebox.showwarning(
+                'Local voice already active',
+                'Pehle local LiveKit session STOP karo taake do metered '
+                'conversations ek saath na chalain.', parent=self.window)
+            return False
+        if not messagebox.askyesno(
+            'Open LiveKit Cloud Agent Console?',
+            'Browser mein LiveKit Cloud khulegi. Project select karo, '
+            'Agents > training-2057 > Launch Console dabao aur mic allow karo. '
+            'Web page khulne se call automatically START nahi hoti.\n\n'
+            'Jab browser mein voice call shuru karoge to Cloud credits use '
+            'ho sakte hain. IMPORTANT: Jarvis STOP aur 5/10/15 min auto '
+            'timer browser call ko band NAHI kar sakte. Browser mein khud '
+            'End Call dabana zaroori hai. Continue?',
+            parent=self.window
+        ):
+            return False
+        try:
+            opened = webbrowser.open(LIVEKIT_DASHBOARD, new=2)
+        except (OSError, webbrowser.Error):
+            opened = False
+        if not opened:
+            self.status.set('Browser open nahi hua; Chrome mein https://cloud.livekit.io/ kholo.')
+            messagebox.showerror('Browser unavailable',
+                                 'Browser nahi khula. https://cloud.livekit.io/ manually kholo.',
+                                 parent=self.window)
+            return False
+        self.browser_opened = True
+        self.refresh()
+        # The browser takes foreground; Jarvis never claims a cloud call
+        # has started, nor can it terminate browser sessions.
+        self.window.withdraw()
+        return True
+
+    def start_local(self):
+        """Advanced, user-approved native Python console; may be blocked by policy."""
         if self.closed or self.busy:
             return False
         if self.console.is_running():
