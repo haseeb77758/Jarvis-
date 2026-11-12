@@ -464,7 +464,7 @@ class LocalAI:
             except Exception as exc:
                 raise RuntimeError(
                     'Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se '
-                    'kholein aur qwen2.5:1.5b download confirm karein. '
+                    'kholein aur selected model ' + self.model + ' install/download confirm karein. '
                     'SETUP-LOCAL-AI.bat bhi optional fallback hai. Direct commands chalti rahengi.'
                 ) from exc
             content = data.get('message', {}).get('content')
