@@ -186,6 +186,7 @@ def make_dashboard(app):
     btn(header, 'Update Jarvis', app.update_jarvis, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'AI Sandbox', app.open_sandbox, compact=True).pack(side='right', padx=4, pady=10)
+    btn(header, 'Toolbox', app.open_toolkit, compact=True).pack(side='right', padx=4, pady=10)
     btn(header, 'Ask Jarvis', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set()), compact=True).pack(side='right', padx=4, pady=10)
     label(header, '', 9, CYAN, bg=DEEP, textvariable=app.ai_status).pack(side='right', padx=(6, 12))
 
@@ -220,6 +221,7 @@ def make_dashboard(app):
         ('✉   Message draft', lambda: (app.mode.set('Local AI chat'), app.entry.insert(0, 'Draft a message: '), app.entry.focus_set())),
         ('▤   Notes', lambda: note_window(app)),
         ('≡   Tasks & shortcuts', lambda: tasks_window(app)),
+        ('◈   AI toolkit & schedule', app.open_toolkit),
         ('⚙   System info', lambda: system_window(app)),
     ]
     for title, action in entries:
