@@ -67,7 +67,7 @@ a live device test is needed to verify permission, voice quality and audible out
 
 ## Primary LiveKit realtime voice (user-approved, usage-metered)
 
-The **LiveKit Voice** button opens an optional, independent voice console based
+The main chat bar's **Talk Live** button opens a user-approved, independent voice console based
 on the user's uploaded `training-2057.zip`. It uses GPT-Live-1 through
 LiveKit Inference. Unlike the normal free speech path, this model requires
 LiveKit Cloud credentials and **can incur usage charges**. The button shows
