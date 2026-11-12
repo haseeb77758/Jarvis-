@@ -10,6 +10,142 @@
   let room = null, busy = false, muted = false, latestRoom = null;
   let countdown = null, poller = null, deadline = 0;
   const knownAudios = new Set();
+  let micMeterTimer = null, silentTicks = 0, detectedMicSound = false;
+  let microphoneReady = false, speakerBlocked = false;
+  function micStatus(message, warning = false) {
+    el("micStatus").textContent = message;
+    el("micStatus").style.color = warning ? "#ffb47e" : "";
+    el("micHint").textContent = message;
+  }
+  function playbackState() {
+    if (!room) return;
+    const blocked = room.canPlaybackAudio === false || speakerBlocked;
+    el("enableAudio").hidden = !blocked;
+    el("speakerStatus").textContent = blocked
+      ? "BLOCKED · click Enable speaker audio" : "Audio enabled";
+    if (blocked) {
+      report("Agent audio is blocked by browser autoplay. Click ENABLE SPEAKER AUDIO now.", "error");
+      activity("Audio playback needs one direct user click.");
+    }
+  }
+  function startMicMeter() {
+    clearInterval(micMeterTimer);
+    silentTicks = 0;
+    detectedMicSound = false;
+    micMeterTimer = setInterval(() => {
+      if (!room || !microphoneReady) return;
+      const local = room.localParticipant;
+      const active = local && local.isMicrophoneEnabled !== false && !muted;
+      if (!active) {
+        el("micLevel").value = 0;
+        micStatus("Muted");
+        return;
+      }
+      const level = Math.max(0, Math.min(1, Number(local.audioLevel) || 0));
+      el("micLevel").value = Math.min(100, Math.round(level * 260));
+      if (level > 0.018) {
+        silentTicks = 0;
+        if (!detectedMicSound) {
+          detectedMicSound = true;
+          activity("Microphone level detected · audio input active.");
+        }
+        micStatus("Input signal detected");
+      } else {
+        silentTicks++;
+        if (silentTicks > 24 && !detectedMicSound) {
+          micStatus("No input level · speak loudly or choose another mic", true);
+        } else if (silentTicks > 24) {
+          micStatus("Microphone active · awaiting speech");
+        } else {
+          micStatus("Mic published · checking input level");
+        }
+      }
+    }, 300);
+  }
+  function stopMicMeter() {
+    clearInterval(micMeterTimer);
+    micMeterTimer = null;
+    el("micLevel").value = 0;
+    microphoneReady = false;
+    micStatus("Stopped");
+    el("micDevice").disabled = true;
+    el("retryMic").hidden = true;
+    el("enableAudio").hidden = true;
+    el("speakerStatus").textContent = "Stopped";
+  }
+  async function refreshMicrophones() {
+    if (!room || !sdk.Room || typeof sdk.Room.getLocalDevices !== "function") return;
+    try {
+      // After a mic permission grant, enumerate without a second capture prompt.
+      const devices = await sdk.Room.getLocalDevices("audioinput", false);
+      const list = el("micDevice");
+      const selected = list.value;
+      list.replaceChildren();
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "System default";
+      list.appendChild(defaultOption);
+      for (const device of devices) {
+        if (!device.deviceId) continue;
+        const option = document.createElement("option");
+        option.value = device.deviceId;
+        option.textContent = device.label || "Microphone " + (list.options.length);
+        list.appendChild(option);
+      }
+      if ([...list.options].some(item => item.value === selected)) list.value = selected;
+      list.disabled = false;
+    } catch (err) {
+      activity("Microphone list unavailable: " + (err.name || "device error"));
+    }
+  }
+  async function enableMicrophone() {
+    if (!room) return false;
+    try {
+      micStatus("Requesting microphone permission...");
+      el("retryMic").hidden = true;
+      const publication = await room.localParticipant.setMicrophoneEnabled(true);
+      if (!publication || !publication.audioTrack ||
+          room.localParticipant.isMicrophoneEnabled === false) {
+        throw new Error("No microphone track was published to LiveKit.");
+      }
+      microphoneReady = true;
+      muted = false;
+      el("mic").textContent = "Mute mic";
+      micStatus("Mic published · checking input level");
+      startMicMeter();
+      activity("LiveKit published a microphone track.");
+      await refreshMicrophones();
+      return true;
+    } catch (err) {
+      microphoneReady = false;
+      micStatus("MIC FAILED: " + (err.name || err.message), true);
+      el("retryMic").hidden = false;
+      report(
+        "Microphone not published. Allow microphone for 127.0.0.1 in Chrome/Edge, " +
+        "check Windows Settings > Privacy & security > Microphone, then click Retry microphone. " +
+        "Error: " + (err.name || err.message), "error");
+      activity("Microphone capture failed: " + (err.name || err.message));
+      return false;
+    }
+  }
+  async function unlockAudio() {
+    if (!room) return;
+    // Important: call startAudio synchronously INSIDE this actual click handler.
+    const activation = room.startAudio();
+    try {
+      await activation;
+      for (const audio of knownAudios) await audio.play();
+      speakerBlocked = false;
+      el("enableAudio").hidden = true;
+      el("speakerStatus").textContent = "Enabled";
+      activity("Speaker audio unlocked through user interaction.");
+      report("Speaker audio enabled. Speak to Jarvis and watch the mic input level.");
+    } catch (err) {
+      speakerBlocked = true;
+      playbackState();
+      activity("Audio unlock failed: " + (err.name || err.message));
+    }
+  }
 
   function report(text, cls = "") {
     el("notice").textContent = text;
