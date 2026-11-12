@@ -135,7 +135,7 @@
       });
     }
     room.on(RoomEvent.ParticipantAttributesChanged, (attributes, participant) => {
-      const current = attributes["lk.agent.state"];
+      const current = (attributes || {})["lk.agent.state"];
       if (current) {
         const view = String(current).toUpperCase();
         el("agent").textContent = view;
