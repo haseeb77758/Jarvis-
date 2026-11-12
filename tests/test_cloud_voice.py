@@ -183,13 +183,17 @@ class CloudVoiceTests(unittest.TestCase):
         self.assertEqual(check.state, 'Configured, not verified')
         self.assertNotIn('fake-unit-test-key', check.detail)
 
-    def test_main_stop_also_stops_sandbox_speech(self):
+    def test_main_stop_ends_livekit_and_leaves_retired_chatbots_inactive(self):
+        livekit = SimpleNamespace(closed=False, stop=Mock())
         sandbox = SimpleNamespace(closed=False, stop=Mock())
-        host = SimpleNamespace(sandbox_window=sandbox, speaker=Mock(), stop=threading.Event(),
+        host = SimpleNamespace(livekit_window=livekit, sandbox_window=sandbox,
+                               speaker=Mock(), stop=threading.Event(),
                                generation=1, pending=[], status=Mock())
         App.halt(host)
-        sandbox.stop.assert_called_once()
-        host.speaker.stop.assert_called_once()
+        livekit.stop.assert_called_once()
+        sandbox.stop.assert_not_called()
+        host.speaker.stop.assert_not_called()
+        self.assertTrue(host.stop.is_set())
 
     def test_native_settings_require_consent_and_hide_key(self):
         import tkinter as tk
