@@ -54,7 +54,11 @@ class LayoutRegressionTests(TestCase):
                 self.assertLessEqual(left.winfo_width(), 250)
                 self.assertGreaterEqual(left.winfo_width(), 205)
                 self.assertLessEqual(right.winfo_width(), 295)
-                self.assertGreaterEqual(center.winfo_width(), width - 580)
+                # Windows runners may clamp requested window width to their
+                # virtual desktop. Assert against the ACTUAL mapped width.
+                actual_width = root.winfo_width()
+                self.assertGreaterEqual(actual_width, 1020)
+                self.assertGreaterEqual(center.winfo_width(), actual_width - 580)
                 self.assertGreater(app.log.winfo_height(), 80)
                 self.assertGreater(app.entry.winfo_height(), 38)
                 self.assertTrue(app.send.winfo_ismapped())
