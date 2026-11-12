@@ -141,7 +141,7 @@ class Speaker:
                     elif (config.get('natural_urdu', False) and
                             config.get('free_voice', '').startswith('ur-') and
                             re.search(r'[A-Za-z]', spoken) and
-                            not re.search(r'[\\u0600-\\u06ff]', spoken)):
+                            not re.search(r'[\u0600-\u06ff]', spoken)):
                         if self.prepare_speech is None:
                             self.notify('Natural Urdu ke liye Connect AI karein. Text reply available hai.')
                             return
