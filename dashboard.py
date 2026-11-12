@@ -314,16 +314,18 @@ def make_dashboard(app):
 
     body = tk.Frame(root, bg=BG)
     body.pack(fill='both', expand=True, padx=11, pady=(11, 7))
-    body.grid_columnconfigure(0, minsize=215)
-    body.grid_columnconfigure(1, weight=1)
-    body.grid_columnconfigure(2, minsize=247)
+    body.grid_columnconfigure(0, minsize=235, weight=0)
+    body.grid_columnconfigure(1, weight=1, minsize=0)
+    body.grid_columnconfigure(2, minsize=290, weight=0)
     body.grid_rowconfigure(0, weight=1)
 
     # Sidebar – navigation and genuine local shortcuts, no fake app entries.
     sidebar = panel(body)
     sidebar.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
-    sidebar.configure(width=221)
-    sidebar.grid_propagate(False)
+    sidebar.configure(width=225)
+    # Children are packed, not gridded: pack propagation must be disabled.
+    # Otherwise the default 394px-wide Canvas forces an enormous sidebar.
+    sidebar.pack_propagate(False)
     clock_card = tk.Frame(sidebar, bg='#102c42')
     clock_card.pack(fill='x', padx=8, pady=(9, 10))
     clock = label(clock_card, '--:--', 29, TEXT, bg='#102c42')
@@ -331,7 +333,8 @@ def make_dashboard(app):
     date_label = label(clock_card, '', 9, MUTED, bg='#102c42',
                        justify='left', wraplength=200)
     date_label.pack(anchor='w', padx=14)
-    wave = tk.Canvas(clock_card, bg='#102c42', height=27, bd=0, highlightthickness=0)
+    wave = tk.Canvas(clock_card, bg='#102c42', width=178, height=27,
+                     bd=0, highlightthickness=0)
     wave.pack(fill='x', padx=5, pady=(3, 2))
     def draw_wave(event=None):
         wave.delete('wave')
@@ -447,46 +450,13 @@ def make_dashboard(app):
     motion_button.configure(command=toggle_motion)
     motion_button.pack(side='right', padx=2)
 
-    chat_frame = tk.Frame(conversation, bg=PANEL, highlightthickness=1, highlightbackground=LINE)
-    chat_frame.pack(fill='both', expand=True, padx=13, pady=(0, 8))
-    app.log = tk.Text(chat_frame, bg='#0a1b2c', fg=TEXT, insertbackground=CYAN,
-                      relief='flat', wrap='word', font=('Segoe UI', 11),
-                      padx=20, pady=13, state='disabled', spacing3=7,
-                      selectbackground='#1e5e70', highlightthickness=0)
-    app.log.pack(fill='both', expand=True, padx=5, pady=5)
-    app.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=14)
-    app.log.tag_config('user', foreground='#85faf3', font=('Segoe UI', 10, 'bold'), spacing1=12)
-    app.log.tag_config('error', foreground='#ffa9a0')
-    app.log.tag_config('user_body', foreground='#d5fffc', background='#114452')
-    app.log.tag_config('ai_body', foreground=TEXT, background='#102e44')
-
-    prompts = tk.Frame(conversation, bg=DEEP)
-    prompts.pack(fill='x', padx=15, pady=(0, 5))
-    label(prompts, '✦  QUICK PROMPTS:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
-    for title, prompt in [
-        ('Salam', 'Salam Jarvis, tum kaise ho?'),
-        ('Website idea', 'Mujhe Haseeb Crafts ke liye 3 creative website ideas do.'),
-        ('Video script', 'Haseeb Crafts ke liye 15 second ki professional video script do.'),
-        ('Plan', 'Mujhe aaj ke 3 practical tasks suggest karo.'),
-    ]:
-        btn(prompts, title, lambda p=prompt: (app.mode.set('Local AI chat'),
-                                              preset_prompt(app.entry, p)),
-            compact=True).pack(side='left', padx=2)
-
-    footer = tk.Frame(conversation, bg=DEEP)
-    footer.pack(fill='x', padx=14, pady=(2, 4))
-    app.entry = ChatComposer(footer, bg='#102b40', fg=TEXT, insertbackground=CYAN,
-                            relief='flat', font=('Segoe UI', 11), height=3, wrap='word',
-                            padx=12, pady=9, highlightthickness=1,
-                            highlightbackground='#277b91', highlightcolor=CYAN, undo=True)
-    app.entry.pack(side='left', fill='both', expand=True)
-    app.entry.bind('<Return>', lambda event: on_return(event, app.submit))
-    app.send = btn(footer, '➤  SEND', app.submit, True)
-    app.send.pack(side='right', padx=(8, 0))
-    btn(footer, 'Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
+    # Pack controls from the bottom first, before the expanding conversation.
+    # Tk otherwise gives the oversized text area priority and hides Send/Mic.
+    label(conversation, 'Enter: send  ·  Shift+Enter: new line  ·  No always-on microphone',
+          8, MUTED, bg=DEEP).pack(side='bottom', anchor='w', padx=16, pady=(0, 6))
 
     voice_footer = tk.Frame(conversation, bg=DEEP)
-    voice_footer.pack(fill='x', padx=13, pady=(0, 8))
+    voice_footer.pack(side='bottom', fill='x', padx=13, pady=(0, 8))
     btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=2)
     btn(voice_footer, 'Test voice', app.test_voice, compact=True).pack(side='left', padx=2)
     ttk.Combobox(voice_footer, textvariable=app.voice_language, width=7,
@@ -498,32 +468,54 @@ def make_dashboard(app):
                    variable=app.permission, bg=DEEP, fg=MUTED,
                    activebackground=DEEP, activeforeground=TEXT,
                    selectcolor=PANEL_2).pack(side='right', padx=1)
-    label(conversation, 'Enter: send  ·  Shift+Enter: new line  ·  No always-on microphone',
-          8, MUTED, bg=DEEP).pack(anchor='w', padx=16, pady=(0, 6))
+    footer = tk.Frame(conversation, bg=DEEP)
+    footer.pack(side='bottom', fill='x', padx=14, pady=(2, 4))
+    app.entry = ChatComposer(footer, width=1,
+                            bg='#102b40', fg=TEXT, insertbackground=CYAN,
+                            relief='flat', font=('Segoe UI', 11), height=3, wrap='word',
+                            padx=12, pady=9, highlightthickness=1,
+                            highlightbackground='#277b91', highlightcolor=CYAN, undo=True)
+    app.entry.pack(side='left', fill='both', expand=True)
+    app.entry.bind('<Return>', lambda event: on_return(event, app.submit))
+    app.send = btn(footer, '➤  SEND', app.submit, True)
+    app.send.pack(side='right', padx=(8, 0))
+    btn(footer, 'Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
+
+    prompts = tk.Frame(conversation, bg=DEEP)
+    prompts.pack(side='bottom', fill='x', padx=15, pady=(0, 5))
+    label(prompts, '✦  QUICK PROMPTS:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
+    for title, prompt in [
+        ('Salam', 'Salam Jarvis, tum kaise ho?'),
+        ('Website idea', 'Mujhe Haseeb Crafts ke liye 3 creative website ideas do.'),
+        ('Video script', 'Haseeb Crafts ke liye 15 second ki professional video script do.'),
+        ('Plan', 'Mujhe aaj ke 3 practical tasks suggest karo.'),
+    ]:
+        btn(prompts, title, lambda p=prompt: (app.mode.set('Local AI chat'),
+                                              preset_prompt(app.entry, p)),
+            compact=True).pack(side='left', padx=2)
+
+    chat_frame = tk.Frame(conversation, bg=PANEL, highlightthickness=1, highlightbackground=LINE)
+    chat_frame.pack(fill='both', expand=True, padx=13, pady=(0, 8))
+    app.log = tk.Text(chat_frame, width=1, height=7,
+                      bg='#0a1b2c', fg=TEXT, insertbackground=CYAN,
+                      relief='flat', wrap='word', font=('Segoe UI', 11),
+                      padx=20, pady=13, state='disabled', spacing3=7,
+                      selectbackground='#1e5e70', highlightthickness=0)
+    app.log.pack(fill='both', expand=True, padx=5, pady=5)
+    app.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=14)
+    app.log.tag_config('user', foreground='#85faf3', font=('Segoe UI', 10, 'bold'), spacing1=12)
+    app.log.tag_config('error', foreground='#ffa9a0')
+    app.log.tag_config('user_body', foreground='#d5fffc', background='#114452')
+    app.log.tag_config('ai_body', foreground=TEXT, background='#102e44')
 
     # Right column: real session activity and status (never fabricated CPU or
     # RAM values from the reference artwork).
-    right = tk.Frame(body, bg=BG, width=254)
+    right = tk.Frame(body, bg=BG, width=278)
     right.grid(row=0, column=2, sticky='nsew', padx=(10, 0))
-    right.grid_propagate(False)
-    activity = panel(right)
-    activity.pack(fill='both', expand=True)
-    heading = tk.Frame(activity, bg=PANEL)
-    heading.pack(fill='x', padx=12, pady=(14, 6))
-    label(heading, '⌁  ACTIVITY', 13, TEXT, True, bg=PANEL).pack(side='left')
-    label(heading, 'SESSION', 8, GREEN, True, bg=PANEL).pack(side='right')
-    label(activity, 'Only real local events are listed. No background monitoring.',
-          9, MUTED, justify='left', wraplength=226).pack(
-          anchor='w', padx=15, pady=(0, 8))
-    tk.Frame(activity, height=1, bg=LINE).pack(fill='x', padx=12)
-    app.activity_log = tk.Text(activity, bg=PANEL, fg=MUTED,
-                               wrap='word', relief='flat',
-                               font=('Segoe UI', 9), state='disabled',
-                               padx=12, pady=8, highlightthickness=0)
-    app.activity_log.pack(fill='both', expand=True, padx=4, pady=4)
-
+    right.pack_propagate(False)
+    # Reserve the status card at the bottom before the expanding activity log.
     status_card = panel(right)
-    status_card.pack(fill='x', pady=(10, 0))
+    status_card.pack(side='bottom', fill='x', pady=(10, 0))
     label(status_card, '◈  SYSTEM STATUS', 12, TEXT, True).pack(
         anchor='w', padx=13, pady=(13, 11))
     local_row = tk.Frame(status_card, bg=PANEL_2)
@@ -544,6 +536,23 @@ def make_dashboard(app):
         side='left', padx=(12, 4), pady=(0, 11))
     btn(status_card, 'Workspace', app.choose, compact=True).pack(
         side='left', padx=3, pady=(0, 11))
+
+    activity = panel(right)
+    activity.pack(fill='both', expand=True)
+    heading = tk.Frame(activity, bg=PANEL)
+    heading.pack(fill='x', padx=12, pady=(14, 6))
+    label(heading, '⌁  ACTIVITY', 13, TEXT, True, bg=PANEL).pack(side='left')
+    label(heading, 'SESSION', 8, GREEN, True, bg=PANEL).pack(side='right')
+    label(activity, 'Only real local events are listed. No background monitoring.',
+          9, MUTED, justify='left', wraplength=226).pack(
+          anchor='w', padx=15, pady=(0, 8))
+    tk.Frame(activity, height=1, bg=LINE).pack(fill='x', padx=12)
+    app.activity_log = tk.Text(activity, width=1, height=7,
+                               bg=PANEL, fg=MUTED,
+                               wrap='word', relief='flat',
+                               font=('Segoe UI', 9), state='disabled',
+                               padx=12, pady=8, highlightthickness=0)
+    app.activity_log.pack(fill='both', expand=True, padx=4, pady=4)
 
     label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   LOCAL-FIRST  ·  STOP: Ctrl+Alt+F12 or Esc  ·  Screen actions need review',
           8, MUTED, bg=BG).pack(anchor='w', padx=17, pady=(0, 7))
