@@ -32,8 +32,8 @@ class LiveKitVoiceWindow:
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
         self.window.title('Jarvis · LiveKit ONLY Voice · GPT-Live-1')
-        self.window.geometry('720x695')
-        self.window.minsize(660, 625)
+        self.window.geometry('760x790')
+        self.window.minsize(700, 690)
         self.window.configure(bg=BG)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
         self.status = tk.StringVar(
@@ -59,6 +59,21 @@ class LiveKitVoiceWindow:
                  font=('Segoe UI', 10), justify='left', wraplength=660,
                  padx=17, pady=13).pack(fill='x', padx=20, pady=4)
 
+        self.start_button = self._button(
+            '● Talk Live · LiveKit Cloud Browser (recommended)', self.start, primary=True)
+        self.start_button.pack(fill='x', padx=25, pady=(10, 9))
+        tk.Label(
+            self.window,
+            text='Browser mode: NO Python install, NO local API key, NO blocked DLL. '
+                 'Sign in to LiveKit Cloud and launch training-2057 in Agent Console.',
+            bg=BG, fg=CYAN, wraplength=660, justify='left',
+            font=('Segoe UI', 9),
+        ).pack(fill='x', padx=25, pady=(0, 8))
+        tk.Label(
+            self.window, text='ADVANCED · LOCAL PYTHON CONSOLE (OPTIONAL)',
+            bg=BG, fg=MUTED, font=('Segoe UI', 10, 'bold')
+        ).pack(anchor='w', padx=25, pady=(4, 1))
+
         self.noise_enhancement = tk.BooleanVar(master=self.window, value=False)
         tk.Checkbutton(
             self.window,
@@ -69,12 +84,12 @@ class LiveKitVoiceWindow:
 
         cap = tk.Frame(self.window, bg=BG)
         cap.pack(fill='x', padx=25, pady=(2, 7))
-        tk.Label(cap, text='Automatically STOP after:', bg=BG, fg=TEXT,
+        tk.Label(cap, text='Local Python STOP after:', bg=BG, fg=TEXT,
                  font=('Segoe UI', 10)).pack(side='left')
         self.max_minutes = tk.StringVar(master=self.window, value='10')
         ttk.Combobox(cap, textvariable=self.max_minutes, values=['5', '10', '15'],
                      width=4, state='readonly').pack(side='left', padx=12)
-        tk.Label(cap, text='minutes · a time limit, not a money cap',
+        tk.Label(cap, text='minutes · does NOT limit browser sessions',
                  bg=BG, fg=MUTED, font=('Segoe UI', 9)).pack(side='left')
 
         links = tk.Frame(self.window, bg=BG)
@@ -86,18 +101,15 @@ class LiveKitVoiceWindow:
         self._button('LiveKit pricing ↗',
                      lambda: webbrowser.open(LIVEKIT_PRICING)).pack(side='left', padx=3)
 
-        self.setup_button = self._button('1  Install / repair LiveKit voice tools', self.install)
+        self.setup_button = self._button('Advanced 1 · Install / repair local Python voice', self.install)
         self.setup_button.pack(fill='x', padx=25, pady=5)
-        self.credentials_button = self._button('2  Open LOCAL API key + secret file',
+        self.credentials_button = self._button('Advanced 2 · Edit local Python API key + secret file',
                                                self.edit_credentials)
         self.credentials_button.pack(fill='x', padx=25, pady=5)
-        self.start_button = self._button('● Talk Live · Browser Agent Console (recommended)',
-                                         self.start, primary=True)
-        self.start_button.pack(fill='x', padx=25, pady=5)
         self.local_start_button = self._button(
-            'Advanced · Local Python console (can be blocked by Windows)', self.start_local)
+            'Advanced 3 · Start local Python voice (Windows may block DLL)', self.start_local)
         self.local_start_button.pack(fill='x', padx=25, pady=4)
-        self.stop_button = self._button('STOP LiveKit realtime voice', self.stop)
+        self.stop_button = self._button('STOP LOCAL VOICE ONLY · Browser sessions end in browser', self.stop)
         self.stop_button.pack(fill='x', padx=25, pady=5)
         self._button('View last LiveKit error / diagnostic log', self.open_diagnostics).pack(
             fill='x', padx=25, pady=4)
