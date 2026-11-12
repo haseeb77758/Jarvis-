@@ -35,6 +35,7 @@ class App:
         self.sandbox_session = SandboxSession()
         self.sandbox_window = None
         self.livekit_window = None
+        self.livekit_voice_state = tk.StringVar(value='LIVEKIT · OFF · click Talk Live to begin')
         self.sleeping = False
         self.pending = []
         self.last_plan = []
@@ -63,7 +64,7 @@ class App:
         root.after(2400, self.check_updates_silently)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
-        self.say('HASEEB AI', 'Salam! Yeh Jarvis AI Chat hai. Apna sawal neeche likho aur SEND dabao. Connect AI dabao, browser mein sign in karo aur connection tab khula rakho. Computer control ke liye Desktop mode alag se select karo.')
+        self.say('HASEEB AI', 'Salam! Talk Live ab Jarvis ka primary voice button hai. Cloud voice sirf tumhari ijazat se start hogi. Text AI chat, Free Mic aur reviewed desktop controls alag available hain.')
 
     def global_stop(self):
         import ctypes
@@ -104,7 +105,7 @@ class App:
         self.voice_settings_window = VoiceSettingsWindow(self)
 
     def open_livekit_voice(self):
-        """Open optional, separately billed real-time voice console settings."""
+        """Open reusable LiveKit primary-voice settings without starting billing."""
         from livekit_window import LiveKitVoiceWindow
         current = getattr(self, 'livekit_window', None)
         if current is not None and not current.closed:
@@ -112,6 +113,17 @@ class App:
             current.window.lift()
             return
         self.livekit_window = LiveKitVoiceWindow(self)
+
+    def toggle_livekit_voice(self):
+        """Primary voice control: user-clicked start with explicit cloud consent."""
+        current = getattr(self, 'livekit_window', None)
+        if current is not None and not current.closed and current.console.is_running():
+            current.stop()
+            return
+        self.open_livekit_voice()
+        current = getattr(self, 'livekit_window', None)
+        if current is not None and not current.closed:
+            current.start()
 
     def open_diagnostics(self):
         from diagnostics import DiagnosticsWindow
