@@ -291,6 +291,37 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(answer, '{"actions":[]}')
         self.assertEqual(ai.opener.open.call_count, 1)
 
+    def test_verified_intro_is_grammatical_three_sentences(self):
+        from core import _verified_jarvis_intro, _has_urdu_script
+        prompt = ("Salam Jarvis! Apna introduction do aur batao tum Haseeb Crafts "
+                  "ke liye kya kar sakte ho. Sirf Roman Urdu mein 3 simple sentences likho.")
+        answer = _verified_jarvis_intro(prompt)
+        self.assertEqual(answer, (
+            "Wa alaikum assalam! "
+            "Main Jarvis hoon, Haseeb Crafts ka local AI assistant. "
+            "Main website ideas, video scripts, content planning aur sawalon "
+            "ke jawab dene mein madad kar sakta hoon."
+        ))
+        self.assertFalse(_has_urdu_script(answer))
+
+    def test_verified_intro_bypasses_nondeterministic_ollama_chat(self):
+        ai = LocalAI(model="qwen2.5:3b")
+        ai.opener = Mock()
+        answer = ai.ask([{"role": "user", "content": "Salam Jarvis! Apna introduction Roman Urdu mein 3 sentences mein do."}])
+        self.assertIn("Haseeb Crafts", answer)
+        ai.opener.open.assert_not_called()
+
+    def test_verified_intro_keeps_general_and_multilingual_requests_on_model(self):
+        from core import _verified_jarvis_intro
+        for prompt in (
+            "Write a video script for Haseeb Crafts",
+            "Who are you? Reply in English.",
+            "اپنا تعارف اردو میں دو",
+            "Apna introduction do aur video script likho.",
+        ):
+            with self.subTest(prompt=prompt):
+                self.assertIsNone(_verified_jarvis_intro(prompt))
+
     def test_local_ai_connection_failure_is_actionable(self):
         ai = LocalAI()
         ai.opener = Mock()
