@@ -192,8 +192,9 @@ class LiveKitOptionalTests(unittest.TestCase):
              patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
             message = lk.install_optional()
         self.assertIn('No extra model download needed', message)
-        self.assertEqual(runner.call_count, 1)
-        command = runner.call_args.args[0]
+        self.assertEqual(runner.call_count, 2)
+        self.assertEqual(runner.call_args_list[0].args[0][-3:], ['-m', 'pip', '--version'])
+        command = runner.call_args_list[1].args[0]
         self.assertEqual(command[1:4], ['-m', 'pip', '--disable-pip-version-check'])
         self.assertNotIn('download-files', command)
         self.assertNotIn('ai-coustics', ' '.join(command))
@@ -204,8 +205,9 @@ class LiveKitOptionalTests(unittest.TestCase):
         python.parent.mkdir(parents=True, exist_ok=True)
         python.touch()
         failed = Mock(returncode=1, stdout=b'', stderr=b'No matching distribution found')
+        healthy_pip = Mock(returncode=0, stdout=b'pip installed', stderr=b'')
         with patch.object(lk.os, 'name', 'nt'), \
-             patch('livekit_bridge.subprocess.run', return_value=failed), \
+             patch('livekit_bridge.subprocess.run', side_effect=[healthy_pip, failed]), \
              patch.object(lk, 'preflight_runtime') as preflight:
             with self.assertRaisesRegex(lk.LiveKitSetupError, 'pip install'):
                 lk.install_optional()
@@ -223,10 +225,10 @@ class LiveKitOptionalTests(unittest.TestCase):
              patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
             result = lk.install_optional(noise_enhancement=True)
         self.assertIn('optional AI-Coustics', result)
-        self.assertEqual(runner.call_count, 3)
+        self.assertEqual(runner.call_count, 4)
         cmds = [call.args[0] for call in runner.call_args_list]
-        self.assertIn('livekit-plugins-ai-coustics~=0.2', cmds[1])
-        self.assertIn('download-files', cmds[2])
+        self.assertIn('livekit-plugins-ai-coustics~=0.2', cmds[2])
+        self.assertIn('download-files', cmds[3])
         preflight.assert_called_once_with(noise_enhancement=True)
 
     def test_repair_does_not_access_cloud_keys_or_start_metered_session(self):
@@ -244,9 +246,66 @@ class LiveKitOptionalTests(unittest.TestCase):
              patch.object(lk, 'preflight_runtime', return_value=True):
             lk.install_optional()
             launch.assert_not_called()
-            self.assertEqual(runner.call_count, 1)
+            self.assertEqual(runner.call_count, 2)
             self.assertNotIn('private-key', repr(runner.call_args))
             self.assertNotIn('private-secret', repr(runner.call_args))
+
+    def test_existing_venv_with_missing_pip_is_bootstrapped_before_install(self):
+        """User's exact error: venv python exists, but -m pip is missing."""
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        missing = Mock(returncode=1, stdout=b'',
+                       stderr=b'No module named pip')
+        ok = Mock(returncode=0, stdout=b'', stderr=b'')
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run',
+                   side_effect=[missing, ok, ok, ok]) as runner, \
+             patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
+            result = lk.install_optional()
+        commands = [call.args[0] for call in runner.call_args_list]
+        self.assertEqual(len(commands), 4)
+        self.assertEqual(commands[0][-3:], ['-m', 'pip', '--version'])
+        self.assertEqual(commands[1][-4:],
+                         ['-m', 'ensurepip', '--upgrade', '--default-pip'])
+        self.assertEqual(commands[2][-3:], ['-m', 'pip', '--version'])
+        self.assertIn('install', commands[3])
+        self.assertNotIn('download-files', ' '.join(map(str, commands)))
+        self.assertIn('installed and verified', result)
+        preflight.assert_called_once_with(noise_enhancement=False)
+
+    def test_missing_ensurepip_fails_safely_and_preserves_credentials(self):
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        credentials = lk.create_credentials_template()
+        secret = ('LIVEKIT_URL=wss://example.livekit.cloud\n'
+                  'LIVEKIT_API_KEY=test-private-key\n'
+                  'LIVEKIT_API_SECRET=test-private-secret\n')
+        credentials.write_text(secret, encoding='utf-8')
+        missing_pip = Mock(returncode=1, stdout=b'',
+                           stderr=b'No module named pip')
+        missing_ensurepip = Mock(returncode=1, stdout=b'',
+                                stderr=b'No module named ensurepip')
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run',
+                   side_effect=[missing_pip, missing_ensurepip]) as runner, \
+             patch('livekit_bridge.subprocess.Popen') as launch:
+            with self.assertRaisesRegex(lk.LiveKitSetupError,
+                                        'Python 3.12 installer'):
+                lk.install_optional()
+            launch.assert_not_called()
+        self.assertEqual(runner.call_count, 2)
+        self.assertIn('No module named ensurepip', lk.safe_log_tail())
+        self.assertEqual(credentials.read_text(encoding='utf-8'), secret)
+
+    def test_existing_pip_is_not_bootstrapped_again(self):
+        healthy = Mock(returncode=0, stdout=b'pip 24.0', stderr=b'')
+        with patch('livekit_bridge.subprocess.run', return_value=healthy) as run:
+            self.assertFalse(lk.ensure_venv_pip())
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0][-3:],
+                         ['-m', 'pip', '--version'])
 
     def test_packaging_includes_agent_and_ui_but_never_keys(self):
         from tools.package_source import source_files, ROOT
