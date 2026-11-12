@@ -351,48 +351,78 @@ class LiveKitOptionalTests(unittest.TestCase):
 
     def _browser_voice_stub(self):
         from livekit_window import LiveKitVoiceWindow
+        from queue import Queue
         host = LiveKitVoiceWindow.__new__(LiveKitVoiceWindow)
         host.closed = False
         host.busy = False
         host.console = Mock()
         host.console.is_running.return_value = False
         host.browser_opened = False
+        host.direct_service = None
+        host.tool_requests = Queue()
         host.window = Mock()
         host.status = Mock()
         host.refresh = Mock()
+        host._launch_direct_browser = Mock(return_value=True)
         return host
 
-    def test_browser_mode_needs_no_python_keys_or_blocked_native_dll(self):
-        from livekit_window import LIVEKIT_DASHBOARD
+    def test_direct_webrtc_requires_local_cloud_keys_but_not_native_dll(self):
+        from livekit_bridge import LiveKitSetupError
         window = self._browser_voice_stub()
         self.assertFalse(lk.configured())
         self.assertFalse(lk.environment_python().is_file())
-        with patch('livekit_window.messagebox.askyesno', return_value=True), \
-             patch('livekit_window.webbrowser.open', return_value=True) as browser, \
-             patch('livekit_bridge.subprocess.Popen') as native, \
-             patch('livekit_window.preflight_runtime') as preflight:
+        with patch("direct_livekit.get_project_settings",
+                   side_effect=LiveKitSetupError("Project credentials missing")), \
+             patch("livekit_window.messagebox.showinfo") as info, \
+             patch("livekit_window.preflight_runtime") as preflight:
+            self.assertFalse(window.start())
+            info.assert_called_once()
+            preflight.assert_not_called()
+        window._launch_direct_browser.assert_not_called()
+
+    def test_direct_webrtc_launch_needs_approval_and_no_native_python(self):
+        window = self._browser_voice_stub()
+        server = Mock()
+        server.start.return_value = "http://127.0.0.1:48123/#random"
+        server.status.return_value = {"active":False}
+        with patch("direct_livekit.get_project_settings", return_value={
+                "LIVEKIT_URL":"wss://example.livekit.cloud",
+                "LIVEKIT_API_KEY":"key",
+                "LIVEKIT_API_SECRET":"secretsecret",
+             }), \
+             patch("livekit_window.messagebox.askyesno", return_value=True), \
+             patch("direct_livekit.DirectVoiceService", return_value=server), \
+             patch("livekit_window.preflight_runtime") as preflight:
             self.assertTrue(window.start())
-        browser.assert_called_once_with(LIVEKIT_DASHBOARD, new=2)
-        self.assertEqual(LIVEKIT_DASHBOARD, 'https://cloud.livekit.io/')
+        window._launch_direct_browser.assert_called_once_with(
+            "http://127.0.0.1:48123/#random~auto")
         self.assertTrue(window.browser_opened)
         window.window.withdraw.assert_called_once()
-        native.assert_not_called()
         preflight.assert_not_called()
         window.console.start.assert_not_called()
 
-    def test_browser_cancel_never_opens_cloud(self):
+    def test_direct_webrtc_cancel_never_opens_or_starts_voice(self):
         window = self._browser_voice_stub()
-        with patch('livekit_window.messagebox.askyesno', return_value=False), \
-             patch('livekit_window.webbrowser.open') as browser:
+        with patch("direct_livekit.get_project_settings",
+                   return_value={"LIVEKIT_URL":"wss://ok.livekit.cloud"}), \
+             patch("livekit_window.messagebox.askyesno", return_value=False):
             self.assertFalse(window.start())
         self.assertFalse(window.browser_opened)
-        browser.assert_not_called()
+        window._launch_direct_browser.assert_not_called()
 
-    def test_browser_launch_failure_never_claims_active_session(self):
+    def test_direct_webrtc_launch_failure_never_claims_active_session(self):
         window = self._browser_voice_stub()
-        with patch('livekit_window.messagebox.askyesno', return_value=True), \
-             patch('livekit_window.webbrowser.open', return_value=False), \
-             patch('livekit_window.messagebox.showerror') as notice:
+        window._launch_direct_browser.return_value = False
+        server = Mock()
+        server.start.return_value = "http://127.0.0.1:48123/#random"
+        with patch("direct_livekit.get_project_settings", return_value={
+                "LIVEKIT_URL":"wss://example.livekit.cloud",
+                "LIVEKIT_API_KEY":"key",
+                "LIVEKIT_API_SECRET":"secretsecret",
+             }), \
+             patch("livekit_window.messagebox.askyesno", return_value=True), \
+             patch("direct_livekit.DirectVoiceService", return_value=server), \
+             patch("livekit_window.messagebox.showerror") as notice:
             self.assertFalse(window.start())
         notice.assert_called_once()
         self.assertFalse(window.browser_opened)

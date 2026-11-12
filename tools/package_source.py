@@ -15,11 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 FOLDER = "Jarvis-Source-Windows"
 FILES = (
     "app.py", "account_chat.py", "adaptive_capture.py", "roman_urdu_speech.py", "free_voice.py", "cloud_voice.py", "voice_settings_ui.py", "diagnostics.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
-    "enhanced_tools.py", "enhanced_ui.py", "livekit_bridge.py", "livekit_window.py",
+    "enhanced_tools.py", "enhanced_ui.py", "livekit_bridge.py", "livekit_window.py", "direct_livekit.py",
     "livekit_agent.py", "livekit_requirements.txt",
     "RUN-JARVIS.py", "START-JARVIS-GUI.pyw", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
     "requirements.txt", "README.md", "ACCOUNT-CHAT.md",
-    "README-ROMAN-URDU.md", "ELEVENLABS-VOICE.md", "FREE-VOICES.md", "LIVEKIT-VOICE.md",
+    "README-ROMAN-URDU.md", "ELEVENLABS-VOICE.md", "FREE-VOICES.md", "LIVEKIT-VOICE.md", "LIVEKIT-DIRECT-DESKTOP.md",
     "EDGE-TTS-LICENSE.txt", "GPL-3.0.txt", "THIRD-PARTY-NOTICES.txt", "DESKTOP-FIRST.md", "SMART-APP-CONTROL.md",
     "UPDATE-JARVIS-NO-CODE.md", "JARVIS-TOOLKIT.md",
 )
@@ -71,7 +71,7 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
             "   Select Python if Windows asks which application should open it.\n"
             "5. Tick the install-permission box, then click INSTALL & OPEN JARVIS.\n"
             "6. After setup, use HASEEB AI - Jarvis on your Desktop.\n"
-            "7. Open LiveKit setup, save your project credentials locally, then click Talk Live.\n\n"
+            "7. In LiveKit setup, save local project URL/API keys once, then Talk Live opens direct Jarvis WebRTC.\n\n"
             "IMPORTANT: This GUI setup does NOT disable Windows\n"
             "Smart App Control or Defender, and contains no unsigned Jarvis.exe.\n"
             "Windows policies may still block a component or installation.\n"

@@ -25,6 +25,7 @@ LOCAL_RUNTIME_TESTS = (
     "test_adaptive_capture.py",
     "test_roman_urdu_voice.py",
     "test_livekit_optional.py",
+    "test_direct_livekit.py",
     "test_account_chat.py",
     "test_diagnostics.py",
     "test_cloud_voice.py",

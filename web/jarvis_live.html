@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>JARVIS · LiveKit Desktop Voice</title>
+  <link rel="stylesheet" href="./jarvis_live.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/dist/livekit-client.umd.min.js"></script>
+  <script defer src="./jarvis_live.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="brand-mark">◇</span> JARVIS <span class="sub">/ HASEEB AI</span></div>
+      <div class="identity">LIVEKIT REALTIME · <span id="state">OFFLINE</span></div>
+    </header>
+    <main>
+      <section class="visual">
+        <div class="halo">
+          <div class="ring ring-1"></div><div class="ring ring-2"></div>
+          <div class="ring ring-3"></div><div class="core" id="core">J</div>
+        </div>
+        <h1 id="headline">VOICE INTELLIGENCE</h1>
+        <p id="detail">Desktop WebRTC · GPT-Live-1 · training-2057</p>
+        <div class="controls">
+          <button class="primary" id="connect">● Connect LiveKit</button>
+          <button class="danger" id="disconnect" disabled>■ Disconnect</button>
+          <button id="mic" disabled>Mute mic</button>
+        </div>
+        <p class="notice" id="notice" role="status" aria-live="polite">
+          Ready for user-approved cloud voice. Connecting may consume LiveKit credits.
+        </p>
+        <p class="remaining" id="remaining">Local session limit: 10:00</p>
+      </section>
+      <aside>
+        <h2>LIVE SESSION</h2>
+        <div class="stat">Connection <span id="connection">Disconnected</span></div>
+        <div class="stat">Agent <span id="agent">Not joined</span></div>
+        <div class="stat">Desktop tools <span>Native approval required</span></div>
+        <h2 class="mt">VOICE COMMANDS</h2>
+        <p>Once the deployed agent has the <code>desktop_command</code> Client Tool enabled in LiveKit Builder, you can ask it to:</p>
+        <div class="sample">“Jarvis, calculator kholo.”</div>
+        <div class="sample">“Workspace mein Clients folder banao.”</div>
+        <div class="sample">“Invoice naam ki file dhoondo.”</div>
+        <p class="fine">Every desktop tool request requires approval on the native Jarvis window. No deletions, shell commands, mouse clicks or unrestricted file reads.</p>
+        <h2 class="mt">TRANSCRIPT / ACTIVITY</h2>
+        <div class="feed" id="feed" aria-live="polite"></div>
+      </aside>
+    </main>
+    <footer>HASEEB CRAFTS · PRIVATE DESKTOP COMPANION <span>STOP ends the room on LiveKit; not a monetary spending cap</span></footer>
+  </div>
+  <div id="audios" hidden></div>
+</body>
+</html>

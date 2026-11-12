@@ -23,7 +23,29 @@ Opening a browser page does not itself start a billable voice session.
 The agent has **no desktop-control tools**, so it cannot execute Windows
 commands by voice.
 
-## Recommended: LiveKit Agent Console in browser (no Windows DLL issue)
+## CURRENT — Direct Jarvis desktop WebRTC mode
+
+Latest Jarvis **Talk Live** opens a private, dedicated Chrome/Edge app-mode
+voice window served from 127.0.0.1, connects to the deployed training-2057
+via an on-device short-lived token broker, and does not import native
+LiveKit Python modules or launch the LiveKit Cloud Agent Console.
+
+Save LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET once through
+LiveKit setup > One-time LiveKit project keys. They stay local, are never
+forwarded to the browser/agent. Browser gets only a 90-second room JWT.
+
+Use direct voice Connect/Disconnect or the Jarvis main Talk Live/STOP.
+The backend requests Cloud room deletion when ending or on the 10-minute
+timer. This is a safety backstop, **not a guaranteed cash cap**, and
+network failures can delay confirmation. Each tool request is reviewed
+through a native Jarvis popup. Enable the desktop_command Client Tool
+once in your LiveKit Builder to activate spoken app/file actions.
+
+See **LIVEKIT-DIRECT-DESKTOP.md** for the one-time Builder configuration,
+restricted actions and privacy details. The below Cloud Console instructions
+are kept for historical context only, not the current default workflow.
+
+## Historical Cloud Console option (superseded)
 
 1. Update Jarvis from GitHub and restart.
 2. On the main Jarvis dashboard press **Talk Live**. Confirm the browser

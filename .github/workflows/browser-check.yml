@@ -30,4 +30,8 @@ jobs:
         env:
           JARVIS_BROWSER_CHANNEL: chrome
         run: python tools/test_account_browser.py
+      - name: Verify direct Jarvis LiveKit WebRTC UI and native RPC boundary (mocked)
+        env:
+          JARVIS_BROWSER_CHANNEL: chrome
+        run: python tools/test_direct_browser.py
 

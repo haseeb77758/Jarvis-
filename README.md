@@ -9,7 +9,32 @@ AI-generated action plans or a second voice-chat provider. The dashboard
 retains its animated orb, local notes, tasks, direct desktop commands,
 screen-action review, emergency STOP and GitHub updates.
 
-## Start LiveKit conversation
+## Current: Direct Jarvis desktop WebRTC voice
+
+Jarvis Talk Live now opens a dedicated Chrome/Edge app-mode desktop window,
+not the LiveKit Cloud Agent Console. A loopback-only Python standard-library
+server mints short-lived tokens from your saved LiveKit Cloud project
+credentials; Windows' blocked native blingfire DLL is not imported.
+
+**One-time**: Save LiveKit project URL, API key and secret locally via
+LiveKit setup -> One-time LiveKit project keys. Then click **Talk Live**,
+approve the Cloud credits notice, and the desktop voice window connects to
+the existing **training-2057** agent. Browser mic permission may be needed
+on first use. End via Disconnect / desktop STOP. The local backend also
+requests room deletion after ten minutes; it is **not** a spending cap.
+
+**Voice-control apps/files:** A restricted desktop_command client RPC is now
+implemented in the browser/local Jarvis bridge. You must additionally add
+and Deploy that Client Tool once in your existing private LiveKit Builder;
+GitHub updates cannot modify your Builder agent. Every action requires
+separate native Jarvis approval. See [Direct Voice setup](LIVEKIT-DIRECT-DESKTOP.md).
+
+**Security:** No arbitrary shell, deletion or unrestricted file reads; only
+approved apps and workspace file operations. LiveKit project secrets never
+enter the browser. Voice sessions need internet/Cloud usage and a pinned
+LiveKit WebRTC SDK CDN. No offline voice is promised.
+
+## Historical browser-console instructions (superseded)
 
 1. Update Jarvis and restart.
 2. Click **Talk Live** to open the **official LiveKit Cloud Agent Console** in your browser. Sign in, choose your existing project and deployed `training-2057` agent, then click **Launch Console**.

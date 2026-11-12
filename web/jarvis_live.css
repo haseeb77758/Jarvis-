@@ -1,0 +1,32 @@
+:root{color-scheme:dark;font-family:"Segoe UI",Inter,system-ui,sans-serif;background:#07121e;color:#e6f8fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 38% 45%,#133b53 0%,#0c1c30 40%,#050d17 88%);overflow-x:hidden}
+.shell{min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:25px 35px;border-bottom:1px solid #19374a;gap:14px}
+.brand{font-weight:800;letter-spacing:.25em;color:#65eee6;font-size:21px}.brand-mark{font-size:32px;margin-right:10px}.sub{font-size:12px;letter-spacing:.12em;color:#7793a4}.identity{font-size:12px;font-weight:650;letter-spacing:.16em;color:#89aebc}.identity span{color:#6bebdc}
+main{flex:1;display:grid;grid-template-columns:minmax(380px,1.35fr) minmax(295px,.65fr);min-height:550px}
+.visual{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:530px;padding:30px 25px;border-right:1px solid #19374a}
+.halo{width:min(38vw,300px);height:min(38vw,300px);min-width:215px;min-height:215px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:22px}
+.ring{position:absolute;inset:8%;border-radius:50%;border:1px solid #4af8e950;border-top-color:#67f5e9;border-bottom-color:#1386a6;box-shadow:0 0 25px #00eae517;animation:spin 11s linear infinite}
+.ring-2{inset:20%;border-top-color:#1386a6;border-left-color:#72f7ed;animation-direction:reverse;animation-duration:8s}
+.ring-3{inset:30%;border:2px dotted #50f3e8;animation-duration:5s}
+.core{width:28%;height:28%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:40px;color:#84fff1;background:radial-gradient(circle,#0a5365,#071827);box-shadow:0 0 60px #08d4da66}
+body.connected .core{animation:pulse 2.5s ease-in-out infinite}
+h1{font-size:22px;margin:2px 0 8px;letter-spacing:.19em;text-align:center}
+.visual p{color:#aac8d5;font-size:13px;line-height:1.55;text-align:center}
+.controls{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin-top:22px}
+button{background:#142b3f;border:1px solid #24526a;border-radius:9px;color:#d9f9ff;cursor:pointer;font:600 14px "Segoe UI",sans-serif;padding:13px 17px;min-height:44px}
+button.primary{background:#45e0d3;color:#041d2e;border:0;box-shadow:0 0 24px #46ddcf2a}
+button.danger{background:#3e1c29;border-color:#8e4354}
+button:disabled{opacity:.46;cursor:not-allowed}
+.notice{max-width:560px;min-height:40px}.remaining{font-variant-numeric:tabular-nums;color:#63e2df!important}
+aside{padding:36px 26px;background:#081523ab;overflow-y:auto;max-height:calc(100vh - 115px)}
+aside h2{font-size:11px;letter-spacing:.2em;color:#79f6e6;margin:0 0 20px}
+.stat{display:flex;justify-content:space-between;border-bottom:1px solid #1c3848;padding:13px 0;font-size:12px;color:#91b0c2;gap:20px}
+.stat span{color:#e7f6fa;text-align:right}.mt{margin-top:36px}aside p{font-size:13px;line-height:1.6;color:#a2bdce}
+.sample{border-left:2px solid #43decf;margin:11px 0;padding:10px 12px;background:#0b2535;font-size:13px}
+.fine{font-size:11px!important;color:#849eb0!important}.feed{min-height:80px;max-height:250px;overflow-y:auto;font-size:12px}
+.feed div{margin:7px 0;border-bottom:1px solid #1e3441;padding:6px 0;color:#adcbda;white-space:pre-wrap;overflow-wrap:anywhere}
+code{color:#5ffae6}footer{display:flex;justify-content:space-between;gap:16px;padding:18px 28px;border-top:1px solid #1a3544;font-size:11px;letter-spacing:.08em;color:#769aae}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{box-shadow:0 0 95px #23daccbb}}
+@media(max-width:850px){main{grid-template-columns:1fr}aside{max-height:none;border-top:1px solid #1b4558}.visual{border-right:0}header{padding:17px 20px}.identity{font-size:10px}footer{display:block;line-height:1.8}}
+@media(prefers-reduced-motion:reduce){.ring,.core{animation:none!important}}
