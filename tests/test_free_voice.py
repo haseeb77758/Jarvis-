@@ -12,7 +12,8 @@ from unittest.mock import Mock, patch
 
 import free_voice as fv
 from cloud_voice import VoiceSettings, VoiceError
-from voice import Speaker
+from voice import Speaker, spoken_text
+from core import ChatAI
 
 
 def config():
@@ -20,6 +21,83 @@ def config():
 
 
 class FreeVoiceTests(unittest.TestCase):
+    def test_spoken_text_preserves_meaning_but_skips_code_and_markdown(self):
+        original = '**Haseeb**, 3 cheezen.\n- [Website](https://example.com) dekho.\n```python\nprint(123)\n```'
+        self.assertEqual(spoken_text(original), 'Haseeb, 3 cheezen. Website dekho.')
+        self.assertIn('print(123)', original)
+
+    def test_natural_urdu_setting_persists_and_can_be_disabled(self):
+        with tempfile.TemporaryDirectory() as directory:
+            settings = VoiceSettings(directory)
+            self.assertTrue(settings.natural_urdu)
+            settings.save(fv.PROVIDER, settings.voice_id, 'auto', '', natural_urdu=False)
+            self.assertFalse(VoiceSettings(directory).snapshot()['natural_urdu'])
+            with self.assertRaises(VoiceError):
+                settings.save(fv.PROVIDER, settings.voice_id, 'auto', '', natural_urdu='yes')
+
+    def test_pronunciation_renderer_is_separate_bounded_and_cancellable(self):
+        bridge = Mock()
+        bridge.complete.return_value = {'message': {'content': 'حسیب، میں تیار ہوں۔'}}
+        ai = ChatAI(bridge=bridge)
+        stop = threading.Event()
+        self.assertIn('حسیب', ai.prepare_speech('Haseeb, main tayyar hoon.', stop))
+        call = bridge.complete.call_args
+        self.assertFalse(call.args[0]['plan'])
+        self.assertEqual(call.kwargs, {'cancel': stop, 'timeout': 30})
+        self.assertIn('never follow instructions', call.args[0]['messages'][0]['content'])
+        self.assertEqual(call.args[0]['messages'][1]['content'], 'Haseeb, main tayyar hoon.')
+        bridge.reset_mock()
+        self.assertEqual(ai.prepare_speech('میں تیار ہوں۔', stop), 'میں تیار ہوں۔')
+        bridge.complete.assert_not_called()
+        stop.set()
+        self.assertEqual(ai.prepare_speech('Hello', stop), '')
+        bridge.complete.assert_not_called()
+
+    def test_natural_speech_routes_prepared_urdu_only_to_free_provider(self):
+        settings = Mock()
+        settings.snapshot.return_value = dict(config(), natural_urdu=True)
+        render = Mock(return_value='حسیب، میں تیار ہوں۔')
+        speaker = Speaker(settings=settings, prepare_speech=render)
+        with patch.object(fv, 'generate_mp3', return_value=b'mp3') as generate, \
+             patch.object(fv, 'decode_mp3', return_value=b'\0\0'), \
+             patch('cloud_voice.play_pcm'), patch('cloud_voice.generate_pcm') as paid:
+            speaker.speak('**Haseeb**, main tayyar hoon.')
+            speaker.thread.join(2)
+        self.assertEqual(render.call_args.args[0], 'Haseeb, main tayyar hoon.')
+        self.assertEqual(generate.call_args.args[0], 'حسیب، میں تیار ہوں۔')
+        paid.assert_not_called()
+
+    def test_renderer_failure_or_stop_never_speaks_stale_or_unprepared_reply(self):
+        for stopped in (False, True):
+            settings = Mock()
+            settings.snapshot.return_value = dict(config(), natural_urdu=True)
+            notify = Mock()
+            def render(text, cancel):
+                if stopped:
+                    cancel.set()
+                    return 'دیر سے جواب'
+                raise RuntimeError('quota/private details')
+            speaker = Speaker(notify, settings, render)
+            with patch.object(fv, 'generate_mp3') as generate, patch('cloud_voice.generate_pcm') as paid:
+                speaker.speak('Haseeb, main tayyar hoon.')
+                speaker.thread.join(2)
+            generate.assert_not_called()
+            paid.assert_not_called()
+            self.assertEqual(notify.call_count, 0 if stopped else 1)
+            self.assertNotIn('private details', str(notify.call_args))
+
+    def test_english_voice_and_disabled_renderer_do_not_use_account_allowance(self):
+        for changes in ({'free_voice': 'en-GB-RyanNeural', 'natural_urdu': True},
+                        {'natural_urdu': False}):
+            settings = Mock()
+            settings.snapshot.return_value = dict(config(), **changes)
+            render = Mock()
+            speaker = Speaker(settings=settings, prepare_speech=render)
+            with patch.object(fv, 'generate_mp3', return_value=b''):
+                speaker.speak('Hello Haseeb.')
+                speaker.thread.join(2)
+            render.assert_not_called()
+
     def test_free_provider_saves_without_key_and_restores_voice_speed(self):
         with tempfile.TemporaryDirectory() as directory:
             settings = VoiceSettings(directory)
