@@ -234,6 +234,12 @@ class LiveKitVoiceWindow:
 
                 def execute_one(request=task):
                     try:
+                        if request.cancelled or self.closed or (
+                                self.direct_service is None or
+                                not self.direct_service.status()["active"] or
+                                self.host.stop.is_set()):
+                            request.result = "DENIED: Voice request expired or STOPPED."
+                            return
                         # Controller.validate and safe_child additionally enforce
                         # allowed app names and restrict file operations to workspace.
                         result = self.host.control.execute(request.action)
