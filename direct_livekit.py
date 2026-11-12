@@ -154,6 +154,7 @@ class VoiceToolRequest:
     action: dict
     event: threading.Event
     result: str = "DENIED: No approval."
+    cancelled: bool = False
 
 
 class DirectVoiceService:
