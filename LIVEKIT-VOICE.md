@@ -1,84 +1,97 @@
-# Jarvis LiveKit Voice — optional test mode
+# Jarvis primary voice — LiveKit GPT-Live-1
 
-This integration was adapted from the user's `training-2057.zip` LiveKit Agent Builder export.
+LiveKit GPT-Live-1 (voice `marin`) is now Jarvis's **primary spoken conversation
+mode**, following the user's successful test of the original
+`training-2057.zip` agent. The regular Windows/Edge voice and local Whisper
+microphone remain a **Free Mic fallback**; text/chat and reviewed desktop
+controls are unchanged.
 
-## What this changes
+**What "primary" means:** a big **Talk Live** button on the main Jarvis
+dashboard launches the user-tested separate LiveKit console. The animated
+dashboard stays available, shows the session's remaining time, and its button
+becomes **End Live Voice** while running. This is a native dashboard shortcut,
+not a fully embedded voice waveform/transcript player. The LiveKit agent has
+**no desktop-control tools** and does not execute spoken PC commands.
 
-Jarvis now offers a separate **LiveKit Voice** button alongside its ordinary
-**Voices** button. The new mode starts a realtime two-way voice session using
-LiveKit Inference, `openai/gpt-live-1` and `marin` voice. It supports
-interruptions, voice turn-taking and AI-Coustics audio enhancement.
+## API keys — official pages
 
-**AI-Coustics voice isolation is OFF by default** to avoid extra metered audio
-processing. Turn it on only with the explicit checkbox if needed.
+- **Create an account / open your project:** https://cloud.livekit.io/
+- **LiveKit API key documentation:** https://docs.livekit.io/reference/api/projects/keys/
+- **GPT-Live-1 setup docs:** https://docs.livekit.io/agents/models/realtime/gpt-live/
+- **Current inference prices:** https://livekit.com/pricing/inference
 
-This is NOT the regular Jarvis Mic, and it is NOT a PC-control interface:
-LiveKit voice is a separate console conversation window with **no desktop,
-filesystem or browser automation tools**. The original free Edge Neural,
-Whisper mic and account chat remain available and unchanged.
+After LiveKit Cloud sign-in, select your project, then navigate to its
+**Settings → API Keys / Keys** section. Create a new key and keep the secret
+immediately: LiveKit only shows it on creation.
 
-## Price and credentials
+You need **three LiveKit Cloud values** for Jarvis:
 
-This specific model is billed by the LiveKit Cloud project, with delegated
-reasoning/tool usage potentially billed separately. This cannot be promised as
-an unlimited free service. Installing the optional library does not start a
-cloud session or subscribe to a plan. **Start** requires a separate explicit
-billing-consent confirmation every time.
+```dotenv
+LIVEKIT_URL=wss://YOUR-PROJECT.livekit.cloud
+LIVEKIT_API_KEY=YOUR_PROJECT_KEY
+LIVEKIT_API_SECRET=YOUR_PROJECT_SECRET
+```
 
-You must have your own LiveKit Cloud project and its credentials. These never
-belong in the GitHub repository or ChatGPT conversation. Open the generated
-private `.env.local` from the LiveKit Voice screen, then fill:
+These are *example placeholders*, not credentials. You do **not** need an
+additional OpenAI API key for the tested LiveKit Inference mode.
 
-    LIVEKIT_URL=wss://your-livekit-project
-    LIVEKIT_API_KEY=...
-    LIVEKIT_API_SECRET=...
+In Jarvis, open **LiveKit setup** then click **Open LOCAL API key + secret
+file** and save the real three values there. The file is stored under
+`%LOCALAPPDATA%\HaseebCrafts\Jarvis\LiveKitVoice\.env.local`, separate
+from source code and GitHub. It is Windows-user-readable **plaintext**, so
+use a private Windows account and never share its contents or upload it.
 
-Saved path: `%LOCALAPPDATA%\HaseebCrafts\Jarvis\LiveKitVoice\.env.local`.
-This is a local plaintext credential file, protected by your Windows account's
-file permissions. Keep the machine/user account secure; don't share the file.
+Existing project credentials and the separately installed voice environment
+are kept when you update Jarvis; updates don't overwrite the credentials
+file. Never paste the API secret into ChatGPT or commit it to a repository.
 
-## Windows 11 steps (no coding)
+## How to speak after updating Jarvis
 
-1. Update Jarvis from GitHub and restart.
-2. Click **LiveKit Voice** beside the existing **Voices** button.
-3. Click **Install separate LiveKit voice tools** and consent to internet
-   package/model downloads. This uses a separate Python 3.12 environment
-   under your Windows user folder, not the regular Jarvis environment.
-4. Click **Open private LiveKit credentials file**. Fill and save your
-   own LiveKit Cloud URL, API key and API secret.
-5. Review your LiveKit Cloud billing/usage limits. Click
-   **Start metered LiveKit conversation** only if you accept the costs.
-   A separate voice console opens. Allow microphone access when prompted.
-6. End the conversation with **STOP LiveKit voice session**, or close
-   the LiveKit Voice dialog / Jarvis. The controller terminates the
-   session process it created.
+1. On Windows 11, open Jarvis and run **Update Jarvis**; restart the app.
+2. For first setup only, click **LiveKit setup** → **Install / repair LiveKit
+   voice tools**. This uses a separate Python 3.12 environment and internet.
+3. Add LiveKit Cloud credentials in the **LOCAL** file described above.
+4. On the main Jarvis chat bar, click **● Talk Live**.
+5. Confirm the cloud usage prompt for this specific session. The familiar
+   LiveKit voice console opens while the dashboard remains available.
+6. Click **■ End Live Voice**, use Jarvis global STOP / Ctrl+Alt+F12, or
+   close Jarvis to terminate the session.
 
-No desktop applications are launched from voice prompts, and no system
-permissions are expanded. No service is automatically started on Windows boot.
+The former **Mic** button is now labelled **Free Mic**. The existing
+**Voices** button still configures the free Edge Neural TTS provider. Use these
+if you don't want to spend LiveKit Cloud credits.
 
-## Quality and latency expectations
+### Safety and ongoing expenses
 
-- GPT-Live-1 supports concurrent listening and speaking, including model
-  driven interruptions. For quick conversations it can reduce the need for
-  separate audio-to-text, LLM and text-to-speech requests.
-- `marin` is not a verified authentic Pakistani Urdu accent, and bilingual
-  pronunciation depends on the model. Test names, Urdu and English separately.
-- Latency depends on LiveKit Cloud routing, network, model response and audio
-  devices. This optional mode has not been live-tested on the user's computer.
-- No guarantees for free quotas, unlimited voice, or millisecond latency.
+- There is **no automatic cloud voice start** on Windows boot, app opening,
+  or chat send. A new voice session needs **explicit user consent**, every time.
+- By default, a LiveKit session **automatically stops after 10 minutes**.
+  You can select **5 / 10 / 15 minutes** in LiveKit setup before starting.
+  This local timer is a safety backstop, **not a monetary cost cap**.
+- LiveKit Inference is **usage-metered**. The free Build plan may include a
+  limited credit allowance, but *this is not unlimited free*. Check live
+  pricing, quota and account usage. Even a short session can consume credits.
+- AI-Coustics enhancement is **OFF by default**, and can add separate usage
+  charges when selected.
+- LiveKit agent speech is **separate from desktop control**. It cannot
+  automatically launch Windows applications, access files or execute commands.
+  The reviewed desktop controls elsewhere in Jarvis retain their approval
+  checks, permissions and STOP behavior.
+- **STOP** ends the local LiveKit console process; an already-billed portion
+  or a provider-side session close delay cannot be reversed.
+- A local virtualenv and downloaded models remain installed between restarts;
+  the agent doesn't download models at every Talk Live click.
 
-## Technical boundaries
+## Verification and limitations
 
-Only `livekit_voice/requirements.txt` is installed when you opt in.
-The exported `training-2057.zip` is a template, not a complete packaged
-Windows client; its original Dockerfile referenced a missing `uv.lock`.
-We adapt its working agent structure instead of copying that Dockerfile.
-The normal Windows CI tests statically test the optional launcher and
-safety boundaries without making real cloud connections. A credentialed,
-human-approved Windows microphone smoke test is still required for full
-validation.
+GitHub Windows CI verifies the dashboard, controlled process start/stop, safe
+credential paths, local time-limit logic, packaging and executable startup
+**without requiring any personal API credentials**. The original user has
+reported that the live console audio sounds good on their device. Future
+latency/accuracy still depends on the LiveKit network and account limits.
+There is no guarantee of a fully offline voice or zero delay.
 
-Official reference:
-- https://docs.livekit.io/agents/models/realtime/gpt-live/
-- https://docs.livekit.io/agents/server/startup-modes/
-- https://docs.livekit.io/agents/models/inference/
+The source is an adaptation of a user-provided LiveKit Agent Builder export.
+It is not a cloud deployment. For a fully embedded audio/chat UI or
+voice-initiated desktop tool approvals, additional integration work and
+explicit permission design would be required.
