@@ -299,6 +299,7 @@ def make_dashboard(app):
                          font=('Segoe UI', 10), cursor='hand2')
     menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
                    activebackground=PANEL_2, activeforeground=CYAN)
+    menu.add_command(label='Voice / ElevenLabs', command=app.open_voice_settings)
     menu.add_command(label='Device readiness', command=app.open_diagnostics)
     menu.add_command(label='Connect GitHub', command=app.connect_github)
     menu.add_command(label='Resume', command=app.resume)
@@ -459,7 +460,7 @@ def make_dashboard(app):
     voice_footer = tk.Frame(conversation, bg=DEEP)
     voice_footer.pack(side='bottom', fill='x', padx=13, pady=(0, 8))
     btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=2)
-    btn(voice_footer, 'Test voice', app.test_voice, compact=True).pack(side='left', padx=2)
+    btn(voice_footer, 'Voices', app.open_voice_settings, compact=True).pack(side='left', padx=2)
     ttk.Combobox(voice_footer, textvariable=app.voice_language, width=7,
                  state='readonly', values=['Auto', 'Urdu', 'English']).pack(side='left', padx=3)
     tk.Checkbutton(voice_footer, text='Speak replies', variable=app.speak_enabled,

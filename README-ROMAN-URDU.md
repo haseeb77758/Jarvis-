@@ -92,3 +92,18 @@ GitHub Pages ke liye repo plan/Pages settings configure honi chahiye; private re
 
 ## Desktop-first / voice / memory update
 Latest instructions: **DESKTOP-FIRST.md**. Naye build mein voice model bundled hai; Setup voice source-run fallback ke liye hai. Urdu mic accuracy aur spoken output target PC par verify karein. Preferences/shortcuts explicit memory hain, executable self-upgrade nahi.
+
+
+## ElevenLabs voice replies
+
+Jarvis update karke **Voices** ya **••• → Voice / ElevenLabs** kholo. Provider
+ElevenLabs select karo, apni API key aur voice ID paste karo, language `ur`/`en`
+ya `auto` choose karo. Spoken text bhejne ka checkbox tick karke Save, phir
+Test voice dabao. **Speak replies** on karne par main chat aur Sandbox ka jawab
+selected voice mein bolega. API key chat mein paste nahi karni.
+
+ElevenLabs ke credits aur internet chahiye. Remember key sirf current Windows
+account ke liye encrypted save karta hai; off ho to session-only hai. STOP local
+playback rokta hai, lekin bheji hui request ke credits wapas hone ki guarantee
+nahi. Urdu script aur matching accent ki voice behtar rahegi. Windows provider
+select karke offline speech use kar sakte ho. ELEVENLABS-VOICE.md dekho.
