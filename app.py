@@ -423,8 +423,8 @@ class App:
             self.ai_status.set('OLLAMA · MODEL NEEDED')
             if messagebox.askokcancel(
                 'Install local AI model',
-                'Ollama chal raha hai, lekin ' + MODEL + ' model missing hai.\n'
-                'Lagbhag 1 GB model download hoga. Internet aur disk space required.\n'
+                'Ollama chal raha hai, lekin ' + self.ai.model + ' model missing hai.\n'
+                ('Lagbhag 1.9 GB' if self.ai.model == 'qwen2.5:3b' else 'Lagbhag 1 GB') + ' model download hoga. Internet aur disk space required.\n'
                 'Model apne PC par chalega; cloud API key nahi chahiye.\n'
                 'Download shuru karun?',
                 parent=self.root
