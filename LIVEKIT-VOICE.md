@@ -88,6 +88,40 @@ Their providers are not constructed or connected in the current runtime.
   AI-Coustics optional extra, when deliberately enabled, may need its own
   plugin and assets. This is not required to speak to Jarvis.
 
+## Fix: `No module named pip` during LiveKit setup
+
+If the diagnostics show:
+
+```text
+LiveKit setup failure at pip install:
+...\\LiveKitVoice\\.venv\\Scripts\\python.exe: No module named pip
+```
+
+this is a **broken or incomplete per-user virtual environment**, **not** a
+LiveKit Cloud API-key error. The `.venv\\Scripts\\python.exe` file can exist
+without the Python package installer `pip`. Earlier Jarvis only checked that
+the Python executable existed.
+
+The updated **Install / repair LiveKit voice tools** button now:
+- Checks `python.exe -m pip --version` in the actual LiveKit virtualenv.
+- If pip is missing, runs Python's bundled
+  `python.exe -m ensurepip --upgrade --default-pip` automatically inside
+  **that same virtualenv**.
+- Verifies that pip is working before installing minimal LiveKit packages,
+  without downloading unrelated models or launching a paid Cloud session.
+- Leaves `%LOCALAPPDATA%\\HaseebCrafts\\Jarvis\\LiveKitVoice\\.env.local`
+  and previously installed packages untouched.
+- Saves the exact failure stage in the redacted local diagnostics if the
+  underlying Python installation also lacks `ensurepip`. In that case use
+  the official Python 3.12 Repair installer, not an arbitrary online
+  bootstrap script, and run Install / repair again.
+
+**No-code recovery:** Update Jarvis from GitHub, restart it, open
+**LiveKit setup**, leave AI-Coustics OFF and click
+**Install / repair LiveKit voice tools**. Do not delete the LiveKitVoice
+folder, passwords, virtualenv or Jarvis app. Choose **Talk Live** only after
+the installation reports success and you accept the metered Cloud session.
+
 ## Fix: "LiveKit dependencies/model download nahi hui"
 
 Older installers ran `python livekit_agent.py download-files` **for every
