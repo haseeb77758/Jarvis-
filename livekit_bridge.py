@@ -157,6 +157,7 @@ class LiveKitConsole:
             raise LiveKitSetupError("LiveKit agent file missing. Jarvis update karein.")
         environment = os.environ.copy()
         environment["JARVIS_LIVEKIT_ENV_FILE"] = str(credentials_path())
+        environment["JARVIS_LIVEKIT_AI_COUSTICS"] = "1" if noise_enhancement else "0"
         # Never embed API credentials in command line arguments.
         self.process = subprocess.Popen(
             [str(python), str(agent), "console"],
