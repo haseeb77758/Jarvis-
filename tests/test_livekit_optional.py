@@ -187,8 +187,8 @@ class LiveKitOptionalTests(unittest.TestCase):
         python.parent.mkdir(parents=True, exist_ok=True)
         python.touch()
         completed = Mock(returncode=0, stdout=b'installed', stderr=b'')
-        with patch.object(lk.os, 'name', 'nt'), \\
-             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \\
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \
              patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
             message = lk.install_optional()
         self.assertIn('No extra model download needed', message)
@@ -204,8 +204,8 @@ class LiveKitOptionalTests(unittest.TestCase):
         python.parent.mkdir(parents=True, exist_ok=True)
         python.touch()
         failed = Mock(returncode=1, stdout=b'', stderr=b'No matching distribution found')
-        with patch.object(lk.os, 'name', 'nt'), \\
-             patch('livekit_bridge.subprocess.run', return_value=failed), \\
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=failed), \
              patch.object(lk, 'preflight_runtime') as preflight:
             with self.assertRaisesRegex(lk.LiveKitSetupError, 'pip install'):
                 lk.install_optional()
@@ -218,8 +218,8 @@ class LiveKitOptionalTests(unittest.TestCase):
         python.parent.mkdir(parents=True, exist_ok=True)
         python.touch()
         completed = Mock(returncode=0, stdout=b'', stderr=b'')
-        with patch.object(lk.os, 'name', 'nt'), \\
-             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \\
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \
              patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
             result = lk.install_optional(noise_enhancement=True)
         self.assertIn('optional AI-Coustics', result)
@@ -234,13 +234,13 @@ class LiveKitOptionalTests(unittest.TestCase):
         python.parent.mkdir(parents=True, exist_ok=True)
         python.touch()
         lk.create_credentials_template().write_text(
-            'LIVEKIT_URL=wss://local.livekit.cloud\\n'
-            'LIVEKIT_API_KEY=private-key\\n'
-            'LIVEKIT_API_SECRET=private-secret\\n', encoding='utf-8')
+            'LIVEKIT_URL=wss://local.livekit.cloud\n'
+            'LIVEKIT_API_KEY=private-key\n'
+            'LIVEKIT_API_SECRET=private-secret\n', encoding='utf-8')
         completed = Mock(returncode=0, stdout=b'', stderr=b'')
-        with patch.object(lk.os, 'name', 'nt'), \\
-             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \\
-             patch('livekit_bridge.subprocess.Popen') as launch, \\
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \
+             patch('livekit_bridge.subprocess.Popen') as launch, \
              patch.object(lk, 'preflight_runtime', return_value=True):
             lk.install_optional()
             launch.assert_not_called()
