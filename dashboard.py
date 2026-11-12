@@ -299,7 +299,6 @@ def make_dashboard(app):
     menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
                    activebackground=PANEL_2, activeforeground=CYAN)
     menu.add_command(label='LiveKit project / API keys', command=app.open_livekit_voice)
-    menu.add_command(label='Device readiness', command=app.open_diagnostics)
     menu.add_command(label='Connect GitHub', command=app.connect_github)
     menu.add_command(label='Resume', command=app.resume)
     menu.add_separator()
