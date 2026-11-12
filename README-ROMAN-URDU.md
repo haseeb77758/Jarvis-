@@ -64,7 +64,7 @@ Main dashboard par **Talk Live** ab primary voice button hai. **LiveKit setup** 
 LiveKit Cloud par billed model hai; **fully free ya unlimited nahi**.
 LiveKit project credentials apne PC ke private file mein rakhni hongi,
 GitHub ya chat mein nahi. Button se separate setup consent aur har voice
-session se pehle usage/billing confirmation milta hai. Existing free voice
+session se pehle usage/billing confirmation milta hai. Cloud voice auto-start nahi hoti. 5/10/15-minute auto STOP available hai; yeh cash spending cap nahi. LiveKit Cloud keys https://cloud.livekit.io/ se project settings mein generate karo. Keys sirf PC ki local file mein rakhna. Existing free voice
 aur desktop-command review bilkul alag rahenge. Steps: [LIVEKIT-VOICE.md](LIVEKIT-VOICE.md).
 
 ## Target-PC check
