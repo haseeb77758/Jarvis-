@@ -34,6 +34,7 @@ class App:
         self.history = []
         self.sandbox_session = SandboxSession()
         self.sandbox_window = None
+        self.livekit_window = None
         self.sleeping = False
         self.pending = []
         self.last_plan = []
@@ -101,6 +102,16 @@ class App:
             current.window.lift()
             return
         self.voice_settings_window = VoiceSettingsWindow(self)
+
+    def open_livekit_voice(self):
+        """Open optional, separately billed real-time voice console settings."""
+        from livekit_window import LiveKitVoiceWindow
+        current = getattr(self, 'livekit_window', None)
+        if current is not None and not current.closed:
+            current.window.deiconify()
+            current.window.lift()
+            return
+        self.livekit_window = LiveKitVoiceWindow(self)
 
     def open_diagnostics(self):
         from diagnostics import DiagnosticsWindow
@@ -621,6 +632,8 @@ class App:
         self.button(win, 'Save screenshot locally…', save).pack(pady=(0, 12))
 
     def close(self):
+        if self.livekit_window is not None and not self.livekit_window.closed:
+            self.livekit_window.close()
         if self.sandbox_window is not None and not self.sandbox_window.closed:
             self.sandbox_window.close()
         self.speaker.stop()
