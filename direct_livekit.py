@@ -297,6 +297,9 @@ class DirectVoiceService:
             if not self.active_room:
                 return {"stopped": True}
             self.state = state
+        if state == "DISCONNECTED":
+            # Browser has lost media: also end the Cloud room, not merely UI.
+            self.disconnect()
         if self.on_state:
             try:
                 self.on_state(state)
