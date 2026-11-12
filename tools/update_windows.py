@@ -41,7 +41,7 @@ REQUIRED = frozenset({
     "web/connect.html", "web/connect.js", "web/connect.css",
 })
 LOCAL_TESTS = (
-    "test_private_github_auth.py", "test_enhanced_tools.py", "test_livekit_optional.py", "test_dashboard_orb.py", "test_dashboard_layout.py",
+    "test_private_github_auth.py", "test_enhanced_tools.py", "test_livekit_optional.py", "test_direct_livekit.py", "test_dashboard_orb.py", "test_dashboard_layout.py",
     "test_sandbox_chat.py", "test_account_chat.py", "test_diagnostics.py", "test_cloud_voice.py", "test_free_voice.py",
     "test_chat_ui.py", "test_core.py", "test_desktop_voice_memory.py",
     "test_safety_regressions.py", "test_stonic_tools.py",
