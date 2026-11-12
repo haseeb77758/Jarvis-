@@ -27,8 +27,17 @@ and service/voice availability is controlled by the provider.
 7. Press **Test voice**, then enable **Speak replies**. Sandbox has its own
    Speak replies checkbox and uses the shared provider/voice settings.
 
-For clear Urdu, use Urdu-script replies with Asad/Uzma. Roman Urdu pronunciation
-can be uneven; selecting an Urdu voice does not transliterate Latin text.
+For clearer Urdu, leave **Natural Urdu pronunciation** enabled with Asad/Uzma.
+Chat bubbles stay Roman Urdu. Before speaking a Latin-only reply, Jarvis asks
+the already-connected account AI to render it in Urdu script, preserving the
+meaning and punctuation. This adds one bounded request and up to 30 seconds of
+waiting, uses the account's free allowance, and requires Connect AI. It never
+buys credits or switches providers. Rendering is model-generated and can make
+pronunciation/transliteration mistakes; listen on your own PC to assess it.
+If rendering fails, Jarvis keeps the text and reports the speech issue instead
+of silently reading the unprepared Roman Urdu. Turn the option off to send text
+directly to the selected voice. Existing Urdu-script input needs no extra call.
+Speech strips markdown, URLs and fenced code; visible chat content is unchanged.
 English voices should be used with English text. Naturalness is subjective;
 listen on the target PC before considering a voice approved.
 
