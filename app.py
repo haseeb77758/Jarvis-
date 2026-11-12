@@ -187,9 +187,17 @@ class App:
                  fg=MUTED, bg=BG, justify='left', anchor='w', font=('Segoe UI', 9)).pack(fill='x', padx=26, pady=(0, 15))
 
     def say(self, name, text):
+        # Text tags provide real chat styling without converting model text
+        # into commands, HTML, or untrusted UI instructions.
         self.log.configure(state='normal')
         self.log.insert('end', name + '\n', 'error' if 'ERROR' in name else 'user' if name == 'YOU' else 'name')
-        self.log.insert('end', str(text) + '\n\n')
+        body_tag = 'user_body' if name == 'YOU' else (
+            'ai_body' if name in {'HASEEB AI', 'HASEEB AI · LOCAL MODEL'} else None
+        )
+        if body_tag:
+            self.log.insert('end', str(text) + '\n\n', body_tag)
+        else:
+            self.log.insert('end', str(text) + '\n\n')
         self.log.configure(state='disabled')
         self.log.see('end')
         if hasattr(self, 'activity_log') and (name in {'RESULT', 'ERROR', 'ACTION ERROR', 'SCREENSHOT', 'PERMISSION'} or name.startswith('PLAN ERROR')):
