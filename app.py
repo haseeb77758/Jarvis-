@@ -40,7 +40,9 @@ class App:
         self.store = PreferenceStore(data_directory)
         self.speak_enabled = tk.BooleanVar(value=False)
         self.voice_language = tk.StringVar(value='Auto')
-        self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)))
+        from cloud_voice import VoiceSettings
+        self.voice_settings = VoiceSettings(self.store.directory)
+        self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)), settings=self.voice_settings)
         self.control = Controller(Path.home(), self.stop, self.store.apps)
         self.ai = LocalAI(model=self.store.chat_model)
         self.mode = tk.StringVar(value='Local AI chat')
@@ -87,6 +89,15 @@ class App:
         item.bind('<Enter>', lambda _e: item.configure(bg=hover) if str(item['state']) != 'disabled' else None)
         item.bind('<Leave>', lambda _e: item.configure(bg=base))
         return item
+
+    def open_voice_settings(self):
+        from voice_settings_ui import VoiceSettingsWindow
+        current = getattr(self, "voice_settings_window", None)
+        if current is not None and not current.closed:
+            current.window.deiconify()
+            current.window.lift()
+            return
+        self.voice_settings_window = VoiceSettingsWindow(self)
 
     def open_diagnostics(self):
         from diagnostics import DiagnosticsWindow
@@ -214,7 +225,7 @@ class App:
             self.activity_log.insert('end', name + '  ·  ' + str(text)[:240] + '\n\n')
             self.activity_log.configure(state='disabled')
             self.activity_log.see('end')
-        if name in {'RESULT', 'HASEEB AI · LOCAL MODEL', 'ERROR'} and self.speak_enabled.get():
+        if name in {'RESULT', 'HASEEB AI · LOCAL MODEL'} and self.speak_enabled.get():
             self.speaker.speak(str(text))
 
     def set_busy(self, on):
@@ -223,7 +234,7 @@ class App:
         self.status.set('Working…' if on else ('Stopped · Resume to continue' if self.stop.is_set() else 'Ready · local controls'))
 
     def test_voice(self):
-        if not self.busy:
+        if not self.busy and not self.stop.is_set():
             self.speaker.speak('Jarvis ready. Aap ka desktop assistant tayyar hai.')
 
     def listen_voice(self):
@@ -460,7 +471,7 @@ class App:
             self.ai_status.set('OLLAMA · MODEL NEEDED')
             if messagebox.askokcancel(
                 'Install local AI model',
-                'Ollama chal raha hai, lekin ' + self.ai.model + ' model missing hai.\n'
+                'Ollama chal raha hai, lekin ' + self.ai.model + ' model missing hai.\n' +
                 ('Lagbhag 1.9 GB' if self.ai.model == 'qwen2.5:3b' else 'Lagbhag 1 GB') + ' model download hoga. Internet aur disk space required.\n'
                 'Model apne PC par chalega; cloud API key nahi chahiye.\n'
                 'Download shuru karun?',
@@ -489,6 +500,9 @@ class App:
         self.say('HASEEB AI', 'Nayi conversation shuru.')
 
     def halt(self):
+        sandbox = getattr(self, 'sandbox_window', None)
+        if sandbox is not None and not sandbox.closed:
+            sandbox.stop()
         if hasattr(self, 'speaker'):
             self.speaker.stop()
         self.stop.set()

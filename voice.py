@@ -108,8 +108,9 @@ def normalize_command(text):
 
 
 class Speaker:
-    def __init__(self, notify=None):
+    def __init__(self, notify=None, settings=None):
         self.notify = notify or (lambda text: None)
+        self.settings = settings
         self.cancel = threading.Event()
         self.thread = None
 
@@ -117,6 +118,7 @@ class Speaker:
         self.cancel.set()
 
     def speak(self, text):
+        config = self.settings.snapshot() if self.settings is not None else {"provider": "Windows"}
         self.stop()
         previous = self.thread
         cancel = threading.Event()
@@ -125,6 +127,19 @@ class Speaker:
             if previous:
                 previous.join(timeout=2)
             if cancel.is_set():
+                return
+            if config["provider"] == "ElevenLabs":
+                from cloud_voice import generate_pcm, play_pcm, VoiceError
+                try:
+                    audio = generate_pcm(text, config, cancel)
+                    if not cancel.is_set():
+                        play_pcm(audio, cancel)
+                except VoiceError as exc:
+                    if not cancel.is_set():
+                        self.notify(str(exc))
+                except Exception:
+                    if not cancel.is_set():
+                        self.notify("ElevenLabs playback unavailable. Audio output settings check karein; text reply available hai.")
                 return
             try:
                 import pythoncom
@@ -144,3 +159,4 @@ class Speaker:
                 self.notify('Windows speech voice unavailable. Text replies still work.')
         self.thread = threading.Thread(target=run, daemon=True)
         self.thread.start()
+

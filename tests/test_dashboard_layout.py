@@ -31,7 +31,7 @@ class LayoutRegressionTests(TestCase):
             speak_enabled=tk.BooleanVar(master=root, value=False),
             permission=tk.BooleanVar(master=root, value=False),
         )
-        for command in ("open_diagnostics", "halt", "resume", "connect_github", "update_jarvis",
+        for command in ("open_voice_settings", "open_diagnostics", "halt", "resume", "connect_github", "update_jarvis",
                         "setup_ai", "open_sandbox", "open_toolkit",
                         "show_memory", "choose", "add_app", "clear",
                         "listen_voice", "setup_voice", "test_voice",

@@ -77,7 +77,7 @@ class SandboxWindow:
         self.busy = False
         self.listening = False
         self.closed = False
-        self.speaker = Speaker(lambda notice: self.events.put(("speech_notice", notice)))
+        self.speaker = Speaker(lambda notice: self.events.put(("speech_notice", notice)), settings=host.voice_settings)
         self.speak_replies = tk.BooleanVar(master=parent, value=False)
         self.status = tk.StringVar(master=parent, value="LOCAL OLLAMA  ·  CHECKING")
         self.activity = tk.StringVar(master=parent, value="Chat only  •  No desktop actions")
@@ -450,3 +450,4 @@ class SandboxWindow:
         self.generation += 1
         self.speaker.stop()
         self.window.destroy()
+

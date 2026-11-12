@@ -30,7 +30,7 @@ HASEEB AI Jarvis helps you perform supported tasks on your Windows PC using text
 Actions are limited to a supported allowlist. Screen typing and clicking require an opt-in and review. There is no automatic sending of WhatsApp messages, arbitrary shell execution or unrestricted file deletion.
 
 **Important setup**
-Local AI chat requires a separate optional Ollama runtime and downloaded language model. An Internet connection may be needed to obtain optional model files, browse websites or open third-party services. Performance depends on your PC's hardware. Jarvis is not a continuous-listening or fully autonomous computer operator.
+Optional ElevenLabs spoken replies send reply text to ElevenLabs after opt-in and require your own API key, internet and available account credits. Windows speech remains the default offline option. Local AI chat requires a separate optional Ollama runtime and downloaded language model. An Internet connection may be needed to obtain optional model files, browse websites or open third-party services. Performance depends on your PC's hardware. Jarvis is not a continuous-listening or fully autonomous computer operator.
 
 ## Suggested Store metadata
 
@@ -64,3 +64,4 @@ Please test the local app shortcuts, microphone opt-in, review controls and emer
 Before submission, the publisher must confirm app/store policies, user-facing screenshots, privacy policy public URL, final package identity/publisher strings, and successful installation on a Windows 11 device. Microsoft may request changes.
 
 Official Store listing guidance: https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/create-app-submission
+

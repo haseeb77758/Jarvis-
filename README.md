@@ -12,7 +12,7 @@ Created by **Haseeb Crafts**.
 
 > **Windows 11 Smart App Control blocked Jarvis.exe?** The executable is unsigned. Do **not** disable Windows security. Download the **Jarvis-Source-Windows** ZIP from the latest successful **Windows source package (no unsigned EXE)** GitHub Actions run, extract it, install official Python 3.10+ and run `py -3 RUN-JARVIS.py` inside the extracted source folder. This requires explicit approval for dependency installation, and does not guarantee every PC's security policy allows execution. See [SMART-APP-CONTROL.md](SMART-APP-CONTROL.md). For publicly distributable EXE releases, use a legitimate trusted code-signing certificate.
 
-A Windows desktop assistant with named-window controls, offline voice input/output, explicit local memory, optional local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
+A Windows desktop assistant with named-window controls, offline voice input, Windows speech or optional ElevenLabs speech, explicit local memory, optional local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
 
 ## Option 2 — Browser chat from this repository
 
@@ -80,11 +80,32 @@ Windows Smart App Control may block unsigned EXE or downloaded CMD files even if
 - Mouse/keyboard input is disabled by default. Review the actual target before approving click/Enter; input does not understand financial or messaging context.
 - GitHub Actions consumes the repository owner's included build allowance. No billing upgrade or paid plan is configured by this repository.
 
+## ElevenLabs spoken replies
+
+Open **Voices** under the chat box or **••• → Voice / ElevenLabs**. Select
+**ElevenLabs**, enter your own API key and voice ID, choose `auto`, `ur` or `en`,
+and accept sending spoken reply text to ElevenLabs. Save, press **Test voice**,
+then enable **Speak replies**. Main chat and Sandbox use the same voice settings.
+
+This uses the official ElevenLabs HTTPS Text to Speech API with `eleven_v3` and
+24 kHz PCM output. Internet, an ElevenLabs account/key and available account
+credits are required. No live cloud generation was verified without a real key.
+Only spoken reply text (up to 1,800 characters) is sent; microphone transcription
+remains local. Urdu script and a voice with a matching accent give clearer Urdu
+pronunciation; Roman Urdu pronunciation is not guaranteed.
+
+Keys stay in memory unless **Remember key** is enabled. Remembered keys are
+protected with Windows DPAPI for the current Windows user, outside the repository.
+**Forget key** removes the app's stored credential; revoke a key in ElevenLabs to
+invalidate it. **STOP** cancels local playback and discards pending audio, but a
+request already submitted may still consume credits. No automatic paid retries.
+Choose **Windows** for offline speech. See [the setup guide](ELEVENLABS-VOICE.md).
+
 ## Device readiness and voice setup
 
 Open **Readiness** in the System Status card (or **••• → Device readiness**).
 The panel checks the selected local Ollama model, default microphone and 16 kHz
-input settings, cached Whisper files and Windows speech voice. Checks run off the
+input settings, cached Whisper files and the selected speech provider. Checks run off the
 UI thread. Refresh after installing a model or changing audio devices.
 
 These checks do not record audio, download models or run desktop commands.

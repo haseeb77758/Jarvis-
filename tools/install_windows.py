@@ -23,6 +23,7 @@ APP_NAME = "HASEEB AI - Jarvis"
 # those must stay in GitHub Actions, not block a user's local installation.
 LOCAL_RUNTIME_TESTS = (
     "test_diagnostics.py",
+    "test_cloud_voice.py",
     "test_private_github_auth.py",
     "test_sandbox_chat.py",
     "test_chat_ui.py",

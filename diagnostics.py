@@ -91,13 +91,20 @@ def check_speaker():
                      'Windows speech voice load nahi hui. Windows Speech settings aur Jarvis installation check karein.')
 
 
-def collect_checks(model):
+def check_cloud_speaker(config):
+    if not config.get("api_key"):
+        return Check("Spoken replies / ElevenLabs", "Setup needed", "Voice settings mein API key enter karein.")
+    return Check("Spoken replies / ElevenLabs", "Configured, not verified",
+                 "Key aur voice ID configured hain. Voice settings → Test voice se API/credits aur playback test karein. Koi cloud request nahi ki gayi.")
+
+
+def collect_checks(model, voice_config=None):
     checks = []
     for name, fn in (
         ('Local AI chat', lambda: check_ai(model)),
         ('Microphone', check_microphone),
         ('Offline speech recognition', check_voice_model),
-        ('Spoken replies', check_speaker),
+        ('Spoken replies', (lambda: check_cloud_speaker(voice_config)) if voice_config and voice_config.get('provider') == 'ElevenLabs' else check_speaker),
     ):
         try:
             checks.append(fn())
@@ -157,7 +164,9 @@ class DiagnosticsWindow:
         self.refresh_button.configure(state='disabled')
         model = self.host.ai.model
         # Worker never touches Tk, app.busy, command queues, or permissions.
-        threading.Thread(target=lambda: self.results.put(collect_checks(model)), daemon=True).start()
+        settings = getattr(self.host, "voice_settings", None)
+        config = settings.snapshot() if settings is not None else None
+        threading.Thread(target=lambda: self.results.put(collect_checks(model, config)), daemon=True).start()
 
     def poll(self):
         if self.closed:

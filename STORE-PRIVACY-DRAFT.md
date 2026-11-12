@@ -21,7 +21,7 @@ Jarvis is a locally running desktop assistant offering supported application con
 - **Microphone:** Audio recording starts only when you click the microphone control. Each capture is approximately six seconds, with local Whisper transcription. The recognized text is shown for review before a requested computer command runs. The current code does not intentionally store the raw microphone audio as an application recording.
 - **Screenshots and computer input:** A screenshot is captured after your command; it is displayed locally for review. Screen clicking and typing require explicit opt-in and approval. The application code does not automatically upload screenshots or stream your desktop.
 - **Conversation:** Your current conversation is held in the running application's session. When optional local AI is enabled, selected recent messages and saved response preferences may be sent to the Ollama service listening on your PC (`127.0.0.1`). Model runtime behavior and separate model installation should be reviewed before use.
-- **Local speech output:** When enabled, text may be spoken using the Windows text-to-speech engine.
+- **Speech output:** The default Windows speech engine runs locally. If the user explicitly selects ElevenLabs, supplies their API key, and accepts the spoken-text disclosure, spoken reply text (up to 1,800 characters) is sent to the ElevenLabs HTTPS API. Internet/account credits and ElevenLabs processing policies apply. Microphone audio is still transcribed locally. Audio returned by ElevenLabs is played from memory; the app does not write it as a recording. Optional remembered keys are encrypted using Windows DPAPI for the current Windows user, outside the repository; session-only keys remain in memory. Forget key removes the app credential, while revoking the key at ElevenLabs invalidates it. A stopped request already submitted may still be processed by ElevenLabs.
 
 ## Internet features and third parties
 
@@ -58,3 +58,4 @@ To ask about this policy or data controls, contact the verified publisher at **[
 - [ ] Correct local paths and deletion instructions confirmed
 - [ ] Microsoft Store privacy/data collection answers match this policy
 - [ ] External optional cloud chat policies separately linked/disclosed if included
+
