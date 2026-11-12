@@ -125,6 +125,12 @@ class EnhancedToolkitTests(unittest.TestCase):
                 generate_cloud_image("x", "short", folder, opener)
             opener.open.assert_called_once()
 
+    def test_toolkit_ui_imports_without_external_services(self):
+        import enhanced_ui
+        self.assertTrue(callable(enhanced_ui.toolkit_window))
+        self.assertTrue(callable(enhanced_ui.code_generator))
+        self.assertTrue(callable(enhanced_ui.image_studio))
+
     def test_updater_and_source_package_include_new_toolkit(self):
         items = [p.as_posix() for p in source_files()]
         for filename in ("enhanced_ui.py", "enhanced_tools.py"):
