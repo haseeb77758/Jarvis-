@@ -2,7 +2,26 @@
 
 Created by Haseeb Crafts.
 
-## Ab sirf LiveKit chatbot / voice AI hai
+## Naya direct desktop LiveKit — current setup
+
+**Talk Live ab seedha Jarvis ki dedicated desktop voice window kholta hai,**
+LiveKit Cloud Console ka round-trip nahi. Existing training-2057 agent
+se WebRTC par connection hota hai. Local Python blingfire DLL ki zaroorat
+nahi; native Windows Smart App Control ko disable mat karo.
+
+Ek dafa **LiveKit setup -> One-time LiveKit project keys** mein project
+wss URL, API key aur API secret save karo. Phir Talk Live dabao, Cloud
+credits consent approve karo, aur mic permission allow karo.
+
+**Voice se apps/files ke liye:** LIVEKIT-DIRECT-DESKTOP.md ke mutabiq
+Builder mein desktop_command Client Tool ek dafa configure karke Deploy
+karna lazmi hai. Agent uske baghair voice requests ko desktop actions mein
+convert nahi karega. Har action native Jarvis confirmation se guzarta hai.
+No shell, delete ya unrestricted screen access. Desktop STOP aur auto
+10-minute timer Cloud room ko end karne ki koshish karte hain; network
+failures mein provider session check karna zaroori hai.
+
+## Purani Cloud Console instructions (superseded)
 
 Jarvis mein ab **Puter Connect AI, Sandbox, AI Chat, Ollama aur alternate
 voice-chat UI** nahi chalengi. Jarvis ke main dashboard par **Talk Live**
