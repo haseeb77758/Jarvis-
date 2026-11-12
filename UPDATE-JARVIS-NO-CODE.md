@@ -2,6 +2,25 @@
 
 After installing the upgraded Windows source edition **once**, Jarvis can check its official GitHub repository for a new `main` commit. You do **not** need to download and extract a new ZIP for each future update.
 
+## Fix: "Invalid package entry: livekit_voice\\agent.py"
+
+Older Jarvis versions downloaded updates with an allowlist that accepted files
+at repository root, plus known `tools/`, `tests/`, and `web/` folders.
+It silently skipped the new `livekit_voice/` folder. The reviewable package
+then failed its own verification and safely preserved the existing Jarvis.
+
+The current source keeps the LiveKit startup code in `livekit_agent.py` and
+`livekit_requirements.txt` at repository root, so **the already-installed
+old updater can stage the complete update without reinstalling**. The
+LiveKit account credential file under your Windows LOCALAPPDATA directory is
+not touched. A regression test now reconstructs the legacy updater's
+archive filtering and validates the complete staged package.
+
+To recover: close other active Jarvis instances, reopen your currently
+installed Jarvis, click **Connect GitHub** if your session expired, and
+click **Update Jarvis** again. Once it reports success, restart Jarvis.
+Do not disable Defender or remove your old user data to fix this error.
+
 ## Private GitHub repository — first-time account connection
 
 Your `haseeb77758/Jarvis-` repository is **private**. This is why the original updater showed "GitHub update check failed" even when the internet worked: it called GitHub as an anonymous visitor. You do **not** need to make the repo public.
