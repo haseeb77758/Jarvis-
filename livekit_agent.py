@@ -5,20 +5,64 @@ LiveKit Inference uses a billed cloud model; regular Jarvis remains unchanged.
 """
 import logging
 import os
+from pathlib import Path
+from logging.handlers import RotatingFileHandler
 
 from dotenv import load_dotenv
 
-# Credentials live in the Windows user's application-data folder, never in Git.
+# The user's explicit, locally saved project must override any stale parent
+# environment values. Never print credentials or place them in command args.
 credential_file = os.environ.get("JARVIS_LIVEKIT_ENV_FILE")
 if credential_file:
-    load_dotenv(credential_file, override=False)
+    load_dotenv(credential_file, override=True)
 
-from livekit.agents import (  # noqa: E402
-    Agent, AgentServer, AgentSession, JobContext, cli, inference, room_io,
-)
-from livekit.plugins import ai_coustics  # noqa: E402
 
+def configure_diagnostics():
+    """Capture SDK warnings and exceptions locally without transcripts or keys."""
+    destination = os.environ.get("JARVIS_LIVEKIT_LOG_PATH")
+    if not destination:
+        return
+    try:
+        log = Path(destination)
+        log.parent.mkdir(parents=True, exist_ok=True)
+        secrets = [
+            os.environ.get("LIVEKIT_API_KEY", ""),
+            os.environ.get("LIVEKIT_API_SECRET", ""),
+            os.environ.get("LIVEKIT_URL", ""),
+        ]
+
+        class RedactingFormatter(logging.Formatter):
+            def format(self, record):
+                result = super().format(record)
+                for secret in secrets:
+                    if secret:
+                        result = result.replace(secret, "[REDACTED]")
+                return result
+
+        handler = RotatingFileHandler(
+            log, maxBytes=256_000, backupCount=0, encoding="utf-8"
+        )
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(RedactingFormatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        root = logging.getLogger()
+        root.addHandler(handler)
+        if root.level > logging.WARNING:
+            root.setLevel(logging.WARNING)
+    except (OSError, ValueError):
+        # Log setup must not block voice startup.
+        pass
+
+
+configure_diagnostics()
 logger = logging.getLogger("jarvis-livekit")
+
+try:
+    from livekit.agents import (  # noqa: E402
+        Agent, AgentServer, AgentSession, JobContext, cli, inference, room_io,
+    )
+except Exception:
+    logger.exception("LiveKit SDK import failed; repair the isolated LiveKit installation")
+    raise
 
 SPEECH_INSTRUCTIONS = (
     "You are Jarvis, the practical personal voice assistant created by Haseeb Crafts. "
@@ -59,6 +103,7 @@ async def entrypoint(ctx: JobContext):
     session_options = {"agent": JarvisLiveVoice(), "room": ctx.room}
     # Optional: ai-coustics Voice Focus can add cloud usage charges.
     if os.environ.get("JARVIS_LIVEKIT_AI_COUSTICS") == "1":
+        from livekit.plugins import ai_coustics  # optional, never imported by default
         session_options["room_options"] = room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
                 noise_cancellation=ai_coustics.audio_enhancement(
@@ -66,8 +111,20 @@ async def entrypoint(ctx: JobContext):
                 ),
             ),
         )
-    await session.start(**session_options)
+    try:
+        await session.start(**session_options)
+    except Exception:
+        logger.exception("LiveKit session failed before voice conversation started")
+        raise
 
 
 if __name__ == "__main__":
-    cli.run_app(server)
+    try:
+        cli.run_app(server)
+    except SystemExit as exc:
+        if exc.code not in (None, 0):
+            logger.error("LiveKit CLI exited before normal completion; status=%s", exc.code)
+        raise
+    except BaseException:
+        logger.exception("LiveKit console terminated unexpectedly")
+        raise
