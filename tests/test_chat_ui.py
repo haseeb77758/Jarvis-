@@ -16,7 +16,7 @@ from tools.package_source import source_files
 
 
 class LocalChatTests(unittest.TestCase):
-    def create_app(self, mode="AI chat"):
+    def create_app(self, mode="Computer commands"):
         app = App.__new__(App)
         app.busy = False
         app.sleeping = False
@@ -29,26 +29,30 @@ class LocalChatTests(unittest.TestCase):
         app.entry.get.return_value = 'calculator kholo'
         app.say = Mock()
         app.worker = Mock()
-        app.ai = Mock()
         app.store = Mock()
         app.store.facts = []
         app.store.apps = {}
         app.pending = []
         return app
 
-    def test_chat_message_never_executes_matching_desktop_command(self):
+    def test_livekit_only_desktop_command_is_local_and_reviewed(self):
         app = self.create_app()
-        with patch('app.parse_command') as parser:
-            app.submit()
-            parser.assert_not_called()
-        app.worker.assert_called_once()
-        callback, kind, query = app.worker.call_args.args
-        self.assertEqual((kind, query), ('ai', 'calculator kholo'))
-        app.ai.ask.return_value = 'Yeh ek AI response hai.'
-        self.assertEqual(callback(), 'Yeh ek AI response hai.')
-        sent = app.ai.ask.call_args.args[0]
-        self.assertEqual(sent[-1], {'role': 'user', 'content': 'calculator kholo'})
-        self.assertEqual(len(sent), 3)
+        app.last_plan = []
+        app.approve = Mock()
+        app.submit()
+        app.approve.assert_called_once_with({'action': 'launch', 'app': 'calculator'})
+        app.worker.assert_not_called()
+        self.assertFalse(hasattr(app, 'ai'))
+        self.assertFalse(hasattr(app, 'chat_bridge'))
+
+    def test_unknown_typed_text_never_reaches_an_online_chatbot(self):
+        app = self.create_app()
+        app.entry.get.return_value = 'Mujhe ek kahani sunao'
+        app.submit()
+        app.worker.assert_not_called()
+        self.assertFalse(hasattr(app, 'ai'))
+        self.assertFalse(hasattr(app, 'chat_bridge'))
+        app.say.assert_any_call('COMMAND HELP', unittest.mock.ANY)
 
     def test_desktop_mode_keeps_existing_command_behavior(self):
         app = self.create_app('Computer commands')
