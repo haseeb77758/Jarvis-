@@ -82,8 +82,11 @@ Their providers are not constructed or connected in the current runtime.
   checks, permissions and STOP behavior.
 - **STOP** ends the local LiveKit console process; an already-billed portion
   or a provider-side session close delay cannot be reversed.
-- A local virtualenv and downloaded models remain installed between restarts;
-  the agent doesn't download models at every Talk Live click.
+- A local virtualenv and installed SDK remain across restarts. The normal
+  GPT-Live-1/marin Cloud mode does **not need local downloadable speech
+  model files** and does not download any on the default Install/repair path.
+  AI-Coustics optional extra, when deliberately enabled, may need its own
+  plugin and assets. This is not required to speak to Jarvis.
 
 ## Windows issue: Talk Live opens and then closes in seconds
 
