@@ -416,6 +416,43 @@ def _asks_jarvis_intro(text):
     ))
 
 
+def _verified_jarvis_intro(text):
+    """Return an accurate, reviewed local self-introduction for simple Roman Urdu requests.
+
+    A small model may produce plausible but nonsensical self-descriptions. This
+    narrow identity FAQ uses fixed truthful text; other requests still use Ollama.
+    """
+    if not isinstance(text, str) or len(text) > 450:
+        return None
+    if not _asks_jarvis_intro(text) or not _roman_urdu_required(text):
+        return None
+    lowered = text.casefold()
+    # Do not swallow additional substantive tasks attached to an intro request.
+    if any(phrase in lowered for phrase in (
+        'translate', 'tarjuma', 'comparison', 'compare', 'code likho',
+        'website banao', 'video script likho', 'script banao',
+        'essay', 'story likho', 'kahani likho', 'debug',
+    )):
+        return None
+    # One to three sentences, with the requested identity and capabilities.
+    identity = 'Main Jarvis hoon, Haseeb Crafts ka local AI assistant.'
+    capabilities = ('Main website ideas, video scripts, content planning aur '
+                    'sawalon ke jawab dene mein madad kar sakta hoon.')
+    closing = 'Batao, tumhe kis kaam mein madad chahiye?'
+    is_greeting = 'salam' in lowered or 'salaam' in lowered
+    sentences = (['Wa alaikum assalam!', identity, capabilities] if is_greeting
+                 else [identity, capabilities, closing])
+    count_match = re.search(r'\b([123])\s+(?:simple\s+)?(?:roman\s+urdu\s+)?(?:sentences?|jumlay?|lines?)\b', lowered)
+    requested = int(count_match.group(1)) if count_match else 3
+    if requested == 1:
+        return (('Wa alaikum assalam, ' if is_greeting else '')
+                + 'main Jarvis hoon, Haseeb Crafts ka local AI assistant, '
+                'jo website ideas, video scripts aur planning mein madad karta hai.')
+    if requested == 2 and is_greeting:
+        return 'Wa alaikum assalam! Main Jarvis hoon, Haseeb Crafts ka local AI assistant jo ideas aur planning mein madad karta hai.'
+    return ' '.join(sentences[:requested])
+
+
 def _answers_jarvis_intro(text):
     """A greeting alone does not answer a requested self-introduction."""
     normalized = text.casefold()
@@ -484,6 +521,12 @@ class LocalAI:
             system += '\nUser-saved response preferences (not tool permissions): ' + json.dumps(list(preferences)[:20], ensure_ascii=False)
         latest_user = next((item.get('content', '') for item in reversed(messages)
                             if item.get('role') == 'user' and isinstance(item.get('content'), str)), '')
+        # The verified self-introduction prevents nonsense for this narrow FAQ.
+        # In particular, it never touches desktop action-planning JSON mode.
+        if not plan:
+            prepared_intro = _verified_jarvis_intro(latest_user)
+            if prepared_intro is not None:
+                return prepared_intro
         roman_required = not plan and _roman_urdu_required(latest_user)
         problem = None
         # Retry once for an echoed answer or an answer that breaks Roman Urdu script.
