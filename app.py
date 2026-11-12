@@ -393,6 +393,9 @@ class App:
         self.say('HASEEB AI', 'Nayi conversation shuru.')
 
     def halt(self):
+        livekit = getattr(self, 'livekit_window', None)
+        if livekit is not None and not livekit.closed:
+            livekit.stop()  # Global STOP also ends the billable voice process.
         sandbox = getattr(self, 'sandbox_window', None)
         if sandbox is not None and not sandbox.closed:
             sandbox.stop()
