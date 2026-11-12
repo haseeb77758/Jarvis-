@@ -65,7 +65,7 @@ limit still applies. The readiness/response timings are shown in the status bar.
 There is no always-on recording. Use **Readiness** for device/configuration hints;
 a live device test is needed to verify permission, voice quality and audible output.
 
-## Optional LiveKit realtime voice (separately billed)
+## Primary LiveKit realtime voice (user-approved, usage-metered)
 
 The **LiveKit Voice** button opens an optional, independent voice console based
 on the user's uploaded `training-2057.zip`. It uses GPT-Live-1 through
