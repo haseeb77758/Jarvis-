@@ -124,6 +124,63 @@ class LiveKitOptionalTests(unittest.TestCase):
             lk.LiveKitConsole()
         launched.assert_not_called()
 
+    def test_invalid_cloud_url_is_rejected_before_start(self):
+        file = lk.create_credentials_template()
+        file.write_text('LIVEKIT_URL=https://cloud.livekit.io/projects/test\\n'
+                        'LIVEKIT_API_KEY=secret-key\\n'
+                        'LIVEKIT_API_SECRET=secret-value\\n', encoding='utf-8')
+        with patch.object(lk.os, 'name', 'nt'), \\
+             patch('livekit_bridge.subprocess.Popen') as launched:
+            with self.assertRaisesRegex(lk.LiveKitSetupError, 'wss://'):
+                lk.LiveKitConsole().start(consent=True)
+            launched.assert_not_called()
+
+    def test_crashed_console_reports_exit_instead_of_ready(self):
+        process = Mock()
+        process.poll.return_value = 1
+        timer = Mock()
+        session = lk.LiveKitConsole()
+        session.process = process
+        session.started_at = lk.time.monotonic() - 3
+        session.max_minutes = 10
+        session._stop_timer = timer
+        self.assertFalse(session.is_running())
+        self.assertEqual(session.last_exit_code, 1)
+        self.assertIn('unexpectedly', session.last_error)
+        self.assertIn('exit code 1', session.last_error)
+        self.assertIsNone(session.process)
+        timer.cancel.assert_called_once()
+        self.assertFalse(session.is_running())
+
+    def test_failure_log_scrubs_known_cloud_keys(self):
+        credentials = lk.create_credentials_template()
+        credentials.write_text('LIVEKIT_URL=wss://valid.livekit.cloud\\n'
+                               'LIVEKIT_API_KEY=sample-private-key\\n'
+                               'LIVEKIT_API_SECRET=sample-private-secret\\n',
+                               encoding='utf-8')
+        lk.session_log_path().write_text(
+            'LiveKit HTTP auth failed: sample-private-key sample-private-secret '
+            'wss://valid.livekit.cloud', encoding='utf-8')
+        tail = lk.safe_log_tail()
+        self.assertIn('[REDACTED]', tail)
+        self.assertNotIn('sample-private-key', tail)
+        self.assertNotIn('sample-private-secret', tail)
+        self.assertNotIn('valid.livekit.cloud', tail)
+
+    def test_preflight_is_offline_and_does_not_start_a_session(self):
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        completed = Mock(returncode=0)
+        with patch('livekit_bridge.subprocess.run', return_value=completed) as run, \\
+             patch('livekit_bridge.subprocess.Popen') as launch:
+            self.assertTrue(lk.preflight_runtime())
+            cmd = run.call_args.args[0]
+            self.assertEqual(cmd[1], '-c')
+            self.assertIn('livekit.agents', cmd[2])
+            self.assertNotIn('LIVEKIT_API_SECRET', repr(cmd))
+            launch.assert_not_called()
+
     def test_packaging_includes_agent_and_ui_but_never_keys(self):
         from tools.package_source import source_files, ROOT
         files = {p.as_posix() for p in source_files(ROOT)}
