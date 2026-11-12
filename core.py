@@ -406,6 +406,26 @@ def _roman_urdu_required(user_text):
     ))
 
 
+def _asks_jarvis_intro(text):
+    """A small, explicit check for requests about Jarvis's own identity."""
+    normalized = text.casefold()
+    return any(phrase in normalized for phrase in (
+        'apna introduction', 'apna intro', 'apne bare mein batao',
+        'apne baare mein batao', 'introduce yourself',
+        'who are you', 'tum kaun ho',
+    ))
+
+
+def _answers_jarvis_intro(text):
+    """A greeting alone does not answer a requested self-introduction."""
+    normalized = text.casefold()
+    return ('jarvis' in normalized or 'haseeb ai' in normalized) and any(
+        phrase in normalized for phrase in (
+            'assistant', 'ai', 'madad', 'help', 'sawal', 'kaam', 'created',
+        )
+    )
+
+
 CHAT_SYSTEM = (
     'You are Jarvis, a friendly, practical AI conversation partner created by Haseeb Crafts. '
     'Have a natural back-and-forth chat in Roman Urdu unless the user requests another language. '
@@ -415,6 +435,9 @@ CHAT_SYSTEM = (
     'When unsure of a fact, say so briefly rather than guessing. '
     'IMPORTANT: Never merely repeat, rephrase or translate the user message. Actually respond to it. '
     'For a greeting, reply warmly and ask a short follow-up question. '
+    'If the user asks for both a greeting AND your introduction, fulfill both; never answer only the greeting. '
+    'If asked for your introduction in 3 Roman Urdu sentences, clearly say: 1) your name and creator, 2) what you can help with, 3) a relevant friendly closing. '
+    'Example for introduction: "Wa alaikum assalam! Main Jarvis, Haseeb Crafts ka local AI assistant hoon. Main sawalon, ideas aur planning mein madad kar sakta hoon; tumhe kis cheez mein madad chahiye?" '
     'For small talk such as "aur sunao", say something conversational and invite the user to continue. '
     'For a specific question, give a useful and accurate answer instead of restating the question. '
     'Remember earlier turns in this chat but do not invent personal details or claim to know private information. '
@@ -472,6 +495,12 @@ class LocalAI:
                                 'Rewrite your answer entirely in Latin-letter Roman Urdu only. '
                                 'No Urdu/Arabic letters, no direct translation to Urdu script. '
                                 'Use short, grammatically simple conversational sentences.')
+            elif attempt and problem == 'intro':
+                instruction += ('\nIMPORTANT CORRECTION: The user asked for YOUR introduction. '
+                                'The previous answer only greeted them. Explicitly say your name Jarvis, '
+                                'that you are Haseeb Crafts local AI assistant, and what you can help with. '
+                                'If the user requested three sentences, give three complete sentences. '
+                                'Keep Roman Urdu natural, without Urdu script.')
             elif attempt:
                 instruction += ('\nYour previous draft echoed the incoming message instead of answering. '
                                 'Reply freshly and conversationally, with at least one new, helpful statement. '
@@ -514,7 +543,15 @@ class LocalAI:
             if _looks_like_echo(latest_user, content):
                 problem = 'echo'
                 continue
+            if _asks_jarvis_intro(latest_user) and not _answers_jarvis_intro(content):
+                problem = 'intro'
+                continue
             return content
+        if problem == 'intro':
+            raise RuntimeError(
+                'Local model ne apna introduction dene ka hissa chhor diya. '
+                'New chat mein sirf "Jarvis apna introduction do" likh kar try karein.'
+            )
         if problem == 'script':
             raise RuntimeError(
                 'Local AI ne Roman Urdu ke bajaye Urdu script likhi. '

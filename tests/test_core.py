@@ -251,6 +251,46 @@ class DesktopTests(unittest.TestCase):
         self.assertIn("میں", answer)
         self.assertEqual(ai.opener.open.call_count, 1)
 
+    def test_jarvis_intro_checks(self):
+        from core import _asks_jarvis_intro, _answers_jarvis_intro
+        self.assertTrue(_asks_jarvis_intro("Salam Jarvis! Apna introduction 3 simple Roman Urdu sentences mein do."))
+        self.assertTrue(_asks_jarvis_intro("Who are you?"))
+        self.assertFalse(_asks_jarvis_intro("Mujhe 3 website ideas do"))
+        self.assertFalse(_answers_jarvis_intro("Wa alaikum assalam! Main theek hoon, tum sunao?"))
+        self.assertTrue(_answers_jarvis_intro("Main Jarvis, Haseeb Crafts ka AI assistant hoon."))
+
+    def test_intro_request_retries_non_answer_once(self):
+        ai = LocalAI(model="qwen2.5:3b")
+        replies = iter([
+            {"message": {"content": "Wa alaikum assalam! Main theek hoon, tum sunao?"}},
+            {"message": {"content": "Wa alaikum assalam! Main Jarvis, Haseeb Crafts ka local AI assistant hoon. Main ideas, planning aur sawalon mein madad karta hoon. Tum kis cheez mein madad chahte ho?"}},
+        ])
+        ai.opener = Mock()
+        def respond(*args, **kwargs):
+            fake = Mock()
+            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(next(replies)).encode()))
+            fake.__exit__ = Mock(return_value=False)
+            return fake
+        ai.opener.open.side_effect = respond
+        answer = ai.ask([{"role": "user", "content": "Salam Jarvis! Apna introduction 3 simple Roman Urdu sentences mein do."}])
+        self.assertIn("Main Jarvis", answer)
+        self.assertEqual(ai.opener.open.call_count, 2)
+        request = json.loads(ai.opener.open.call_args_list[1].args[0].data)
+        self.assertIn("previous answer only greeted", request["messages"][0]["content"])
+
+    def test_intro_retries_do_not_interfere_with_desktop_plans(self):
+        ai = LocalAI(model="qwen2.5:3b")
+        ai.opener = Mock()
+        fake = Mock()
+        fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(
+            {"message": {"content": '{"actions":[]}'}}
+        ).encode()))
+        fake.__exit__ = Mock(return_value=False)
+        ai.opener.open.return_value = fake
+        answer = ai.ask([{"role": "user", "content": "Apna introduction do"}], plan=True)
+        self.assertEqual(answer, '{"actions":[]}')
+        self.assertEqual(ai.opener.open.call_count, 1)
+
     def test_local_ai_connection_failure_is_actionable(self):
         ai = LocalAI()
         ai.opener = Mock()
