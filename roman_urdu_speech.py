@@ -16,7 +16,7 @@ URDU_MARKERS = frozenset((
     'aap', 'ap', 'apka', 'aapka', 'aapki', 'aapke', 'apne', 'main', 'mein',
     'mai', 'mujhe', 'mera', 'meri', 'mere', 'hum', 'ham', 'tum', 'tumhe',
     'tumhara', 'tumhari', 'kya', 'kyun', 'kaise', 'kesay', 'kab', 'kahan',
-    'hai', 'hain', 'han', 'hoon', 'hun', 'ho', 'tha', 'thi', 'the',
+    'hai', 'hain', 'han', 'hoon', 'hun', 'ho', 'tha', 'thi',
     'nahi', 'nahin', 'nhi', 'bilkul', 'acha', 'achha', 'theek', 'thik',
     'kar', 'karo', 'karna', 'karta', 'karti', 'kiya', 'kiye', 'ki',
     'ka', 'ke', 'ko', 'se', 'par', 'aur', 'lekin', 'magar', 'bhi',
