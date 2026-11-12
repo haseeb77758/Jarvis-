@@ -16,7 +16,7 @@ import re
 import subprocess
 import tempfile
 from urllib.parse import urlencode
-from urllib.request import Request, build_opener
+from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 from uuid import uuid4
 
 IMAGE_API_URL = "https://api.openai.com/v1/images/generations"
@@ -172,7 +172,11 @@ def generate_cloud_image(prompt: str, api_key: str, output_directory: str | Path
         "Authorization": "Bearer " + api_key,
         "Content-Type": "application/json",
     }, method="POST")
-    client = opener if opener is not None else build_opener()
+    class BlockRedirect(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            raise ValueError("Image provider redirect denied; API key never forwarded.")
+
+    client = opener if opener is not None else build_opener(ProxyHandler({}), BlockRedirect())
     try:
         with client.open(request, timeout=150) as response:
             raw = response.read(24_000_001)
