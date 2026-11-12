@@ -53,7 +53,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         process = Mock()
         process.poll.return_value = None
         with patch.object(lk.os, 'name', 'nt'), \
-                patch.object(lk, 'agent_path', return_value=Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'), \
+                patch.object(lk, 'agent_path', return_value=Path(__file__).resolve().parents[1] / 'livekit_agent.py'), \
                 patch('livekit_bridge.subprocess.Popen', return_value=process) as launch:
             session = lk.LiveKitConsole()
             session.start(consent=True)
@@ -84,7 +84,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         timer = Mock()
         with patch.object(lk.os, 'name', 'nt'), \
                 patch.object(lk, 'agent_path',
-                             return_value=Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'), \
+                             return_value=Path(__file__).resolve().parents[1] / 'livekit_agent.py'), \
                 patch('livekit_bridge.subprocess.Popen', return_value=process), \
                 patch('livekit_bridge.threading.Timer', return_value=timer) as create_timer:
             session = lk.LiveKitConsole()
@@ -117,7 +117,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         instance.open_livekit_voice.assert_not_called()
 
     def test_billing_cannot_be_started_by_background_import(self):
-        source = Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'
+        source = Path(__file__).resolve().parents[1] / 'livekit_agent.py'
         self.assertTrue(source.is_file())
         ast.parse(source.read_text(encoding='utf-8'))
         with patch('livekit_bridge.subprocess.Popen') as launched:
@@ -128,7 +128,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         from tools.package_source import source_files, ROOT
         files = {p.as_posix() for p in source_files(ROOT)}
         for entry in ('livekit_bridge.py', 'livekit_window.py',
-                      'livekit_voice/agent.py', 'livekit_voice/requirements.txt'):
+                      'livekit_agent.py', 'livekit_requirements.txt'):
             self.assertIn(entry, files)
         self.assertNotIn('.env.local', files)
         self.assertFalse(any('.venv' in p for p in files))

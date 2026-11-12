@@ -69,6 +69,68 @@ class UpdateTests(unittest.TestCase):
                 else:
                     self.assertNotIn(value, u.snapshot_sources(fake_zip(extra={value: b"malicious"})))
 
+    def test_legacy_updater_stages_complete_livekit_package(self):
+        """Regression for previously shipped updater that rejects new directories.
+
+        Windows users still run the OLD updater until a new snapshot is
+        verified. It only accepts root-level .py/.txt files plus tools, tests
+        and web. The old LiveKit layout passed GitHub CI but failed on the
+        user's PC because livekit_voice/agent.py was filtered out.
+        """
+        from tools.package_source import ROOT, source_files
+
+        # Reproduce the exact path-shape rules from the installed updater:
+        # arbitrary new top-level directories are silently skipped.
+        def accepted_by_old_updater(path):
+            p = PurePosixPath(path)
+            if len(p.parts) == 1:
+                return p.suffix.lower() in {
+                    '.py', '.pyw', '.md', '.txt', '.bat', '.cmd'
+                } or p.name == 'requirements.txt'
+            if len(p.parts) != 2:
+                return False
+            return ((p.parts[0] == 'tools' and p.suffix.lower() in {'.py', '.ps1'}) or
+                    (p.parts[0] == 'tests' and p.name.startswith('test_') and p.suffix == '.py') or
+                    (p.parts[0] == 'web' and p.suffix.lower() in {'.html', '.css', '.js'}))
+
+        published = {p.as_posix(): (ROOT / p).read_bytes()
+                     for p in source_files(ROOT)}
+        # The repository may keep its original LiveKit training reference,
+        # but user updates must not depend on that filtered directory.
+        for name in ('livekit_voice/agent.py', 'livekit_voice/requirements.txt'):
+            original = ROOT / name
+            if original.is_file():
+                published[name] = original.read_bytes()
+        self.assertFalse(accepted_by_old_updater('livekit_voice/agent.py'))
+        for required in ('livekit_agent.py', 'livekit_requirements.txt'):
+            self.assertIn(required, published)
+            self.assertTrue(accepted_by_old_updater(required))
+
+        archived = io.BytesIO()
+        with ZipFile(archived, 'w') as zipfile:
+            for name, value in published.items():
+                zipfile.writestr('Jarvis-legacy-check/' + name, value)
+        with ZipFile(io.BytesIO(archived.getvalue())) as archive:
+            legacy_files = {}
+            for entry in archive.infolist():
+                relative = '/'.join(PurePosixPath(entry.filename).parts[1:])
+                if accepted_by_old_updater(relative):
+                    legacy_files[relative] = archive.read(entry)
+
+        with tempfile.TemporaryDirectory() as temp:
+            stage = Path(temp) / 'stage'
+            stage.mkdir()
+            for name, value in legacy_files.items():
+                target = stage / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(value)
+            # This used to throw "Invalid package entry: livekit_voice\\agent.py".
+            staged = {p.as_posix() for p in source_files(stage)}
+            self.assertEqual(staged, {p.as_posix() for p in source_files(ROOT)})
+            for required in ('livekit_agent.py', 'livekit_requirements.txt',
+                             'livekit_bridge.py', 'livekit_window.py'):
+                self.assertTrue((stage / required).is_file())
+
     def test_commit_version_saved_and_compared(self):
         sha = "a" * 40
         with tempfile.TemporaryDirectory() as tmp:

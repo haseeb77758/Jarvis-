@@ -32,14 +32,15 @@ MAX_SINGLE_FILE = 1_000_000
 MAX_FILES = 250
 REQUIRED = frozenset({
     "app.py", "account_chat.py", "free_voice.py", "cloud_voice.py", "voice_settings_ui.py", "diagnostics.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "memory.py", "voice.py",
-    "enhanced_tools.py", "enhanced_ui.py",
+    "enhanced_tools.py", "enhanced_ui.py", "livekit_bridge.py", "livekit_window.py",
+    "livekit_agent.py", "livekit_requirements.txt",
     "requirements.txt", "tools/install_windows.py", "tools/create_shortcuts.py",
     "tools/update_windows.py", "tests/test_core.py", "tests/test_chat_ui.py",
     "tests/test_updater.py", "tests/test_account_chat.py",
     "web/connect.html", "web/connect.js", "web/connect.css",
 })
 LOCAL_TESTS = (
-    "test_private_github_auth.py", "test_enhanced_tools.py", "test_dashboard_orb.py", "test_dashboard_layout.py",
+    "test_private_github_auth.py", "test_enhanced_tools.py", "test_livekit_optional.py", "test_dashboard_orb.py", "test_dashboard_layout.py",
     "test_sandbox_chat.py", "test_account_chat.py", "test_diagnostics.py", "test_cloud_voice.py", "test_free_voice.py",
     "test_chat_ui.py", "test_core.py", "test_desktop_voice_memory.py",
     "test_safety_regressions.py", "test_stonic_tools.py",

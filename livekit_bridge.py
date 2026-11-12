@@ -38,11 +38,11 @@ def package_root():
 
 
 def agent_path():
-    return package_root() / "livekit_voice" / "agent.py"
+    return package_root() / "livekit_agent.py"
 
 
 def dependencies_path():
-    return package_root() / "livekit_voice" / "requirements.txt"
+    return package_root() / "livekit_requirements.txt"
 
 
 def create_credentials_template():
@@ -123,7 +123,7 @@ def install_optional():
         # Download only the agent's declared noise processing model files.
         subprocess.run(
             [str(python), str(agent_path()), "download-files"],
-            check=True, cwd=str(package_root() / "livekit_voice"),
+            check=True, cwd=str(package_root()),
             capture_output=True, timeout=360,
         )
     except (OSError, subprocess.SubprocessError):
