@@ -299,6 +299,7 @@ def make_dashboard(app):
                          font=('Segoe UI', 10), cursor='hand2')
     menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
                    activebackground=PANEL_2, activeforeground=CYAN)
+    menu.add_command(label='Device readiness', command=app.open_diagnostics)
     menu.add_command(label='Connect GitHub', command=app.connect_github)
     menu.add_command(label='Resume', command=app.resume)
     menu.add_separator()
@@ -532,7 +533,7 @@ def make_dashboard(app):
         anchor='w', padx=13, pady=(8, 2))
     label(status_card, '', 9, TEXT, textvariable=app.status,
           wraplength=212, justify='left').pack(anchor='w', padx=13, pady=(0, 9))
-    btn(status_card, 'Toolbox', app.open_toolkit, compact=True).pack(
+    btn(status_card, 'Readiness', app.open_diagnostics, compact=True).pack(
         side='left', padx=(12, 4), pady=(0, 11))
     btn(status_card, 'Workspace', app.choose, compact=True).pack(
         side='left', padx=3, pady=(0, 11))
@@ -556,3 +557,4 @@ def make_dashboard(app):
 
     label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   LOCAL-FIRST  ·  STOP: Ctrl+Alt+F12 or Esc  ·  Screen actions need review',
           8, MUTED, bg=BG).pack(anchor='w', padx=17, pady=(0, 7))
+

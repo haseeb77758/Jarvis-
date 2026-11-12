@@ -22,6 +22,7 @@ APP_NAME = "HASEEB AI - Jarvis"
 # packaging and release tests require repository-only documents and CI files;
 # those must stay in GitHub Actions, not block a user's local installation.
 LOCAL_RUNTIME_TESTS = (
+    "test_diagnostics.py",
     "test_private_github_auth.py",
     "test_sandbox_chat.py",
     "test_chat_ui.py",
@@ -142,3 +143,4 @@ if __name__ == "__main__":
     except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
         print("INSTALLATION FAILED:", exc, file=sys.stderr)
         raise SystemExit(1) from exc
+
