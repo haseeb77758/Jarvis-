@@ -73,7 +73,7 @@ LiveKit Inference. Unlike the normal free speech path, this model requires
 LiveKit Cloud credentials and **can incur usage charges**. The button shows
 explicit confirmation before launching cloud audio; the dependencies install
 only after separate permission. It does **not** connect to Jarvis desktop
-controls or ordinary chat history. The original voice remains the default.
+controls or ordinary chat history. The original free Mic/Edge voices remain available as fallbacks; **Talk Live** is now the primary voice entry. Sessions are not launched automatically, require explicit cost consent, and have a user-selectable 5/10/15-minute local stop timer (not a billing cap).
 See [LiveKit Voice setup and safety](LIVEKIT-VOICE.md).
 
 ## Reviewed desktop controls
