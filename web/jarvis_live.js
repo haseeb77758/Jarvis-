@@ -226,9 +226,14 @@
   function attachRoomHandlers() {
     const {RoomEvent, Track} = sdk;
     room.on(RoomEvent.ParticipantConnected, (participant) => {
-      el("agent").textContent = "Participant joined";
-      activity("Remote participant joined: " + (participant.identity || "agent"));
-      publishState("AGENT JOINED");
+      const agent = participant.isAgent === true ||
+        String(participant.kind || "").toLowerCase().includes("agent") ||
+        participant.kind === 4;
+      el("agent").textContent = agent ? "Agent joined · waiting for audio" :
+        "Remote participant (not verified as agent)";
+      activity("Remote " + (agent ? "agent" : "participant") +
+               " joined; this does not prove microphone or speaker audio works.");
+      if (agent) publishState("AGENT JOINED");
     });
     room.on(RoomEvent.ParticipantDisconnected, (participant) => {
       el("agent").textContent = "Agent left";
@@ -242,11 +247,17 @@
         audio.controls = false;
         el("audios").appendChild(audio);
         knownAudios.add(audio);
-        audio.play().catch(() => {
-          report("Browser audio playback blocked. Click Connect/Enable Audio or allow sound.", "error");
+        audio.play().then(() => {
+          if (room && room.canPlaybackAudio !== false) {
+            el("speakerStatus").textContent = "Remote audio playing";
+          }
+        }).catch(() => {
+          speakerBlocked = true;
+          playbackState();
         });
-        activity("Receiving agent audio.");
-        el("agent").textContent = "Audio connected";
+        activity("Remote audio track received; checking playback permission.");
+        el("agentAudio").textContent = "Audio track received";
+        el("agent").textContent = "Audio subscribed";
       }
     });
     room.on(RoomEvent.TrackUnsubscribed, (track) => {
@@ -255,11 +266,45 @@
       }
     });
     room.on(RoomEvent.Disconnected, () => {
+      stopMicMeter();
       status("DISCONNECTED");
       buttons(false);
       el("agent").textContent = "Not joined";
+      el("agentAudio").textContent = "No remote track";
       activity("LiveKit room disconnected.");
     });
+    if (RoomEvent.AudioPlaybackStatusChanged) {
+      room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        if (room && room.canPlaybackAudio === false) speakerBlocked = true;
+        playbackState();
+      });
+    }
+    if (RoomEvent.LocalTrackSubscribed) {
+      room.on(RoomEvent.LocalTrackSubscribed, () => {
+        el("micSubscribed").textContent = "Yes · agent subscribed";
+        activity("A remote participant subscribed to the microphone track.");
+      });
+    }
+    if (RoomEvent.LocalAudioSilenceDetected) {
+      room.on(RoomEvent.LocalAudioSilenceDetected, () => {
+        micStatus("Silence detected · check microphone device", true);
+        activity("LiveKit detected a silent local audio track.");
+      });
+    }
+    if (RoomEvent.MediaDevicesError) {
+      room.on(RoomEvent.MediaDevicesError, (error) => {
+        el("retryMic").hidden = false;
+        micStatus("Device error · " + (error?.name || "unknown"), true);
+        report("Microphone device error: " + (error?.name || "unknown") +
+          ". Check permissions and choose another microphone.", "error");
+      });
+    }
+    if (RoomEvent.TrackSubscriptionFailed) {
+      room.on(RoomEvent.TrackSubscriptionFailed, () => {
+        el("agentAudio").textContent = "Remote audio subscription FAILED";
+        report("Could not receive agent audio track. Check connection and restart.", "error");
+      });
+    }
     room.on(RoomEvent.ConnectionQualityChanged, () => {});
     if (RoomEvent.TranscriptionReceived) {
       room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
@@ -301,10 +346,15 @@
       attachRoomHandlers();
       registerDesktopTool();
       await room.connect(ticket.url, ticket.token, {autoSubscribe:true});
-      await room.localParticipant.setMicrophoneEnabled(true);
-      try { await room.startAudio(); } catch (_err) {
-        report("Connected. If sound is muted, click browser audio permission.", "error");
+      const micReady = await enableMicrophone();
+      // Browser app-mode launch is NOT a user click. Audio may fail due to
+      // autoplay rules; provide an explicit button instead of hiding errors.
+      try {
+        await room.startAudio();
+      } catch (_err) {
+        speakerBlocked = true;
       }
+      playbackState();
       publishState(room.remoteParticipants.size ? "AGENT JOINED" : "CONNECTED");
       el("agent").textContent = room.remoteParticipants.size
         ? "Participant connected" : "Waiting for training-2057";
@@ -326,8 +376,15 @@
         }
       }, 1300);
       buttons(true);
-      report("LiveKit room connected. Speak normally; wait for the agent to join.");
-      activity("Joined private session · " + ticket.agent);
+      if (!micReady) {
+        report("Connected but MICROPHONE FAILED. Click Retry microphone and allow browser/Windows access.", "error");
+      } else if (speakerBlocked || room.canPlaybackAudio === false) {
+        playbackState();
+      } else {
+        report("Connected, mic published. Speak and check MIC INPUT LEVEL. Agent audio may require Enable speaker audio.");
+      }
+      activity("Joined private session · " + ticket.agent +
+               " · mic=" + (micReady ? "published" : "FAILED"));
     } catch (error) {
       activity("Connection failed: " + error.message);
       report("Could not connect: " + error.message, "error");
@@ -348,6 +405,7 @@
       const previous = room; room = null;
       try { await previous.disconnect(); } catch (_err) {}
     }
+    stopMicMeter();
     for (const audio of knownAudios) audio.remove();
     knownAudios.clear();
     deadline = 0; latestRoom = null;
@@ -366,14 +424,34 @@
     activity("Disconnect requested.");
   }
 
+  el("enableAudio").addEventListener("click", unlockAudio);
+  el("retryMic").addEventListener("click", enableMicrophone);
+  el("micDevice").addEventListener("change", async () => {
+    if (!room || !el("micDevice").value) return;
+    try {
+      const changed = await room.switchActiveDevice("audioinput", el("micDevice").value);
+      if (changed === false) throw new Error("Audio input switch declined");
+      activity("Switched microphone input device.");
+      silentTicks = 0;
+      detectedMicSound = false;
+      micStatus("New microphone selected · speak to test");
+    } catch (err) {
+      micStatus("Cannot switch mic: " + (err.name || err.message), true);
+      el("retryMic").hidden = false;
+    }
+  });
   el("connect").addEventListener("click", () => connect());
   el("disconnect").addEventListener("click", () => disconnect());
   el("mic").addEventListener("click", async () => {
     if (!room) return;
     muted = !muted;
     try {
-      await room.localParticipant.setMicrophoneEnabled(!muted);
+      const published = await room.localParticipant.setMicrophoneEnabled(!muted);
+      if (!muted && !published && room.localParticipant.isMicrophoneEnabled !== true) {
+        throw new Error("Microphone could not be re-enabled.");
+      }
       el("mic").textContent = muted ? "Unmute mic" : "Mute mic";
+      micStatus(muted ? "Muted" : "Microphone enabled");
     } catch (err) {
       muted = !muted; report("Microphone change failed: " + err.message, "error");
     }
