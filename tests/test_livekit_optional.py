@@ -117,7 +117,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         instance.open_livekit_voice.assert_not_called()
 
     def test_billing_cannot_be_started_by_background_import(self):
-        source = Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'
+        source = Path(__file__).resolve().parents[1] / 'livekit_agent.py'
         self.assertTrue(source.is_file())
         ast.parse(source.read_text(encoding='utf-8'))
         with patch('livekit_bridge.subprocess.Popen') as launched:
