@@ -27,7 +27,19 @@
           <button class="primary" id="connect">● Connect LiveKit</button>
           <button class="danger" id="disconnect" disabled>■ Disconnect</button>
           <button id="mic" disabled>Mute mic</button>
+          <button id="enableAudio" hidden>Enable speaker audio</button>
+          <button id="retryMic" hidden>Retry microphone</button>
         </div>
+        <div class="mic-monitor" aria-label="Microphone input test">
+          <span>MIC INPUT LEVEL</span>
+          <progress id="micLevel" max="100" value="0"></progress>
+          <span id="micHint">Not started</span>
+        </div>
+        <label class="input-select">Microphone
+          <select id="micDevice" disabled aria-label="Select microphone">
+            <option value="">System default</option>
+          </select>
+        </label>
         <p class="notice" id="notice" role="status" aria-live="polite">
           Ready for user-approved cloud voice. Connecting may consume LiveKit credits.
         </p>
@@ -37,6 +49,10 @@
         <h2>LIVE SESSION</h2>
         <div class="stat">Connection <span id="connection">Disconnected</span></div>
         <div class="stat">Agent <span id="agent">Not joined</span></div>
+        <div class="stat">Microphone <span id="micStatus">Not started</span></div>
+        <div class="stat">Agent subscribed to mic <span id="micSubscribed">Not yet</span></div>
+        <div class="stat">Agent audio <span id="agentAudio">No remote track</span></div>
+        <div class="stat">Speaker output <span id="speakerStatus">Not started</span></div>
         <div class="stat">Desktop tools <span>Native approval required</span></div>
         <h2 class="mt">VOICE COMMANDS</h2>
         <p>Once the deployed agent has the <code>desktop_command</code> Client Tool enabled in LiveKit Builder, you can ask it to:</p>
