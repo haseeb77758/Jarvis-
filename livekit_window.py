@@ -145,7 +145,8 @@ class LiveKitVoiceWindow:
         if not messagebox.askyesno(
             'Start billable LiveKit session?',
             'GPT-Live-1 usage and delegated backend operations can incur '
-            'charges against YOUR LiveKit Cloud account. Use it only if you '
+            'charges against YOUR LiveKit Cloud account. AI-Coustics audio '
+            'enhancement can add separate charges if enabled. Use it only if you '
             'understand and accept your provider plan, limits and charges. '
             'Proceed with one voice session?',
             parent=self.window
