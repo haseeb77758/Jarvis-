@@ -47,6 +47,7 @@ class App:
         from account_chat import AccountChat
         self.chat_bridge = AccountChat()
         self.ai = ChatAI(bridge=self.chat_bridge, cancel=self.stop)
+        self.speaker.prepare_speech = self.ai.prepare_speech
         self.mode = tk.StringVar(value='AI chat')
         self.ai_status = tk.StringVar(value='AI · SIGN IN')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
