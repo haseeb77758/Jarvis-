@@ -193,6 +193,20 @@ def image_studio(app):
     tk.Label(win, textvariable=status, bg=BG, fg=MUTE, wraplength=645,
              justify="left").pack(anchor="w", padx=22, pady=(4, 12))
     action = button(win, "Generate 1024x1024 PNG", lambda: None)
+    import queue
+    results = queue.Queue()
+    def poll_result():
+        if not win.winfo_exists():
+            return
+        try:
+            outcome = results.get_nowait()
+        except queue.Empty:
+            pass
+        else:
+            complete(outcome)
+        win.after(150, poll_result)
+    win.after(150, poll_result)
+
     def generate():
         text = prompt.get("1.0", "end").strip()
         key = entry.get().strip()
@@ -220,10 +234,9 @@ def image_studio(app):
             except Exception:
                 # Error text must never expose a provider response containing secrets.
                 result = ("failure", "API request failed. Billing, API key, network aur model access check karein.")
-            finally:
-                key = None
-            if win.winfo_exists():
-                win.after(0, lambda: complete(result))
+            # A background worker never touches Tk widgets. The root UI polls
+            # the thread-safe queue and performs callbacks on its own thread.
+            results.put(result)
         def complete(result):
             action.configure(state="normal")
             if result[0] == "success":
@@ -253,6 +266,8 @@ def toolkit_window(app):
          "Optional paid image API; per-request approval and no saved key"),
         ("Reviewed power controls", lambda: system_window(app),
          "Manual lock, delayed restart/shutdown and cancel"),
+        ("Sleep / Wake Jarvis", app.toggle_sleep_mode,
+         "Pause chat and desktop commands; say Wake up Jarvis to resume"),
     ]
     for label, invoke, detail in entries:
         panel = tk.Frame(win, bg=PANEL)
