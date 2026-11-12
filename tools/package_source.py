@@ -71,7 +71,7 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
             "   Select Python if Windows asks which application should open it.\n"
             "5. Tick the install-permission box, then click INSTALL & OPEN JARVIS.\n"
             "6. After setup, use HASEEB AI - Jarvis on your Desktop.\n"
-            "7. Open LiveKit setup, save your project credentials locally, then click Talk Live.\n\n"
+            "7. In LiveKit setup, save local project URL/API keys once, then Talk Live opens direct Jarvis WebRTC.\n\n"
             "IMPORTANT: This GUI setup does NOT disable Windows\n"
             "Smart App Control or Defender, and contains no unsigned Jarvis.exe.\n"
             "Windows policies may still block a component or installation.\n"
