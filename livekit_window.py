@@ -21,7 +21,7 @@ class LiveKitVoiceWindow:
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
         self.window.title('Jarvis · LiveKit realtime voice (optional)')
-        self.window.geometry('700x520')
+        self.window.geometry('700x560')
         self.window.minsize(640, 470)
         self.window.configure(bg=BG)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
