@@ -172,6 +172,26 @@ def _write_install_error(stage, details):
         pass
 
 
+
+def is_windows_app_control_block(data):
+    """Recognize Windows Code Integrity native module rejection, not pip errors."""
+    if isinstance(data, bytes):
+        data = data.decode("utf-8", "replace")
+    message = str(data).casefold()
+    return (
+        "an application control policy has blocked this file" in message
+        or ("dll load failed" in message and "code integrity policy" in message)
+    )
+
+
+def application_control_guidance():
+    return (
+        "Windows Application Control ne LiveKit ki native DLL block ki hai. "
+        "Reinstall/pip repair se policy bypass nahi hogi. "
+        "Jarvis mein Talk Live se official LiveKit Cloud Agent Console "
+        "browser mein kholo. Windows security OFF na karo."
+    )
+
 def _install_command(command, root, stage, timeout=360):
     """Run an allowlisted Python command, never a shell or a cloud session."""
     try:
@@ -186,6 +206,8 @@ def _install_command(command, root, stage, timeout=360):
     if result.returncode:
         details = (result.stderr or b"") + b"\n" + (result.stdout or b"")
         _write_install_error(stage, details)
+        if is_windows_app_control_block(details):
+            raise LiveKitSetupError(application_control_guidance())
         raise LiveKitSetupError(
             "LiveKit " + stage + " fail hua (code " + str(result.returncode) +
             "). View last LiveKit error / diagnostic log kholo."
@@ -250,6 +272,8 @@ def preflight_runtime(noise_enhancement=False):
         raise LiveKitSetupError("LiveKit Python preflight fail. Install / repair dobara chalao.") from None
     if completed.returncode:
         _write_install_error("SDK preflight", completed.stderr or b"")
+        if is_windows_app_control_block((completed.stderr or b"") + b"\n" + (completed.stdout or b"")):
+            raise LiveKitSetupError(application_control_guidance())
         if noise_enhancement:
             raise LiveKitSetupError(
                 "AI-Coustics extra missing/broken hai. Enhancement OFF karke test karo "
