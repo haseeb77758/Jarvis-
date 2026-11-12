@@ -38,7 +38,7 @@ def package_root():
 
 
 def agent_path():
-    return package_root() / "livekit_voice" / "agent.py"
+    return package_root() / "livekit_agent.py"
 
 
 def dependencies_path():
