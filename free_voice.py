@@ -100,3 +100,99 @@ def decode_mp3(audio, cancel):
     if not pcm or len(pcm) > MAX_AUDIO:
         raise VoiceError('Free voice se valid audio nahi mili.')
     return bytes(pcm)
+
+
+async def _stream_pcm_play(text, voice, rate, cancel, notify=None):
+    """Decode MP3 fragments as they arrive and play PCM without waiting for full TTS."""
+    import av
+    import sounddevice as sd
+    import edge_tts
+    import time
+    from contextlib import ExitStack
+
+    codec = av.CodecContext.create('mp3', 'r')
+    resampler = av.AudioResampler(format='s16', layout='mono', rate=24000)
+    compressed_size = 0
+    decoded_size = 0
+    started = time.monotonic()
+    first_sound = False
+    stream = None
+    client = edge_tts.Communicate(text, voice=voice, rate=rate,
+                                  connect_timeout=10, receive_timeout=15)
+
+    with ExitStack() as stack:
+        def play_frames(frames):
+            nonlocal stream, decoded_size, first_sound
+            for frame in frames:
+                if cancel.is_set():
+                    return
+                for converted in resampler.resample(frame):
+                    payload = bytes(converted.planes[0])[:converted.samples * 2]
+                    if not payload:
+                        continue
+                    decoded_size += len(payload)
+                    if decoded_size > MAX_AUDIO:
+                        raise VoiceError('Free voice audio limit. Chhota reply try karein.')
+                    if stream is None:
+                        stream = stack.enter_context(sd.RawOutputStream(
+                            samplerate=24000, channels=1, dtype='int16', latency='low'))
+                    if not first_sound:
+                        first_sound = True
+                        if notify:
+                            notify(f'Voice playback started in {time.monotonic() - started:.1f}s')
+                    stream.write(payload)
+
+        try:
+            async for chunk in client.stream():
+                if cancel.is_set():
+                    break
+                if time.monotonic() - started > 60:
+                    raise VoiceError('Free voice service timeout. Internet check karein.')
+                if chunk.get('type') != 'audio':
+                    continue
+                data = chunk.get('data', b'')
+                compressed_size += len(data)
+                if compressed_size > MAX_AUDIO:
+                    raise VoiceError('Free voice audio limit. Chhota reply try karein.')
+                for packet in codec.parse(data):
+                    play_frames(codec.decode(packet))
+            if not cancel.is_set():
+                for packet in codec.parse(None):
+                    play_frames(codec.decode(packet))
+                play_frames(codec.decode(None))
+                for converted in resampler.resample(None):
+                    payload = bytes(converted.planes[0])[:converted.samples * 2]
+                    if payload:
+                        decoded_size += len(payload)
+                        if decoded_size > MAX_AUDIO:
+                            raise VoiceError('Free voice audio limit. Chhota reply try karein.')
+                        if stream is None:
+                            stream = stack.enter_context(sd.RawOutputStream(
+                                samplerate=24000, channels=1, dtype='int16', latency='low'))
+                        stream.write(payload)
+                if not decoded_size:
+                    raise VoiceError('Free voice se valid audio nahi mili.')
+        finally:
+            # A private stream is aborted only if playback was interrupted.
+            if cancel.is_set() and stream is not None:
+                stream.abort()
+
+
+def stream_and_play(text, config, cancel, notify=None):
+    """Keyless, bounded online Urdu/English TTS with early playback and STOP."""
+    if cancel.is_set():
+        return
+    validate_free_voice(config['free_voice'], config['free_rate'])
+    text = str(text).strip()[:MAX_TEXT]
+    if not text:
+        return
+    try:
+        asyncio.run(_stream_pcm_play(text, config['free_voice'],
+                                     config['free_rate'], cancel, notify))
+    except VoiceError:
+        raise
+    except ImportError:
+        raise VoiceError('Free voice library missing hai. Jarvis update/setup dobara chalayein.') from None
+    except Exception:
+        if not cancel.is_set():
+            raise VoiceError('Streaming free voice unavailable. Internet/audio output check karein.') from None
