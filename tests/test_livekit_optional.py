@@ -128,7 +128,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         from tools.package_source import source_files, ROOT
         files = {p.as_posix() for p in source_files(ROOT)}
         for entry in ('livekit_bridge.py', 'livekit_window.py',
-                      'livekit_voice/agent.py', 'livekit_voice/requirements.txt'):
+                      'livekit_agent.py', 'livekit_requirements.txt'):
             self.assertIn(entry, files)
         self.assertNotIn('.env.local', files)
         self.assertFalse(any('.venv' in p for p in files))
