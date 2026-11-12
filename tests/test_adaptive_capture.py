@@ -123,6 +123,39 @@ class AdaptiveCaptureTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'stopped'):
                 record_until_silence(stop)
 
+    def test_next_speech_does_not_wait_for_stalled_old_request(self):
+        import free_voice as fv
+        from voice import Speaker
+        settings = Mock()
+        settings.snapshot.return_value = {
+            'provider': fv.PROVIDER, 'free_voice': 'en-GB-RyanNeural',
+            'free_rate': '+0%', 'natural_urdu': False
+        }
+        entered = threading.Event()
+        release = threading.Event()
+        second_started = threading.Event()
+        def generate(text, _config, _cancel):
+            if text == 'first':
+                entered.set()
+                release.wait(0.8)
+            elif text == 'second':
+                second_started.set()
+            return b'compressed'
+        speaker = Speaker(settings=settings)
+        try:
+            with patch.object(fv, 'generate_mp3', side_effect=generate), patch.object(
+                fv, 'decode_mp3', return_value=b'\\0\\0'
+            ), patch('cloud_voice.play_pcm'):
+                speaker.speak('first')
+                self.assertTrue(entered.wait(0.4))
+                speaker.speak('second')
+                self.assertTrue(second_started.wait(0.45),
+                                'New speech must not wait for slow old network work')
+                speaker.thread.join(2)
+        finally:
+            release.set()
+            speaker.stop()
+
     def test_whisper_receives_trimmed_clip_not_six_second_padding(self):
         from voice import listen
         audio = np.full(16000, 0.05, dtype=np.float32)
