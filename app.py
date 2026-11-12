@@ -41,7 +41,7 @@ class App:
         self.voice_language = tk.StringVar(value='Auto')
         self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)))
         self.control = Controller(Path.home(), self.stop, self.store.apps)
-        self.ai = LocalAI()
+        self.ai = LocalAI(model=self.store.chat_model)
         self.mode = tk.StringVar(value='Local AI chat')
         self.ai_status = tk.StringVar(value='OLLAMA · CHECKING')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
@@ -293,7 +293,7 @@ class App:
         if not self.root.winfo_exists():
             return
         def check():
-            state = ollama_status()
+            state = ollama_status(model=self.ai.model)
             self.events.put((self.generation, 'ollama_status', state, '', None))
         threading.Thread(target=check, daemon=True).start()
 
@@ -391,7 +391,7 @@ class App:
                 webbrowser.open('https://ollama.com/download/windows')
             return
         self.ai_status.set('OLLAMA · CHECKING')
-        self.worker(lambda: ollama_status(executable=executable), 'setup_status')
+        self.worker(lambda: ollama_status(model=self.ai.model, executable=executable), 'setup_status')
 
     def confirm_model_setup(self, state):
         if state == 'ready':
@@ -429,7 +429,7 @@ class App:
                 'Download shuru karun?',
                 parent=self.root
             ):
-                self.worker(lambda: setup_local_model(self.stop), 'setup')
+                self.worker(lambda: setup_local_model(self.stop, model=self.ai.model), 'setup')
             return
         self.ai_status.set('OLLAMA · NOT INSTALLED')
         self.say('AI SETUP', 'Ollama install nahi. Setup AI button se official site kholo.')
