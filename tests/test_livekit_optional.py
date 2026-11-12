@@ -68,6 +68,54 @@ class LiveKitOptionalTests(unittest.TestCase):
             session.stop()
             process.terminate.assert_called_once()
 
+    def test_voice_session_has_hard_user_selected_time_limit(self):
+        creds = lk.create_credentials_template()
+        creds.write_text(
+            'LIVEKIT_URL=wss://example.livekit.cloud\n'
+            'LIVEKIT_API_KEY=private-example\n'
+            'LIVEKIT_API_SECRET=private-secret\n',
+            encoding='utf-8',
+        )
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        process = Mock()
+        process.poll.return_value = None
+        timer = Mock()
+        with patch.object(lk.os, 'name', 'nt'), \
+                patch.object(lk, 'agent_path',
+                             return_value=Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'), \
+                patch('livekit_bridge.subprocess.Popen', return_value=process), \
+                patch('livekit_bridge.threading.Timer', return_value=timer) as create_timer:
+            session = lk.LiveKitConsole()
+            session.start(consent=True, max_minutes=5)
+            create_timer.assert_called_once_with(300, session.stop)
+            timer.start.assert_called_once()
+            self.assertGreater(session.remaining_seconds(), 0)
+            session.stop()
+            timer.cancel.assert_called_once()
+            process.terminate.assert_called_once()
+            self.assertEqual(session.remaining_seconds(), 0)
+
+    def test_invalid_maximum_minutes_does_not_launch_cloud(self):
+        with patch.object(lk.os, 'name', 'nt'), \
+                patch('livekit_bridge.subprocess.Popen') as launch:
+            for value in (0, 20, True, '10'):
+                with self.assertRaises(lk.LiveKitSetupError):
+                    lk.LiveKitConsole().start(consent=True, max_minutes=value)
+            launch.assert_not_called()
+
+    def test_no_auto_cloud_start_and_primary_handler_stops_running_session(self):
+        from app import App
+        instance = App.__new__(App)
+        instance.livekit_window = Mock()
+        instance.livekit_window.closed = False
+        instance.livekit_window.console.is_running.return_value = True
+        instance.open_livekit_voice = Mock()
+        App.toggle_livekit_voice(instance)
+        instance.livekit_window.stop.assert_called_once()
+        instance.open_livekit_voice.assert_not_called()
+
     def test_billing_cannot_be_started_by_background_import(self):
         source = Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'
         self.assertTrue(source.is_file())
