@@ -10,3 +10,6 @@ sounddevice>=0.5,<1
 
 # Keyless online neural speech; local playback uses the PyAV dependency above.
 edge-tts==7.3.1
+
+# Offline Roman Urdu -> Urdu TTS script rendering (MIT code, CC BY-SA data).
+urdunlp @ https://github.com/hammasbuilds/urdunlp/archive/587c63acfffba6efe7df96818f6a4677eff923ba.zip

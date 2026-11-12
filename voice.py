@@ -131,7 +131,14 @@ class Speaker:
                 from cloud_voice import play_pcm, VoiceError
                 try:
                     spoken = spoken_text(text)
-                    if (config.get('natural_urdu', False) and
+                    if (config.get('fast_urdu', False) and
+                            config.get('free_voice', '').startswith('ur-') and
+                            re.search(r'[A-Za-z]', spoken)):
+                        # The spoken copy becomes Urdu script locally. This is
+                        # much faster than a second remote chat request.
+                        from roman_urdu_speech import spoken_urdu
+                        spoken = spoken_urdu(spoken)
+                    elif (config.get('natural_urdu', False) and
                             config.get('free_voice', '').startswith('ur-') and
                             re.search(r'[A-Za-z]', spoken) and
                             not re.search(r'[\u0600-\u06ff]', spoken)):
@@ -146,12 +153,17 @@ class Speaker:
                             return
                     if cancel.is_set() or not spoken:
                         return
-                    compressed = generate_mp3(spoken, config, cancel)
-                    if not cancel.is_set():
-                        audio = decode_mp3(compressed, cancel)
-                        with self.playback_lock:
-                            if not cancel.is_set():
-                                play_pcm(audio, cancel)
+                    if config.get('stream_audio', False):
+                        from free_voice import stream_and_play
+                        stream_and_play(spoken, config, cancel, self.notify)
+                    else:
+                        # Legacy path retained for existing configurations/tests.
+                        compressed = generate_mp3(spoken, config, cancel)
+                        if not cancel.is_set():
+                            audio = decode_mp3(compressed, cancel)
+                            with self.playback_lock:
+                                if not cancel.is_set():
+                                    play_pcm(audio, cancel)
                 except VoiceError as exc:
                     if not cancel.is_set():
                         self.notify(str(exc))

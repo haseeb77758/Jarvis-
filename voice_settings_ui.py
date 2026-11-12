@@ -15,8 +15,8 @@ class VoiceSettingsWindow:
         self.window = tk.Toplevel(host.root)
         self.window.title('Jarvis · Voices / Free neural')
         self.window.configure(bg=BG)
-        self.window.geometry('690x720')
-        self.window.minsize(620, 700)
+        self.window.geometry('690x775')
+        self.window.minsize(620, 755)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
         settings = host.voice_settings
         self.provider = tk.StringVar(master=self.window, value=settings.provider)
@@ -25,6 +25,7 @@ class VoiceSettingsWindow:
         self.free_voice = tk.StringVar(master=self.window, value=next(name for name, value in VOICES.items() if value == settings.free_voice))
         self.free_rate = tk.StringVar(master=self.window, value=settings.free_rate)
         self.natural_urdu = tk.BooleanVar(master=self.window, value=settings.natural_urdu)
+        self.fast_urdu = tk.BooleanVar(master=self.window, value=settings.fast_urdu)
         self.api_key = tk.StringVar(master=self.window, value='')
         self.remember = tk.BooleanVar(master=self.window, value=settings.key_path.is_file())
         self.consent = tk.BooleanVar(master=self.window, value=settings.provider != 'Windows')
@@ -46,7 +47,10 @@ class VoiceSettingsWindow:
         ttk.Combobox(self.free_form, textvariable=self.free_voice, values=list(VOICES), state='readonly').pack(fill='x', padx=13)
         label(self.free_form, 'Speaking speed (−5%: slightly calmer)', 10, TEXT).pack(anchor='w', padx=13, pady=(10, 3))
         ttk.Combobox(self.free_form, textvariable=self.free_rate, values=RATES, state='readonly').pack(fill='x', padx=13, pady=(0, 12))
-        tk.Checkbutton(self.free_form, text='Natural Urdu pronunciation (uses connected AI allowance)',
+        tk.Checkbutton(self.free_form, text='FAST Urdu accent (local text conversion, no extra AI call)',
+                       variable=self.fast_urdu, bg=PANEL, fg=TEXT, selectcolor=BG,
+                       activebackground=PANEL, activeforeground=TEXT).pack(anchor='w', padx=9, pady=(2, 4))
+        tk.Checkbutton(self.free_form, text='AI Urdu conversion (only if FAST is off; slower)',
                        variable=self.natural_urdu, bg=PANEL, fg=TEXT, selectcolor=BG,
                        activebackground=PANEL, activeforeground=TEXT).pack(anchor='w', padx=9, pady=(0, 8))
 
@@ -101,8 +105,9 @@ class VoiceSettingsWindow:
             self.free_form.pack(fill='x')
             self.disclosure.set('Send spoken reply text to Microsoft for free online speech')
             self.explanation.set('No API key or paid subscription is required by this client. Internet required.\n'
-                                 'Asad/Uzma: Natural Urdu renders Roman replies via your connected AI before speech.\n'
-                                 'This adds a request, uses free account allowance and may add delay. Chat stays Roman Urdu.\n'
+                                 'FAST Urdu uses a local Roman Urdu converter and streams speech audio while it arrives.\n'
+                                 'It skips the extra AI request. For unusual names or English words, pronunciation can still vary.\n'
+                                 'Switch FAST off to use slower AI-based Urdu pronunciation (uses account allowance).\n'
                                  'Only spoken reply text is sent; mic recognition stays local. STOP cancels playback.\n'
                                  'Service availability and voice quality can vary; no unlimited-service guarantee.')
         elif selected == 'ElevenLabs':
@@ -133,7 +138,7 @@ class VoiceSettingsWindow:
             self.host.voice_settings.save(self.provider.get(), self.voice_id.get().strip(),
                                           self.language.get(), key, self.remember.get(),
                                           free_voice=VOICES[self.free_voice.get()], free_rate=self.free_rate.get(),
-                                          natural_urdu=self.natural_urdu.get())
+                                          natural_urdu=self.natural_urdu.get(), fast_urdu=self.fast_urdu.get())
         except (VoiceError, KeyError) as exc:
             messagebox.showerror('Voice settings', str(exc) if isinstance(exc, VoiceError) else 'List se free voice select karein.', parent=self.window)
             return False

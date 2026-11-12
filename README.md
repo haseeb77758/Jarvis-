@@ -52,7 +52,7 @@ Open **Voices → Edge Neural (free online)**, choose **Asad/Uzma** for Urdu or
 Ryan/Sonia/Guy/Jenny for English, accept sending spoken text, save and test.
 Enable **Speak replies**. No API key is required by this client, but internet and
 service availability are required. Urdu script gives clearer Urdu pronunciation;
-Roman Urdu is not automatically transliterated. [Voice setup](FREE-VOICES.md).
+Roman Urdu replies now use a **local Roman Urdu → Urdu script** speech copy by default; text chat stays Roman Urdu. This removes the separate AI conversion request, though unusual names and mixed English words may still sound incorrect. The same free neural service is used; live latency depends on the provider and network. Incoming MP3 audio is now decoded and played while subsequent audio is still arriving. [Voice setup](FREE-VOICES.md).
 
 Windows speech is available offline. The previously added ElevenLabs provider is
 optional and requires its own key/credits; it is never a fallback for free chat or

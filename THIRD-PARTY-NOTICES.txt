@@ -17,3 +17,8 @@ modifications to this library are permitted for that purpose.
 The LGPL applies to the edge-tts library; it does not grant ownership of or
 unlimited access to Microsoft's online speech service. Service terms,
 availability and voice availability are controlled by the service provider.
+
+Roman Urdu speech conversion uses urdunlp 0.2.0, pinned GitHub source revision 587c63acfffba6efe7df96818f6a4677eff923ba (https://github.com/hammasbuilds/urdunlp).
+Program code: MIT License. Bundled language statistics/data: CC BY-SA 4.0,
+derived from public-language corpora. Upstream LICENSE and LICENSE-DATA apply;
+the wheel includes its license metadata. No runtime text is sent to urdunlp authors.
