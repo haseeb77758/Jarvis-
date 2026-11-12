@@ -35,28 +35,37 @@ def session_log_path():
     return app_data_root() / "last-session.log"
 
 
+def _redact_secrets(content):
+    """Redact locally configured LiveKit URL/key/secret from human-readable logs."""
+    try:
+        path = credentials_path()
+        if not path.is_file() or path.stat().st_size > 8192:
+            return content
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            if "=" not in line or line.lstrip().startswith("#"):
+                continue
+            name, value = line.split("=", 1)
+            if name.strip() in ENV_KEYS:
+                secret = value.strip().strip("'\"")
+                if secret:
+                    content = content.replace(secret, "[REDACTED]")
+    except (OSError, ValueError, UnicodeError):
+        pass
+    return content
+
+
 def safe_log_tail(limit=1500):
-    """Read a small local log excerpt and scrub LiveKit credentials."""
+    """Return a small, redacted excerpt, without uploading local log contents."""
     try:
         path = session_log_path()
         if not path.is_file() or path.stat().st_size > 1_000_000:
             return ""
         with path.open("rb") as src:
-            src.seek(max(0, path.stat().st_size - 6000))
+            src.seek(max(0, path.stat().st_size - 16_000))
             result = src.read().decode("utf-8", "replace")[-limit:]
-        creds = credentials_path()
-        if creds.is_file() and creds.stat().st_size <= 8192:
-            for line in creds.read_text(encoding="utf-8-sig").splitlines():
-                if "=" in line and not line.strip().startswith("#"):
-                    name, value = line.split("=", 1)
-                    if name.strip() in ENV_KEYS and value.strip():
-                        value = value.strip().strip("\\\"'")
-                        if value:
-                            result = result.replace(value, "[REDACTED]")
-        return result
+        return _redact_secrets(result)
     except (OSError, UnicodeError, ValueError):
         return ""
-
 
 def credential_issue():
     """Validate the local URL shape without making any network request."""
@@ -68,7 +77,7 @@ def credential_issue():
             if "=" not in line or line.lstrip().startswith("#"):
                 continue
             key, value = line.split("=", 1)
-            entries[key.strip()] = value.strip().strip("\\\"'")
+            entries[key.strip()] = value.strip().strip("'\"")
         address = urlsplit(entries["LIVEKIT_URL"])
         if address.scheme != "wss" or not address.hostname or address.username or address.password or address.query or address.fragment:
             return "LIVEKIT_URL must be a wss:// project URL, not the project ID or dashboard URL."
@@ -162,6 +171,15 @@ def preflight_runtime():
     except (OSError, subprocess.TimeoutExpired):
         raise LiveKitSetupError("LiveKit Python preflight fail. Install / repair tools dobara chalao.") from None
     if completed.returncode:
+        try:
+            output = (completed.stderr or b"")[-5000:]
+            output = output.decode("utf-8", "replace") if isinstance(output, bytes) else str(output)
+            session_log_path().write_text(
+                "Offline LiveKit SDK preflight failed:\n" + _redact_secrets(output)[-4000:],
+                encoding="utf-8",
+            )
+        except (OSError, UnicodeError, ValueError):
+            pass
         raise LiveKitSetupError("LiveKit Python packages import nahi ho rahe. Install / repair tools dabao. Error details local diagnostics mein dekho.")
     return True
 
