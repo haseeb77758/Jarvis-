@@ -47,7 +47,7 @@ hai. STOP/Esc ya global Ctrl+Alt+F12 (jab registered ho) se rok sakte ho.
 
 **Voices → Edge Neural (free online)** mein Asad/Uzma Urdu aur English voices
 available hain. Disclosure tick, Save, Test voice aur Speak replies on karo.
-Internet chahiye, API key nahi. Urdu script ke saath pronunciation behtar hogi.
+Internet chahiye, API key nahi. Voices mein FAST Urdu accent default on hai: Roman Urdu text local taur par Urdu script mein convert ho kar neural voice ko jata hai. Isse second AI call ka delay bachta hai. English brand names kabhi ghalat parh sakte hain. Audio aate hi stream playback hoti hai, lekin network delay rahega.
 Windows voice offline option hai. ElevenLabs paid/key wala optional provider free
 flow ka fallback nahi; free-only use ke liye usay select nahi karna.
 
