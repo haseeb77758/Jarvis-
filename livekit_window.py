@@ -27,6 +27,7 @@ class LiveKitVoiceWindow:
         self.host = host
         self.closed = False
         self.busy = False
+        self.setup_issue = ""
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
         self.window.title('Jarvis · LiveKit ONLY Voice · GPT-Live-1')
@@ -129,6 +130,8 @@ class LiveKitVoiceWindow:
             issue = credential_issue()
             if self.console.last_error:
                 phrase = 'VOICE EXITED · ' + self.console.last_error
+            elif self.setup_issue:
+                phrase = 'VOICE SETUP ERROR · ' + self.setup_issue
             elif issue:
                 phrase = 'SETUP REQUIRED · ' + issue
             else:
@@ -200,6 +203,7 @@ class LiveKitVoiceWindow:
                 if self.closed:
                     return
                 self.busy = False
+                self.setup_issue = error or ""
                 self.setup_button.configure(state='normal')
                 self.status.set(error or result)
             try:
@@ -268,6 +272,7 @@ class LiveKitVoiceWindow:
                     return
                 self.busy = False
                 if error:
+                    self.setup_issue = error
                     self.window.deiconify()
                     self.window.lift()
                     self.status.set('VOICE SETUP ERROR · ' + error)
@@ -275,6 +280,7 @@ class LiveKitVoiceWindow:
                     return
                 try:
                     self.console.start(consent=True, noise_enhancement=noise, max_minutes=cap)
+                    self.setup_issue = ""
                     self.refresh()
                     self.window.withdraw()
                     self.host.root.lift()
