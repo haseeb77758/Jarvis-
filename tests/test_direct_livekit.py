@@ -87,7 +87,7 @@ class DirectLivekitUnitTests(unittest.TestCase):
             self.assertEqual(sent.get_method(), "POST")
             token = sent.get_header("Authorization").split("Bearer ", 1)[1]
             claims = decode_payload(token)
-            self.assertTrue(claims["video"]["roomAdmin"])
+            self.assertTrue(claims["video"]["roomCreate"])
             self.assertNotIn("roomConfig", claims)
 
     def test_browser_assets_serve_no_secret_and_pinned_sdk(self):
