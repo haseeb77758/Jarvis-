@@ -19,7 +19,7 @@ FILES = (
     "livekit_voice/agent.py", "livekit_voice/requirements.txt",
     "RUN-JARVIS.py", "START-JARVIS-GUI.pyw", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
     "requirements.txt", "README.md", "ACCOUNT-CHAT.md",
-    "README-ROMAN-URDU.md", "ELEVENLABS-VOICE.md", "FREE-VOICES.md",
+    "README-ROMAN-URDU.md", "ELEVENLABS-VOICE.md", "FREE-VOICES.md", "LIVEKIT-VOICE.md",
     "EDGE-TTS-LICENSE.txt", "GPL-3.0.txt", "THIRD-PARTY-NOTICES.txt", "DESKTOP-FIRST.md", "SMART-APP-CONTROL.md",
     "UPDATE-JARVIS-NO-CODE.md", "JARVIS-TOOLKIT.md",
 )
