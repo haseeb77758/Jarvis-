@@ -192,6 +192,65 @@ class DesktopTests(unittest.TestCase):
             ai.ask([{"role": "user", "content": "aur sunao"}])
         self.assertEqual(ai.opener.open.call_count, 2)
 
+    def test_roman_urdu_detection_respects_user_language_choice(self):
+        from core import _has_urdu_script, _roman_urdu_required
+        self.assertTrue(_has_urdu_script("میں ایک پروگرام ہوں"))
+        self.assertFalse(_has_urdu_script("Main AI hoon, tum sunao?"))
+        self.assertTrue(_roman_urdu_required("Assalamualaikum Jarvis, Roman Urdu mein baat karo"))
+        self.assertTrue(_roman_urdu_required("hello Jarvis"))
+        self.assertFalse(_roman_urdu_required("Please reply in English"))
+        self.assertFalse(_roman_urdu_required("اردو میں جواب دو"))
+        self.assertFalse(_roman_urdu_required("Please reply in Urdu script"))
+
+    def test_mixed_script_reply_is_retried_once(self):
+        from core import _has_urdu_script
+        ai = LocalAI(model="qwen2.5:3b")
+        responses = [
+            {"message": {"content": "Wa alaikum assalam! میں ٹھیک ہوں."}},
+            {"message": {"content": "Wa alaikum assalam! Main theek hoon, tum sunao?"}},
+        ]
+        ai.opener = Mock()
+        def responder(*args, **kwargs):
+            value = responses.pop(0)
+            fake = Mock()
+            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(value).encode()))
+            fake.__exit__ = Mock(return_value=False)
+            return fake
+        ai.opener.open.side_effect = responder
+        answer = ai.ask([{"role": "user", "content": "Roman Urdu mein hello bolo"}])
+        self.assertFalse(_has_urdu_script(answer))
+        self.assertEqual(ai.opener.open.call_count, 2)
+        second = json.loads(ai.opener.open.call_args_list[1].args[0].data)
+        self.assertIn("previous reply wrongly used", second["messages"][0]["content"])
+
+    def test_persistent_urdu_script_is_reported_instead_of_displayed(self):
+        ai = LocalAI(model="qwen2.5:3b")
+        ai.opener = Mock()
+        def mixed(*args, **kwargs):
+            fake = Mock()
+            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(
+                {"message": {"content": "Main theek hoon. آپ کیسے ہیں؟"}}
+            ).encode()))
+            fake.__exit__ = Mock(return_value=False)
+            return fake
+        ai.opener.open.side_effect = mixed
+        with self.assertRaisesRegex(RuntimeError, "Roman Urdu"):
+            ai.ask([{"role": "user", "content": "Kya haal hai?"}])
+        self.assertEqual(ai.opener.open.call_count, 2)
+
+    def test_requested_urdu_script_is_not_discarded(self):
+        ai = LocalAI(model="qwen2.5:3b")
+        ai.opener = Mock()
+        fake = Mock()
+        fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(
+            {"message": {"content": "میں ٹھیک ہوں"}}
+        ).encode()))
+        fake.__exit__ = Mock(return_value=False)
+        ai.opener.open.return_value = fake
+        answer = ai.ask([{"role": "user", "content": "اردو میں جواب دو"}])
+        self.assertIn("میں", answer)
+        self.assertEqual(ai.opener.open.call_count, 1)
+
     def test_local_ai_connection_failure_is_actionable(self):
         ai = LocalAI()
         ai.opener = Mock()
