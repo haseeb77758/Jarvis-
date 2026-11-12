@@ -29,6 +29,8 @@ jobs:
           python -m pip install -r livekit_requirements.txt
           python -c "from dotenv import load_dotenv; from livekit.agents import Agent, AgentServer, AgentSession, inference, room_io; import sounddevice"
           python livekit_agent.py --help
+      - name: Verify repair of real Windows LiveKit venv missing pip
+        run: python tools/smoke_livekit_pip_repair.py
       - name: Run integration and validation tests
         run: python -m unittest discover -s tests -v
       - name: Test actual Windows venv COM shortcut creation in temp dirs
