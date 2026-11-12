@@ -128,7 +128,7 @@
     if (RoomEvent.TranscriptionReceived) {
       room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
         for (const segment of (segments || []).slice(0,5)) {
-          if (segment.final && segment.text) {
+          if ((segment.final || segment.isFinal) && segment.text) {
             activity((participant ? "Jarvis" : "Voice") + ": " + segment.text.slice(0,600));
           }
         }
