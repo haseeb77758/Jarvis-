@@ -12,10 +12,10 @@ from datetime import datetime
 import queue
 import threading
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from chat_ui import ChatComposer, on_return, preset_prompt
-from core import LocalAI, MODEL, ollama_status
+from core import LocalAI, MODEL, CHAT_MODELS, ollama_status, setup_local_model
 from voice import Speaker, listen
 
 BG = "#070e16"
@@ -69,7 +69,8 @@ class SandboxWindow:
         self.parent = parent
         self.host = host
         self.session = session if session is not None else SandboxSession()
-        self.ai = LocalAI()
+        self.selected_model = tk.StringVar(master=parent, value=host.store.chat_model)
+        self.ai = LocalAI(model=host.store.chat_model)
         self.events = queue.Queue()
         self.cancel = threading.Event()
         self.generation = 0
@@ -139,6 +140,17 @@ class SandboxWindow:
         tk.Label(side, textvariable=self.status, fg=CYAN, bg=SIDE,
                  font=("Segoe UI", 9, "bold"), wraplength=192,
                  justify="left").pack(anchor="w", padx=17, pady=(2, 9))
+        tk.Label(side, text="CHAT MODEL", fg=GOLD, bg=SIDE, font=("Segoe UI", 9, "bold")).pack(
+            anchor="w", padx=17, pady=(10, 4)
+        )
+        self.model_picker = ttk.Combobox(side, textvariable=self.selected_model, state="readonly",
+                                         values=CHAT_MODELS, width=17)
+        self.model_picker.pack(fill="x", padx=15, pady=4)
+        self.model_picker.bind("<<ComboboxSelected>>", self.on_model_change)
+        tk.Label(side, text="1.5B: faster  |  3B: better quality, slower", fg=MUTED, bg=SIDE,
+                 font=("Segoe UI", 8), wraplength=192, justify="left").pack(
+            anchor="w", padx=17, pady=(1, 7))
+        self._button(side, "Download selected", self.download_model).pack(fill="x", padx=15, pady=4)
         self._button(side, "Refresh Ollama", self.refresh_status).pack(fill="x", padx=15, pady=4)
         tk.Frame(side, bg=LINE, height=1).pack(fill="x", padx=15, pady=17)
         tk.Label(side, text="THIS IS A CHAT-ONLY SPACE", fg=GOLD, bg=SIDE,
@@ -156,8 +168,8 @@ class SandboxWindow:
         top.pack_propagate(False)
         tk.Label(top, text="Conversation with Jarvis", fg=LIGHT, bg=PANEL,
                  font=("Segoe UI", 14, "bold")).pack(side="left", padx=19, pady=14)
-        tk.Label(top, text="qwen2.5:1.5b  ·  OFFLINE AFTER SETUP",
-                 fg=MUTED, bg=PANEL, font=("Segoe UI", 9)).pack(side="right", padx=17)
+        tk.Label(top, textvariable=self.selected_model, fg=MUTED, bg=PANEL,
+                 font=("Segoe UI", 9)).pack(side="right", padx=17)
 
         transcript = tk.Frame(main, bg=BG)
         transcript.pack(fill="both", expand=True)
@@ -246,12 +258,58 @@ class SandboxWindow:
             self.mic_button.configure(state="disabled" if value else "normal")
             self.activity.set(message)
 
+    def on_model_change(self, _event=None):
+        if self.busy:
+            self.selected_model.set(self.ai.model)
+            self.activity.set("Current response finish hone par model change karein.")
+            return
+        selected = self.selected_model.get()
+        if selected not in CHAT_MODELS:
+            self.selected_model.set(self.ai.model)
+            return
+        self.ai.model = selected
+        self.host.store.chat_model = selected
+        self.host.store.save()
+        self.host.ai.model = selected
+        self.status.set("● CHECKING " + selected)
+        self.activity.set("Selected " + selected + " · model check ho raha hai")
+        self.refresh_status()
+
+    def download_model(self):
+        if self.closed or self.busy:
+            return
+        model = self.selected_model.get()
+        if model not in CHAT_MODELS:
+            return
+        # For the user's 8 GB CPU laptop the 3B quality option may be slower.
+        if not messagebox.askyesno(
+            "Download Ollama model",
+            "Selected: " + model + "\n\n"
+            + ("3B model approx 1.9 GB download karta hai; 8 GB RAM par CPU responses slower ho sakte hain.\n"
+               if model == "qwen2.5:3b" else
+               "1.5B model chhota aur relatively fast hai, lekin Roman Urdu quality limited ho sakti hai.\n")
+            + "Internet aur free disk space required. Model local PC par download karun?",
+            parent=self.window
+        ):
+            return
+        self._set_busy(True, "Downloading " + model + " with your approval...")
+        self.cancel.clear()
+        generation = self.generation
+        def work():
+            try:
+                result = setup_local_model(self.cancel, model=model)
+                self.events.put(("download", (generation, result, None)))
+            except Exception as exc:
+                self.events.put(("download", (generation, None, str(exc))))
+        threading.Thread(target=work, daemon=True).start()
+
     def refresh_status(self):
         if self.closed:
             return
+        selected = self.selected_model.get()
         def work():
-            result = ollama_status()
-            self.events.put(("health", result))
+            result = ollama_status(model=selected)
+            self.events.put(("health", (selected, result)))
         threading.Thread(target=work, daemon=True).start()
 
     def send(self):
@@ -267,7 +325,8 @@ class SandboxWindow:
             return
         self.entry.delete(0, "end")
         self._bubble("YOU", text)
-        self._set_busy(True, "Jarvis is thinking locally...")
+        self.ai.model = self.selected_model.get()
+        self._set_busy(True, "Jarvis is thinking locally (" + self.ai.model + ")...")
         self.cancel.clear()
         generation = self.generation
         def work():
@@ -323,12 +382,25 @@ class SandboxWindow:
             while True:
                 kind, data = self.events.get_nowait()
                 if kind == "health":
+                    model, result = data
+                    if model != self.selected_model.get():
+                        continue
                     self.status.set({
                         "ready": "● OLLAMA READY",
                         "model_missing": "● MODEL DOWNLOAD REQUIRED",
                         "missing": "● INSTALL OLLAMA",
                         "stopped": "● OLLAMA SERVICE OFF",
                     }.get(data, "● CHECK OLLAMA"))
+                elif kind == "download":
+                    generation, result, error = data
+                    self._set_busy(False)
+                    if generation != self.generation:
+                        continue
+                    if error:
+                        self.activity.set("Model setup failed: " + error)
+                    else:
+                        self.activity.set(result)
+                    self.refresh_status()
                 elif kind == "voice_status":
                     generation, notice = data
                     if generation == self.generation:

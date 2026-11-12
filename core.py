@@ -14,6 +14,7 @@ from datetime import datetime
 from urllib.request import Request, build_opener, ProxyHandler
 
 MODEL = 'qwen2.5:1.5b'
+CHAT_MODELS = ('qwen2.5:1.5b', 'qwen2.5:3b')  # bounded, CPU-friendly options for 8 GB PCs
 CLOUD_URL = 'https://haseeb-ai-4ybb30.v2.appdeploy.ai/'
 APP_NAMES = ('chrome', 'edge', 'notepad', 'calculator', 'paint', 'explorer')
 KEYS = {'ctrl+c': ('ctrl', 'c'), 'ctrl+v': ('ctrl', 'v'),
@@ -382,6 +383,9 @@ def _looks_like_echo(user_text, answer):
 CHAT_SYSTEM = (
     'You are Jarvis, a friendly, practical AI conversation partner created by Haseeb Crafts. '
     'Have a natural back-and-forth chat in Roman Urdu unless the user requests another language. '
+    'Write natural Pakistan-style Roman Urdu with correct common phrases. Prefer simple conversational words; avoid broken literal translations, nonsense phrases and overly formal English. '
+    'For salam use: "Wa alaikum assalam! Main theek hoon, tum sunao?" Never say "hai. Kya hai ab?". '
+    'When unsure of a fact, say so briefly rather than guessing. '
     'IMPORTANT: Never merely repeat, rephrase or translate the user message. Actually respond to it. '
     'For a greeting, reply warmly and ask a short follow-up question. '
     'For small talk such as "aur sunao", say something conversational and invite the user to continue. '
@@ -389,7 +393,7 @@ CHAT_SYSTEM = (
     'Remember earlier turns in this chat but do not invent personal details or claim to know private information. '
     'Keep responses concise and clear unless the user asks for detail. '
     'You cannot control the computer from this chat and must never claim an action was performed. '
-    'Examples: User: "Assalam u alaikum" Assistant: "Wa alaikum assalam! Kya haal hain?"; '
+    'Examples: User: "Assalam u alaikum Jarvis" Assistant: "Wa alaikum assalam! Main theek hoon, tum sunao?"; '
     'User: "aur sunao" Assistant: "Bas sab theek! Tum sunao, aaj kis cheez par baat karein?"'
 )
 
@@ -460,7 +464,7 @@ class LocalAI:
             except Exception as exc:
                 raise RuntimeError(
                     'Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se '
-                    'kholein aur qwen2.5:1.5b download confirm karein. '
+                    'kholein aur selected model ' + self.model + ' install/download confirm karein. '
                     'SETUP-LOCAL-AI.bat bhi optional fallback hai. Direct commands chalti rahengi.'
                 ) from exc
             content = data.get('message', {}).get('content')
@@ -475,20 +479,22 @@ class LocalAI:
             'behtar jawab ke liye bara local model chahiye ho sakta hai.'
         )
 
-def setup_local_model(stop):
-    """Download only the named local model with an existing official Ollama install."""
+def setup_local_model(stop, model=MODEL):
+    """Download only an explicitly allowed local model with the Ollama app."""
+    if model not in CHAT_MODELS:
+        raise ValueError('Only approved local Ollama chat models are supported.')
     if os.name != 'nt':
         raise RuntimeError('Model setup button Windows ke liye hai.')
     executable = ollama_binary()
     if not executable:
         raise FileNotFoundError('Ollama installed nahi. Jarvis ka Setup AI button official Windows download page kholta hai.')
-    status = ollama_status(executable=executable)
+    status = ollama_status(model=model, executable=executable)
     if status == 'stopped':
         raise RuntimeError('Ollama installed hai magar local server band hai. Windows Start menu mein Ollama kholo, phir Setup AI dobara dabao.')
     if status == 'ready':
         return 'Ollama model already downloaded. Local AI chat mein sawal likhein.'
     with tempfile.TemporaryFile(mode='w+b') as log:
-        process = subprocess.Popen([executable, 'pull', MODEL], stdout=log, stderr=subprocess.STDOUT,
+        process = subprocess.Popen([executable, 'pull', model], stdout=log, stderr=subprocess.STDOUT,
                                    shell=False, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         deadline = time.monotonic() + 900
         while process.poll() is None:
@@ -506,6 +512,6 @@ def setup_local_model(stop):
             log.seek(max(0, length - 1500))
             details = log.read().decode('utf-8', errors='replace')
             raise RuntimeError('Ollama model download fail hua. Ollama Start menu se open karein aur internet check karein.\n' + details)
-    if ollama_status(executable=executable) != 'ready':
+    if ollama_status(model=model, executable=executable) != 'ready':
         raise RuntimeError('Download khatam hua magar Ollama API par model confirm nahi hua. Ollama app khol kar Setup AI dobara dabayein.')
-    return 'Ollama qwen2.5:1.5b model ready. Local AI chat mein sawal likhein.'
+    return 'Ollama ' + model + ' model ready. Local AI chat mein sawal likhein.'
