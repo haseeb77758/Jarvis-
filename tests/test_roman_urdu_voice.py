@@ -21,7 +21,7 @@ class FastUrduVoiceTests(unittest.TestCase):
         result = spoken_urdu('Haseeb, main tayyar hoon. Aap kaise hain?')
         self.assertTrue(any('\u0600' <= char <= '\u06ff' for char in result), repr(result))
         self.assertNotEqual(result, 'Haseeb, main tayyar hoon. Aap kaise hain?')
-        print('Roman Urdu voice script sample:', result)
+        self.assertGreater(len(result), 5)
 
     def test_english_and_urdu_only_inputs_are_unchanged(self):
         self.assertEqual(spoken_urdu('Welcome to the dashboard.'), 'Welcome to the dashboard.')
@@ -131,8 +131,8 @@ class StreamedAudioTests(unittest.TestCase):
         edge = SimpleNamespace(Communicate=Mock(return_value=FakeClient()))
         notices = []
         with patch.dict(sys.modules, {'sounddevice': sd, 'edge_tts': edge}):
-            fv.stream_and_play('السلام علیکم', {
-                'free_voice': fv.DEFAULT_VOICE, 'free_rate': '+0%'}, threading.Event(), notices.append)
+            asyncio.run(fv._stream_pcm_play('السلام علیکم',
+                fv.DEFAULT_VOICE, '+0%', threading.Event(), notices.append))
         self.assertTrue(played)
         self.assertNotIn('aborted', played)
         self.assertIn('playback started', notices[0].lower())
