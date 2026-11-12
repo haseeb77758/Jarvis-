@@ -67,8 +67,8 @@ class ReadinessTests(unittest.TestCase):
         App.poll(host)
         host.ai_status.set.assert_not_called()
         host.mode.set.assert_not_called()
-        host.say.assert_called_once_with('VOICE SETUP', 'Voice model ready')
-        host.status.set.assert_called_once_with('Voice model ready · press Mic to test')
+        host.say.assert_called_once_with('RESULT', 'Voice model ready')
+        host.status.set.assert_not_called()
 
     def test_cancelled_voice_setup_does_not_claim_readiness(self):
         host = SimpleNamespace(events=queue.Queue(), generation=4, stop=threading.Event(),
