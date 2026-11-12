@@ -160,11 +160,14 @@ def play_pcm(audio, cancel):
     import sounddevice as sd
     # Private stream: STOP must not stop unrelated audio or microphone streams.
     with sd.RawOutputStream(samplerate=24000, channels=1, dtype='int16', latency='low') as stream:
+        completed = False
         try:
             for start in range(0, len(audio), 4800):
                 if cancel.is_set():
                     break
                 stream.write(audio[start:start + 4800])
+            completed = not cancel.is_set()
         finally:
-            # Abort also drops buffered samples instead of playing after STOP.
-            stream.abort()
+            # Normal context exit drains the final samples; STOP/errors discard them.
+            if not completed:
+                stream.abort()

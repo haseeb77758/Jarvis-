@@ -111,6 +111,17 @@ class CloudVoiceTests(unittest.TestCase):
         sd.stop.assert_not_called()
         sd.rec.assert_not_called()
 
+    def test_completed_playback_drains_final_samples_instead_of_aborting(self):
+        stream = Mock()
+        stream.__enter__ = Mock(return_value=stream)
+        stream.__exit__ = Mock(return_value=False)
+        sd = Mock()
+        sd.RawOutputStream.return_value = stream
+        with patch.dict(sys.modules, {'sounddevice': sd}):
+            cv.play_pcm(b'\0\0' * 100, threading.Event())
+        stream.write.assert_called_once()
+        stream.abort.assert_not_called()
+
     def test_session_key_does_not_enter_any_file(self):
         with tempfile.TemporaryDirectory() as directory:
             store = cv.VoiceSettings(directory)
