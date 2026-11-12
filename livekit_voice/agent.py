@@ -56,17 +56,17 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession(
         llm=inference.DuplexModel(model="openai/gpt-live-1", voice="marin"),
     )
-    await session.start(
-        agent=JarvisLiveVoice(),
-        room=ctx.room,
-        room_options=room_io.RoomOptions(
+    session_options = {"agent": JarvisLiveVoice(), "room": ctx.room}
+    # Optional: ai-coustics Voice Focus can add cloud usage charges.
+    if os.environ.get("JARVIS_LIVEKIT_AI_COUSTICS") == "1":
+        session_options["room_options"] = room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
                 noise_cancellation=ai_coustics.audio_enhancement(
                     model=ai_coustics.EnhancerModel.QUAIL_VF_S,
                 ),
             ),
-        ),
-    )
+        )
+    await session.start(**session_options)
 
 
 if __name__ == "__main__":
