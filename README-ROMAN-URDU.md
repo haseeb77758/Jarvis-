@@ -7,8 +7,10 @@ Created by Haseeb Crafts.
 Jarvis mein ab **Puter Connect AI, Sandbox, AI Chat, Ollama aur alternate
 voice-chat UI** nahi chalengi. Jarvis ke main dashboard par **Talk Live**
 hi ek AI conversation option hai: `GPT-Live-1`, `marin` voice.
-AI agent abhi alag LiveKit console mein bolta hai; Jarvis orb aur
-dashboard session status/STOP ko control karte hain.
+Ab Talk Live **official LiveKit Cloud Agent Console browser** mein kholta hai.
+Windows `blingfire` native DLL block hone par bhi ye browser route chal sakta hai.
+Jarvis **browser ki call ko STOP ya 5/10/15-minute timer se band nahi kar sakta**.
+Call ko browser mein khud End Call/Disconnect karna hoga.
 
 **Important:** LiveKit GPT-Live-1 usage-based billed provider hai. Free
 unlimited nahi. Session har dafa tumhari permission se start hogi.
