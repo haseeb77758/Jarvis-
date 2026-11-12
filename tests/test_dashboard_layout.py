@@ -53,6 +53,10 @@ class LayoutRegressionTests(TestCase):
                 right = body.grid_slaves(row=0, column=2)[0]
                 self.assertLessEqual(left.winfo_width(), 250)
                 self.assertGreaterEqual(left.winfo_width(), 205)
+                # These frames hold packed children, so grid_propagate(False)
+                # would NOT prevent huge default Canvas/Text requests.
+                self.assertFalse(left.pack_propagate())
+                self.assertFalse(right.pack_propagate())
                 self.assertLessEqual(right.winfo_width(), 295)
                 # Windows runners may clamp requested window width to their
                 # virtual desktop. Assert against the ACTUAL mapped width.
