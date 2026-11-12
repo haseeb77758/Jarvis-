@@ -307,6 +307,97 @@ class LiveKitOptionalTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][-3:],
                          ['-m', 'pip', '--version'])
 
+    def test_recognizes_app_control_blocked_native_blingfire(self):
+        message = (
+            b'ImportError: DLL load failed while importing _native: '
+            b'An Application Control policy has blocked this file.'
+        )
+        self.assertTrue(lk.is_windows_app_control_block(message))
+        self.assertFalse(lk.is_windows_app_control_block(b'No module named pip'))
+        self.assertFalse(lk.is_windows_app_control_block(b'Connection timeout'))
+        self.assertIn('Windows security OFF na karo',
+                      lk.application_control_guidance())
+
+    def test_blocked_native_sdk_preflight_shows_browser_recovery_not_repair(self):
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        blocked = Mock(
+            returncode=1, stdout=b'',
+            stderr=b'ImportError: DLL load failed while importing _native: '
+                   b'An Application Control policy has blocked this file.',
+        )
+        with patch('livekit_bridge.subprocess.run', return_value=blocked), \
+             patch('livekit_bridge.subprocess.Popen') as launched:
+            for noise in (False, True):
+                with self.assertRaisesRegex(lk.LiveKitSetupError,
+                                            'Application Control'):
+                    lk.preflight_runtime(noise_enhancement=noise)
+            launched.assert_not_called()
+        self.assertIn('Application Control', lk.safe_log_tail())
+
+    def test_native_download_failure_reports_blocked_dll(self):
+        blocked = Mock(
+            returncode=1, stdout=b'',
+            stderr=b'ImportError: DLL load failed while importing _native: '
+                   b'An Application Control policy has blocked this file.',
+        )
+        with patch('livekit_bridge.subprocess.run', return_value=blocked):
+            with self.assertRaisesRegex(lk.LiveKitSetupError, 'Application Control'):
+                lk._install_command(['python', '-m', 'some-command'],
+                                    self.root, 'optional AI-Coustics model download')
+        self.assertIn('optional AI-Coustics', lk.safe_log_tail())
+        self.assertIn('blocked this file', lk.safe_log_tail())
+
+    def _browser_voice_stub(self):
+        from livekit_window import LiveKitVoiceWindow
+        host = LiveKitVoiceWindow.__new__(LiveKitVoiceWindow)
+        host.closed = False
+        host.busy = False
+        host.console = Mock()
+        host.console.is_running.return_value = False
+        host.browser_opened = False
+        host.window = Mock()
+        host.status = Mock()
+        host.refresh = Mock()
+        return host
+
+    def test_browser_mode_needs_no_python_keys_or_blocked_native_dll(self):
+        from livekit_window import LIVEKIT_DASHBOARD
+        window = self._browser_voice_stub()
+        self.assertFalse(lk.configured())
+        self.assertFalse(lk.environment_python().is_file())
+        with patch('livekit_window.messagebox.askyesno', return_value=True), \
+             patch('livekit_window.webbrowser.open', return_value=True) as browser, \
+             patch('livekit_bridge.subprocess.Popen') as native, \
+             patch('livekit_window.preflight_runtime') as preflight:
+            self.assertTrue(window.start())
+        browser.assert_called_once_with(LIVEKIT_DASHBOARD, new=2)
+        self.assertEqual(LIVEKIT_DASHBOARD, 'https://cloud.livekit.io/')
+        self.assertTrue(window.browser_opened)
+        window.window.withdraw.assert_called_once()
+        native.assert_not_called()
+        preflight.assert_not_called()
+        window.console.start.assert_not_called()
+
+    def test_browser_cancel_never_opens_cloud(self):
+        window = self._browser_voice_stub()
+        with patch('livekit_window.messagebox.askyesno', return_value=False), \
+             patch('livekit_window.webbrowser.open') as browser:
+            self.assertFalse(window.start())
+        self.assertFalse(window.browser_opened)
+        browser.assert_not_called()
+
+    def test_browser_launch_failure_never_claims_active_session(self):
+        window = self._browser_voice_stub()
+        with patch('livekit_window.messagebox.askyesno', return_value=True), \
+             patch('livekit_window.webbrowser.open', return_value=False), \
+             patch('livekit_window.messagebox.showerror') as notice:
+            self.assertFalse(window.start())
+        notice.assert_called_once()
+        self.assertFalse(window.browser_opened)
+        window.window.withdraw.assert_not_called()
+
     def test_packaging_includes_agent_and_ui_but_never_keys(self):
         from tools.package_source import source_files, ROOT
         files = {p.as_posix() for p in source_files(ROOT)}
