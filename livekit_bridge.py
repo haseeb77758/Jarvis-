@@ -138,7 +138,7 @@ class LiveKitConsole:
     def is_running(self):
         return self.process is not None and self.process.poll() is None
 
-    def start(self, *, consent=False):
+    def start(self, *, consent=False, noise_enhancement=False):
         """Start a separate console only with explicit cost consent."""
         if not consent:
             raise LiveKitSetupError("LiveKit cloud-usage consent required hai.")
