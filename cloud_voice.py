@@ -50,6 +50,7 @@ class VoiceSettings:
         self.language = 'auto'
         self.free_voice = 'ur-PK-AsadNeural'
         self.free_rate = '-5%'
+        self.natural_urdu = True
         self.key = ''
         self.load()
 
@@ -61,8 +62,12 @@ class VoiceSettings:
                 from free_voice import validate_free_voice, DEFAULT_VOICE
                 free_voice, free_rate = data.get('free_voice', DEFAULT_VOICE), data.get('free_rate', '-5%')
                 validate_free_voice(free_voice, free_rate)
+                natural_urdu = data.get('natural_urdu', True)
+                if type(natural_urdu) is not bool:
+                    raise ValueError('Invalid speech setting')
                 self.provider, self.voice_id, self.language = data['provider'], data['voice_id'], data['language']
                 self.free_voice, self.free_rate = free_voice, free_rate
+                self.natural_urdu = natural_urdu
         except (OSError, ValueError, TypeError, KeyError, VoiceError):
             pass
         try:
@@ -80,11 +85,14 @@ class VoiceSettings:
         if not isinstance(voice_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', voice_id):
             raise VoiceError('Valid ElevenLabs voice ID enter karein (URL nahi).')
 
-    def save(self, provider, voice_id, language, api_key, remember=False, *, free_voice=None, free_rate=None):
+    def save(self, provider, voice_id, language, api_key, remember=False, *, free_voice=None, free_rate=None, natural_urdu=None):
         from free_voice import validate_free_voice
         free_voice = free_voice or self.free_voice
         free_rate = free_rate or self.free_rate
         validate_free_voice(free_voice, free_rate)
+        natural_urdu = self.natural_urdu if natural_urdu is None else natural_urdu
+        if type(natural_urdu) is not bool:
+            raise VoiceError('Natural Urdu setting invalid hai.')
         self._validate(provider, voice_id, language)
         api_key = api_key.strip()
         if api_key and (not 8 <= len(api_key) <= 1024 or not api_key.isascii() or any(c.isspace() for c in api_key)):
@@ -100,10 +108,11 @@ class VoiceSettings:
                 raise VoiceError('Windows encrypted key save nahi hui. Remember key off karke session-only use karein.') from None
         elif self.key_path.exists():
             self.key_path.unlink()
-        payload = dict(provider=provider, voice_id=voice_id, language=language, free_voice=free_voice, free_rate=free_rate)
+        payload = dict(provider=provider, voice_id=voice_id, language=language, free_voice=free_voice, free_rate=free_rate, natural_urdu=natural_urdu)
         _atomic_write(self.path, json.dumps(payload).encode('utf-8'))
         self.provider, self.voice_id, self.language, self.key = provider, voice_id, language, api_key
         self.free_voice, self.free_rate = free_voice, free_rate
+        self.natural_urdu = natural_urdu
 
     def forget(self):
         if self.key_path.exists():
@@ -112,7 +121,8 @@ class VoiceSettings:
 
     def snapshot(self):
         return dict(provider=self.provider, voice_id=self.voice_id,
-                    language=self.language, api_key=self.key, free_voice=self.free_voice, free_rate=self.free_rate)
+                    language=self.language, api_key=self.key, free_voice=self.free_voice, free_rate=self.free_rate,
+                    natural_urdu=self.natural_urdu)
 
 
 def generate_pcm(text, config, cancel, opener=None):

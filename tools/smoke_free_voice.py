@@ -15,8 +15,8 @@ from free_voice import generate_mp3, decode_mp3, PROVIDER
 out = ROOT / 'dist' / 'free-voice-samples'
 out.mkdir(parents=True, exist_ok=True)
 for voice, text, name in (
-    ('ur-PK-AsadNeural', 'السلام علیکم حسیب! میں جاروس ہوں، آپ کا اسسٹنٹ۔', 'Jarvis-Asad-Urdu.wav'),
-    ('en-GB-RyanNeural', 'Hello Haseeb. Jarvis is ready to help you.', 'Jarvis-Ryan-English.wav'),
+    ('ur-PK-AsadNeural', 'السلام علیکم حسیب! ہاں، میں تیار ہوں۔ پہلے ایک کام مکمل کر لیتے ہیں، پھر اگلا قدم دیکھتے ہیں۔', 'Jarvis-Asad-Urdu.wav'),
+    ('en-GB-RyanNeural', "Hello Haseeb. Yes, I'm ready. Let's finish one thing first, then we'll work out the next step.", 'Jarvis-Ryan-English.wav'),
 ):
     stop = threading.Event()
     audio = generate_mp3(text, dict(provider=PROVIDER, free_voice=voice, free_rate='-5%'), stop)

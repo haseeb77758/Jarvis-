@@ -1,5 +1,6 @@
 """Opt-in local microphone transcription and Windows speech output."""
 import os
+import re
 import sys
 from pathlib import Path
 import threading
@@ -108,9 +109,10 @@ def normalize_command(text):
 
 
 class Speaker:
-    def __init__(self, notify=None, settings=None):
+    def __init__(self, notify=None, settings=None, prepare_speech=None):
         self.notify = notify or (lambda text: None)
         self.settings = settings
+        self.prepare_speech = prepare_speech
         self.cancel = threading.Event()
         self.thread = None
 
@@ -132,7 +134,23 @@ class Speaker:
                 from free_voice import generate_mp3, decode_mp3
                 from cloud_voice import play_pcm, VoiceError
                 try:
-                    compressed = generate_mp3(text, config, cancel)
+                    spoken = spoken_text(text)
+                    if (config.get('natural_urdu', False) and
+                            config.get('free_voice', '').startswith('ur-') and
+                            re.search(r'[A-Za-z]', spoken) and
+                            not re.search(r'[\u0600-\u06ff]', spoken)):
+                        if self.prepare_speech is None:
+                            self.notify('Natural Urdu ke liye Connect AI karein. Text reply available hai.')
+                            return
+                        try:
+                            spoken = self.prepare_speech(spoken, cancel)
+                        except Exception:
+                            if not cancel.is_set():
+                                self.notify('Natural Urdu rendering nahi hui. AI connection/allowance check karein; text reply available hai.')
+                            return
+                    if cancel.is_set() or not spoken:
+                        return
+                    compressed = generate_mp3(spoken, config, cancel)
                     if not cancel.is_set():
                         audio = decode_mp3(compressed, cancel)
                         if not cancel.is_set():
@@ -175,4 +193,16 @@ class Speaker:
                 self.notify('Windows speech voice unavailable. Text replies still work.')
         self.thread = threading.Thread(target=run, daemon=True)
         self.thread.start()
+
+
+def spoken_text(text):
+    """Keep screen formatting/code out of speech without changing the chat bubble."""
+    value = str(text)[:1800]
+    value = re.sub(r'```.*?(?:```|\Z)', '', value, flags=re.S)
+    value = re.sub(r'!\[[^\]]*\]\([^)]*\)', '', value)
+    value = re.sub(r'\[([^\]]+)\]\([^)]*\)', r'\1', value)
+    value = re.sub(r'https?://\S+', '', value)
+    value = re.sub(r'(?m)^\s*(?:#{1,6}\s+|[-*+]\s+|\d+[.)]\s+)', '', value)
+    value = re.sub(r'[*_`]', '', value)
+    return re.sub(r'\s+', ' ', value).strip()
 
