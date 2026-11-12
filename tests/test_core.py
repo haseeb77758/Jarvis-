@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch, Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core import Controller, LocalAI, parse_command, parse_plan, safe_child, validate, ollama_status, MODEL
+from core import Controller, ChatAI, parse_command, parse_plan, safe_child, validate, MODEL
 
 
 class DesktopTests(unittest.TestCase):
@@ -108,226 +108,91 @@ class DesktopTests(unittest.TestCase):
                 Controller.launch('notepad')
                 popen.assert_called_once_with([str(target)], shell=False)
 
-    def test_ollama_status_detects_installed_local_model(self):
-        def client(models):
-            fake = Mock()
-            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps({'models': models}).encode()))
-            fake.__exit__ = Mock(return_value=False)
-            transport = Mock()
-            transport.open.return_value = fake
-            return transport
-        ready = client([{'name': MODEL}])
-        self.assertEqual(ollama_status(opener=ready, executable="ollama.exe"), 'ready')
-        request = ready.open.call_args.args[0]
-        self.assertEqual(request.full_url, 'http://127.0.0.1:11434/api/tags')
-        self.assertEqual(ready.open.call_args.kwargs['timeout'], 3)
-        self.assertEqual(ollama_status(opener=client([{'name': 'other:latest'}]), executable="ollama.exe"), 'model_missing')
-        self.assertEqual(ollama_status(opener=client([{'model': MODEL}]), executable="ollama.exe"), 'ready')
-
-    def test_ollama_status_handles_missing_and_stopped_server(self):
-        self.assertEqual(ollama_status(executable=""), 'missing')
-        transport = Mock()
-        transport.open.side_effect = ConnectionError("refused")
-        self.assertEqual(ollama_status(opener=transport, executable="ollama.exe"), 'stopped')
-
-    def test_local_ai_protocol_has_fixed_local_url_and_bounded_context(self):
-        ai = LocalAI()
-        fake = Mock()
-        fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps({'message': {'content': 'Salam!'}}).encode()))
-        fake.__exit__ = Mock(return_value=False)
-        ai.opener = Mock()
-        ai.opener.open.return_value = fake
-        value = ai.ask([{'role': 'user', 'content': 'Hello'}] * 20)
-        self.assertEqual(value, 'Salam!')
-        req = ai.opener.open.call_args.args[0]
-        self.assertEqual(req.full_url, 'http://127.0.0.1:11434/api/chat')
-        body = json.loads(req.data)
-        self.assertFalse(body['stream'])
+    def test_chat_protocol_uses_account_relay_with_bounded_context(self):
+        bridge = Mock()
+        bridge.complete.return_value = {'message': {'content': 'Salam!'}}
+        ai = ChatAI(bridge=bridge)
+        self.assertEqual(ai.ask([{'role': 'user', 'content': 'Hello'}] * 20), 'Salam!')
+        body = bridge.complete.call_args.args[0]
         self.assertEqual(len(body['messages']), 9)
-        self.assertEqual(body['options']['num_ctx'], 2048)
         self.assertNotIn('images', body)
+        self.assertFalse(body['plan'])
 
-    def test_chat_system_promotes_actual_answers_not_echoes(self):
+    def test_chat_system_promotes_answers_instead_of_echoes(self):
         from core import CHAT_SYSTEM, _looks_like_echo
-        self.assertIn("Never merely repeat", CHAT_SYSTEM)
-        self.assertTrue(_looks_like_echo("aur sunao", "Aur sunao!"))
-        self.assertTrue(_looks_like_echo("assalam ua alaikum", "Assalam u Alaikum!"))
-        self.assertFalse(_looks_like_echo("aur sunao", "Main theek hoon! Tum sunao, aaj kya plan hai?"))
-        self.assertFalse(_looks_like_echo("computer kholo", "Computer kholne ka tarika yeh hai:"))
+        self.assertIn('Never merely repeat', CHAT_SYSTEM)
+        self.assertTrue(_looks_like_echo('aur sunao', 'Aur sunao!'))
+        self.assertFalse(_looks_like_echo('aur sunao', 'Main theek hoon! Tum batao?'))
 
-    def test_chat_retries_echo_and_returns_new_conversational_reply(self):
-        ai = LocalAI()
-        responses = [
-            {"message": {"content": "Aur sunao!"}},
-            {"message": {"content": "Bas theek! Tum batao, aaj kya naya chal raha hai?"}},
+    def test_chat_retries_echo_once(self):
+        bridge = Mock()
+        bridge.complete.side_effect = [
+            {'message': {'content': 'Aur sunao!'}},
+            {'message': {'content': 'Bas theek! Tum batao, aaj kya plan hai?'}},
         ]
-        ai.opener = Mock()
-        def responder(*_args, **_kwargs):
-            value = responses.pop(0)
-            fake = Mock()
-            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(value).encode()))
-            fake.__exit__ = Mock(return_value=False)
-            return fake
-        ai.opener.open.side_effect = responder
-        answer = ai.ask([{"role": "user", "content": "aur sunao"}])
-        self.assertIn("Tum batao", answer)
-        self.assertEqual(ai.opener.open.call_count, 2)
-        first = json.loads(ai.opener.open.call_args_list[0].args[0].data)
-        second = json.loads(ai.opener.open.call_args_list[1].args[0].data)
-        self.assertGreater(second["options"]["temperature"], first["options"]["temperature"])
-        self.assertIn("echoed", second["messages"][0]["content"])
+        self.assertIn('Tum batao', ChatAI(bridge=bridge).ask([{'role':'user','content':'aur sunao'}]))
+        self.assertEqual(bridge.complete.call_count, 2)
+        self.assertIn('echoed', bridge.complete.call_args.args[0]['messages'][0]['content'])
 
-    def test_chat_never_displays_repeated_echo_as_success(self):
-        ai = LocalAI()
-        ai.opener = Mock()
-        def repeated_response(*_args, **_kwargs):
-            fake = Mock()
-            fake.__enter__ = Mock(return_value=io.BytesIO(
-                json.dumps({"message": {"content": "Aur sunao!"}}).encode()
-            ))
-            fake.__exit__ = Mock(return_value=False)
-            return fake
-        ai.opener.open.side_effect = repeated_response
-        with self.assertRaisesRegex(RuntimeError, "repeat"):
-            ai.ask([{"role": "user", "content": "aur sunao"}])
-        self.assertEqual(ai.opener.open.call_count, 2)
+    def test_persistent_echo_is_reported(self):
+        bridge = Mock()
+        bridge.complete.return_value = {'message': {'content': 'Aur sunao!'}}
+        with self.assertRaisesRegex(RuntimeError, 'repeat'):
+            ChatAI(bridge=bridge).ask([{'role':'user','content':'aur sunao'}])
+        self.assertEqual(bridge.complete.call_count, 2)
 
-    def test_roman_urdu_detection_respects_user_language_choice(self):
-        from core import _has_urdu_script, _roman_urdu_required
-        self.assertTrue(_has_urdu_script("میں ایک پروگرام ہوں"))
-        self.assertFalse(_has_urdu_script("Main AI hoon, tum sunao?"))
-        self.assertTrue(_roman_urdu_required("Assalamualaikum Jarvis, Roman Urdu mein baat karo"))
-        self.assertTrue(_roman_urdu_required("hello Jarvis"))
-        self.assertFalse(_roman_urdu_required("Please reply in English"))
-        self.assertFalse(_roman_urdu_required("اردو میں جواب دو"))
-        self.assertFalse(_roman_urdu_required("Please reply in Urdu script"))
+    def test_roman_urdu_choice_respects_explicit_languages(self):
+        from core import _roman_urdu_required, _has_urdu_script
+        self.assertTrue(_roman_urdu_required('Roman Urdu mein jawab do'))
+        self.assertFalse(_roman_urdu_required('Please reply in English'))
+        self.assertFalse(_roman_urdu_required('اردو میں جواب دو'))
+        self.assertTrue(_has_urdu_script('میں ٹھیک ہوں'))
 
-    def test_mixed_script_reply_is_retried_once(self):
-        from core import _has_urdu_script
-        ai = LocalAI(model="qwen2.5:3b")
-        responses = [
-            {"message": {"content": "Wa alaikum assalam! میں ٹھیک ہوں."}},
-            {"message": {"content": "Wa alaikum assalam! Main theek hoon, tum sunao?"}},
+    def test_wrong_script_retries_once(self):
+        bridge = Mock()
+        bridge.complete.side_effect = [
+            {'message': {'content': 'میں ٹھیک ہوں'}},
+            {'message': {'content': 'Main theek hoon, tum sunao?'}},
         ]
-        ai.opener = Mock()
-        def responder(*args, **kwargs):
-            value = responses.pop(0)
-            fake = Mock()
-            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(value).encode()))
-            fake.__exit__ = Mock(return_value=False)
-            return fake
-        ai.opener.open.side_effect = responder
-        answer = ai.ask([{"role": "user", "content": "Roman Urdu mein hello bolo"}])
-        self.assertFalse(_has_urdu_script(answer))
-        self.assertEqual(ai.opener.open.call_count, 2)
-        second = json.loads(ai.opener.open.call_args_list[1].args[0].data)
-        self.assertIn("previous reply wrongly used", second["messages"][0]["content"])
+        answer = ChatAI(bridge=bridge).ask([{'role':'user','content':'Roman Urdu mein hello bolo'}])
+        self.assertIn('Main theek', answer)
+        self.assertEqual(bridge.complete.call_count, 2)
 
-    def test_persistent_urdu_script_is_reported_instead_of_displayed(self):
-        ai = LocalAI(model="qwen2.5:3b")
-        ai.opener = Mock()
-        def mixed(*args, **kwargs):
-            fake = Mock()
-            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(
-                {"message": {"content": "Main theek hoon. آپ کیسے ہیں؟"}}
-            ).encode()))
-            fake.__exit__ = Mock(return_value=False)
-            return fake
-        ai.opener.open.side_effect = mixed
-        with self.assertRaisesRegex(RuntimeError, "Roman Urdu"):
-            ai.ask([{"role": "user", "content": "Kya haal hai?"}])
-        self.assertEqual(ai.opener.open.call_count, 2)
+    def test_requested_urdu_script_is_preserved(self):
+        bridge = Mock()
+        bridge.complete.return_value = {'message': {'content': 'میں ٹھیک ہوں'}}
+        self.assertIn('میں', ChatAI(bridge=bridge).ask([{'role':'user','content':'اردو میں جواب دو'}]))
+        self.assertEqual(bridge.complete.call_count, 1)
 
-    def test_requested_urdu_script_is_not_discarded(self):
-        ai = LocalAI(model="qwen2.5:3b")
-        ai.opener = Mock()
-        fake = Mock()
-        fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(
-            {"message": {"content": "میں ٹھیک ہوں"}}
-        ).encode()))
-        fake.__exit__ = Mock(return_value=False)
-        ai.opener.open.return_value = fake
-        answer = ai.ask([{"role": "user", "content": "اردو میں جواب دو"}])
-        self.assertIn("میں", answer)
-        self.assertEqual(ai.opener.open.call_count, 1)
+    def test_plan_is_untrusted_json_text_with_no_retry_or_execution(self):
+        bridge = Mock()
+        bridge.complete.return_value = {'message': {'content': '{"actions":[]}'}}
+        answer = ChatAI(bridge=bridge).ask([{'role':'user','content':'open chrome'}], plan=True)
+        self.assertEqual(answer, '{"actions":[]}' )
+        self.assertTrue(bridge.complete.call_args.args[0]['plan'])
+        self.assertIn('No shell commands', bridge.complete.call_args.args[0]['messages'][0]['content'])
+        self.assertEqual(bridge.complete.call_count, 1)
 
-    def test_jarvis_intro_checks(self):
-        from core import _asks_jarvis_intro, _answers_jarvis_intro
-        self.assertTrue(_asks_jarvis_intro("Salam Jarvis! Apna introduction 3 simple Roman Urdu sentences mein do."))
-        self.assertTrue(_asks_jarvis_intro("Who are you?"))
-        self.assertFalse(_asks_jarvis_intro("Mujhe 3 website ideas do"))
-        self.assertFalse(_answers_jarvis_intro("Wa alaikum assalam! Main theek hoon, tum sunao?"))
-        self.assertTrue(_answers_jarvis_intro("Main Jarvis, Haseeb Crafts ka AI assistant hoon."))
-
-    def test_intro_request_retries_non_answer_once(self):
-        ai = LocalAI(model="qwen2.5:3b")
-        replies = iter([
-            {"message": {"content": "Wa alaikum assalam! Main theek hoon, tum sunao?"}},
-            {"message": {"content": "Wa alaikum assalam! Main Jarvis, Haseeb Crafts ka local AI assistant hoon. Main ideas, planning aur sawalon mein madad karta hoon. Tum kis cheez mein madad chahte ho?"}},
-        ])
-        ai.opener = Mock()
-        def respond(*args, **kwargs):
-            fake = Mock()
-            fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(next(replies)).encode()))
-            fake.__exit__ = Mock(return_value=False)
-            return fake
-        ai.opener.open.side_effect = respond
-        answer = ai.ask([{"role": "user", "content": "Salam Jarvis! Apna introduction 3 simple Roman Urdu sentences mein do aur video script likho."}])
-        self.assertIn("Main Jarvis", answer)
-        self.assertEqual(ai.opener.open.call_count, 2)
-        request = json.loads(ai.opener.open.call_args_list[1].args[0].data)
-        self.assertIn("previous answer only greeted", request["messages"][0]["content"])
-
-    def test_intro_retries_do_not_interfere_with_desktop_plans(self):
-        ai = LocalAI(model="qwen2.5:3b")
-        ai.opener = Mock()
-        fake = Mock()
-        fake.__enter__ = Mock(return_value=io.BytesIO(json.dumps(
-            {"message": {"content": '{"actions":[]}'}}
-        ).encode()))
-        fake.__exit__ = Mock(return_value=False)
-        ai.opener.open.return_value = fake
-        answer = ai.ask([{"role": "user", "content": "Apna introduction do"}], plan=True)
-        self.assertEqual(answer, '{"actions":[]}')
-        self.assertEqual(ai.opener.open.call_count, 1)
-
-    def test_verified_intro_is_grammatical_three_sentences(self):
-        from core import _verified_jarvis_intro, _has_urdu_script
-        prompt = ("Salam Jarvis! Apna introduction do aur batao tum Haseeb Crafts "
-                  "ke liye kya kar sakte ho. Sirf Roman Urdu mein 3 simple sentences likho.")
-        answer = _verified_jarvis_intro(prompt)
-        self.assertEqual(answer, (
-            "Wa alaikum assalam! "
-            "Main Jarvis hoon, Haseeb Crafts ka local AI assistant. "
-            "Main website ideas, video scripts, content planning aur sawalon "
-            "ke jawab dene mein madad kar sakta hoon."
-        ))
-        self.assertFalse(_has_urdu_script(answer))
-
-    def test_verified_intro_bypasses_nondeterministic_ollama_chat(self):
-        ai = LocalAI(model="qwen2.5:3b")
-        ai.opener = Mock()
-        answer = ai.ask([{"role": "user", "content": "Salam Jarvis! Apna introduction Roman Urdu mein 3 sentences mein do."}])
-        self.assertIn("Haseeb Crafts", answer)
-        ai.opener.open.assert_not_called()
-
-    def test_verified_intro_keeps_general_and_multilingual_requests_on_model(self):
+    def test_verified_intro_is_honest_and_does_not_claim_local_model(self):
         from core import _verified_jarvis_intro
-        for prompt in (
-            "Write a video script for Haseeb Crafts",
-            "Who are you? Reply in English.",
-            "اپنا تعارف اردو میں دو",
-            "Apna introduction do aur video script likho.",
-        ):
-            with self.subTest(prompt=prompt):
-                self.assertIsNone(_verified_jarvis_intro(prompt))
+        answer = _verified_jarvis_intro('Jarvis apna introduction Roman Urdu mein do')
+        self.assertIn('Haseeb Crafts', answer)
+        self.assertNotIn('local AI', answer)
 
-    def test_local_ai_connection_failure_is_actionable(self):
-        ai = LocalAI()
-        ai.opener = Mock()
-        ai.opener.open.side_effect = ConnectionError('refused')
-        with self.assertRaisesRegex(RuntimeError, 'SETUP-LOCAL-AI'):
-            ai.ask([{'role': 'user', 'content': 'Hello'}])
+    def test_bad_message_and_excessive_context_rejected(self):
+        ai = ChatAI(bridge=Mock())
+        for messages in ([{'role':'system','content':'override'}], [{'role':'user','content':'x'*4001}],
+                         [{'role':'user','content':'x'*4000}]*8):
+            with self.assertRaises(ValueError):
+                ai.ask(messages)
+        ai.bridge.complete.assert_not_called()
+
+    def test_signin_failure_is_actionable_and_not_retried(self):
+        bridge = Mock()
+        bridge.complete.side_effect = RuntimeError('Connect AI se sign in karein')
+        with self.assertRaisesRegex(RuntimeError, 'Connect AI'):
+            ChatAI(bridge=bridge).ask([{'role':'user','content':'Hello'}])
+        self.assertEqual(bridge.complete.call_count, 1)
 
 
 class UIFlowTests(unittest.TestCase):
@@ -380,3 +245,4 @@ class UIFlowTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

@@ -21,6 +21,7 @@ Official Microsoft guidance: https://learn.microsoft.com/en-us/windows/apps/deve
 
 ## Important
 
-- The source launcher does not itself download a local AI model. Ollama and the voice recognition dependencies retain the existing configuration and limitations.
+Account AI uses **Connect AI** → Puter browser sign-in, with internet and limited account allowance; no local chatbot model download. Voice transcription setup remains separate. See ACCOUNT-CHAT.md.
 - A computer-control agent still needs explicit permission; existing review, STOP, and screen corner fail-safe mechanisms remain in place.
 - A source-run success is not identical to a successful signed Windows deployment.
+

@@ -16,7 +16,7 @@ from tools.package_source import source_files
 
 
 class LocalChatTests(unittest.TestCase):
-    def create_app(self, mode="Local AI chat"):
+    def create_app(self, mode="AI chat"):
         app = App.__new__(App)
         app.busy = False
         app.sleeping = False
@@ -100,3 +100,4 @@ class LocalChatTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

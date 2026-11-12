@@ -2,157 +2,115 @@
 
 Created by **Haseeb Crafts**.
 
-> **OFFLINE ANSWERS VIA OLLAMA:** Open Jarvis → **Setup AI** → install official Ollama when prompted, then approve the small `qwen2.5:1.5b` local model download. Jarvis shows local readiness and switches to **Local AI chat** when ready. [No-code Ollama setup](OLLAMA-NO-CODE-SETUP.md). No Smart App Control changes or cloud API key required. The Ollama app must be installed and running separately.
+Jarvis combines a native animated dashboard, account-based AI chat, opt-in voice,
+local notes/memory and reviewed Windows controls. **No API key or local language
+model is required for chat.** Internet, a Puter account sign-in and available
+account allowance are required. This is limited free usage, not unlimited free
+inference. The app does not buy credits or upgrade plans.
 
-> **PERSONAL LOCAL TEST — NO STORE ACCOUNT NEEDED:** Install official Python 3.12, extract the GitHub repository ZIP and open `START-JARVIS-GUI.pyw` using Python. The graphical setup asks permission, installs requirements in an isolated user folder, runs tests and creates Desktop/Start Menu shortcuts. **Do not use the unsigned EXE/CMD** on the PC where Smart App Control blocked them. See [LOCAL-TEST-NO-ID.md](LOCAL-TEST-NO-ID.md). Windows security policies may still block Python source or other components.
+## Start on Windows
 
-> **Personal testing first (Individual developer):** Haseeb Crafts is an unregistered brand, so use your own real identity for Microsoft Partner Center. The [Personal Store Test Guide](PERSONAL-STORE-TEST.md) describes the private/limited audience path, exact Partner Center details needed for the GitHub MSIX workflow, and later commercial options. Do not install the unsigned EXE/CMD on a Smart App Control protected PC. Store approval is not yet complete.
+Install official Python 3.12, extract the complete source ZIP, and open
+**START-JARVIS-GUI.pyw** with Python. Approve the dependency installation, wait for
+runtime checks, and use the installed **HASEEB AI - Jarvis** shortcut. See
+[the local install guide](LOCAL-TEST-NO-ID.md). Existing preferences are preserved.
 
-> **Windows 11 Smart App Control update:** The ordinary EXE remains unsigned and may be blocked on protected computers. The new manual **Trusted signed Jarvis Windows release** workflow can create a signed distribution only after the publisher supplies a valid publicly trusted code-signing certificate via secure GitHub Actions secrets. Read [TRUSTED-WINDOWS-RELEASE.md](TRUSTED-WINDOWS-RELEASE.md). A successful unsigned CI build does not resolve Smart App Control.
+Unsigned EXE/CMD distributions may be blocked by Windows Smart App Control. Keep
+Windows security enabled. See [Smart App Control](SMART-APP-CONTROL.md) and the
+[trusted release guide](TRUSTED-WINDOWS-RELEASE.md). A successful CI build does not
+make an unsigned executable trusted or prove installation on your laptop.
 
-> **Windows 11 Smart App Control blocked Jarvis.exe?** The executable is unsigned. Do **not** disable Windows security. Download the **Jarvis-Source-Windows** ZIP from the latest successful **Windows source package (no unsigned EXE)** GitHub Actions run, extract it, install official Python 3.10+ and run `py -3 RUN-JARVIS.py` inside the extracted source folder. This requires explicit approval for dependency installation, and does not guarantee every PC's security policy allows execution. See [SMART-APP-CONTROL.md](SMART-APP-CONTROL.md). For publicly distributable EXE releases, use a legitimate trusted code-signing certificate.
+## Connect AI — account sign-in, no API key
 
-A Windows desktop assistant with named-window controls, offline voice input, Windows speech or optional ElevenLabs speech, explicit local memory, optional local AI chat, and action-by-action approval. This repository contains the working Python source and an automatic Windows executable build.
+1. Open Jarvis and click **Connect AI**.
+2. Accept opening the connection page. In the browser, tick the chat-data
+   disclosure and click **Sign in & connect**.
+3. Sign in to your own Puter account and return to the desktop dashboard.
+4. Keep the connection tab open while using main chat, Sandbox or AI action plans.
+5. Click Disconnect in that tab to sign out, or close Jarvis to stop the relay.
 
-## Option 2 — Browser chat from this repository
+Puter provides a free monthly allowance, subject to account/model limits. Exact
+message counts vary with model, context and reply length. Use a free account and
+check its usage view. Existing paid account entitlements are controlled by the
+provider; Jarvis does not automatically subscribe, purchase or switch providers.
+Quota errors are shown in chat. [Connection details and limits](ACCOUNT-CHAT.md).
 
-The standalone browser app is in **web/**. It uses Puter sign-in and the user's free monthly allowance, with no API key. Browser chat cannot control Windows. The external provider may prompt for more credits when the allowance is exhausted; there is no unlimited-free claim.
+Chat messages, recent context and saved response preferences are sent to
+Puter/model providers after opt-in. User-selected code review sends the selected
+file text only after its additional disclosure. No automatic screenshots or raw
+microphone audio are attached. Authentication is managed by the browser SDK;
+Jarvis never asks for an account API key, password or manually copied token.
 
-- **Private GitHub preview:** Open **Code → Codespaces → Create codespace on main**. The devcontainer starts the static server on port 8000 and opens the browser preview. If needed, use **Ports → 8000 → Open in Browser**. Codespaces uses the account's included development allowance; stop it after use. Creating a codespace has not been done automatically in this session.
-- **GitHub Pages publishing:** The `Publish browser chat to GitHub Pages` workflow is ready but manual. GitHub Free cannot publish Pages from a private repository. A Pro account may publish from a private repo; otherwise changing repository visibility is an explicit owner decision. First configure **Settings → Pages → Source: GitHub Actions**, then run that workflow. No public URL is claimed before successful publishing.
-- **Immediate existing cloud chat:** https://haseeb-ai-4ybb30.v2.appdeploy.ai/ (separate hosted version, not GitHub Pages).
-- **Local browser preview:** `python -m http.server 8000 --directory web`, then open http://localhost:8000.
+The previous local chat runtime is retired: no service checks, launches, model
+pulls or chat requests use it. Already-installed software/model files on your PC
+are not uninstalled or deleted. Voice recognition still uses a separate small
+local transcription model.
 
-## Option 3 — One Windows EXE
+## Free voice replies
 
-1. Open **Actions → Windows test and build**, then the latest successful run.
-2. Download **Jarvis-UNSIGNED-Development-Windows-x64** from Artifacts and extract it.
-3. Run **Jarvis.exe**. No `_internal` folder or Python install is required for this build.
-4. Voice recognition dependencies and the tiny multilingual voice model are bundled in the new Windows EXE. Use **Test voice**, **Mic · 6 seconds**, and transcript review.
-5. Use the app's **Setup local AI** button once for optional free offline AI. If Ollama is missing, it opens the official installer page. After installation, press the button again to download `qwen2.5:1.5b` (about 986 MB). The local chatbot model/runtime are separate downloads. The smaller voice-transcription model is embedded in this build.
+Open **Voices → Edge Neural (free online)**, choose **Asad/Uzma** for Urdu or
+Ryan/Sonia/Guy/Jenny for English, accept sending spoken text, save and test.
+Enable **Speak replies**. No API key is required by this client, but internet and
+service availability are required. Urdu script gives clearer Urdu pronunciation;
+Roman Urdu is not automatically transliterated. [Voice setup](FREE-VOICES.md).
 
-The app is unsigned. One-file packaging extracts bundled application libraries into a temporary folder while running; bundled voice libraries/model make startup and the download larger. The local chatbot model is still a separate download. You must sign in to GitHub to download private-repository artifacts. Artifacts are retained for 14 days. No repository visibility or billing setting was changed.
+Windows speech is available offline. The previously added ElevenLabs provider is
+optional and requires its own key/credits; it is never a fallback for free chat or
+free speech. Do not select it for free-only usage. [Optional setup](ELEVENLABS-VOICE.md).
 
-## Run from source
+Mic recording starts only after pressing **Mic**, captures about six seconds,
+transcribes locally, and asks for transcript review before running a command.
+There is no always-on recording. Use **Readiness** for device/configuration hints;
+a live device test is needed to verify permission, voice quality and audible output.
 
-Extract/clone the repository and double-click **SETUP.bat**. It checks Python 3.10+, creates a local environment, installs dependencies and runs tests. Later, use **START.bat**. Read [the Roman Urdu guide](README-ROMAN-URDU.md) for setup and machine-specific checks.
+## Reviewed desktop controls
 
-## Video reference: Stonic-style local desktop control
-
-This update is implemented **in this GitHub Windows desktop project, not AppDeploy**. It adds quick buttons and natural Roman Urdu/English commands alongside existing local voice recognition and safe UI Automation.
-
-| Say or type | Real action |
+| Command | Supported action |
 | --- | --- |
-| `youtube kholo` / `whatsapp kholo` | Opens the respective HTTPS site in the default browser |
-| `google par search karo: website design` | Opens Google search results |
-| `youtube par dhoondo: Python tutorial` | Opens YouTube search results; it does not auto-select a video |
-| `play pause` / `next song` / `previous song` | Sends standard Windows multimedia keys to the active media player |
-| `whatsapp draft: Assalamualaikum` | Opens a WhatsApp draft link; the user chooses a recipient and manually sends |
-| `windows` / `inspect: Notepad` | Lists/inspects titled Windows apps within defined bounds |
+| `chrome kholo`, `notepad kholo`, `calculator kholo` | Launch a supported installed app |
+| `windows`, `inspect: Notepad` | List/inspect named app windows |
+| `focus: Notepad`, `wait: Notepad` | Target an exact titled window |
+| `write: Notepad \| Hello Haseeb` | Reviewed targeted text input |
+| `button: Calculator \| Nine` | Invoke an exact accessible control after inspection |
+| `folder banao: Client Work`, `note: Meeting Monday` | Create workspace folder/note without overwriting |
+| `find: invoice`, `screenshot` | Bounded workspace filename search or local screenshot preview |
+| `volume up`, `play pause`, `youtube kholo` | Allowlisted media/site controls |
+| `remember: Reply in short Roman Urdu`, `shortcut: work` | Explicit local preferences/reviewed saved plans |
 
-Mic recording is **opt-in** and the recognized transcript must be reviewed before any command executes. The AI plan is bounded to supported actions and sensitive screen input requires explicit permission. This assistant is **not** autonomous full-PC control, always-listening surveillance, a hidden keylogger, or a self-upgrading agent. Actions involving payment, deleting files, or sending messages are not run automatically.
+Select **Computer commands** for direct controls or **AI action plan** for a
+proposed bounded plan. AI output never directly calls desktop functions. Each
+plan is validated, screen input requires opt-in, and actions are reviewed.
+Unsupported requests, elevated/UAC windows, arbitrary shell execution and
+unrestricted autonomous PC operation are not supported.
 
-Windows Smart App Control may block unsigned EXE or downloaded CMD files even if GitHub CI passes. Keep Windows security on. Trusted code signing remains necessary for a conventional distributed installer.
+STOP: app button, app-focused Esc, global Ctrl+Alt+F12 when registered, or the
+PyAutoGUI corner fail-safe during input. Cloud requests already submitted can
+still consume account allowance, but cancelled/late answers are discarded.
 
-## What works
+## Network and packaging
 
-| Command / mode | Function |
-| --- | --- |
-| `chrome kholo`, `edge kholo`, `notepad kholo` | Launch an installed supported app |
-| `calculator kholo`, `paint kholo`, `explorer kholo` | Launch Windows utilities |
-| `open https://example.com` | Open an HTTPS website |
-| `folder banao: Client Work` | Create a folder inside the selected workspace |
-| `find: invoice` | Bounded filename search in the selected workspace |
-| `note: Client meeting Monday` | Save a unique text note without overwriting files |
-| `screenshot` | Preview the primary screen locally and optionally select a click point |
-| `type: Hello Haseeb`, `key: ctrl+s`, `click: 300,400` | Reviewed keyboard/mouse input after opt-in and a countdown |
-| Local AI chat | Chat with a downloaded model through local Ollama |
-| AI action plan | Review and approve a limited plan before each action |
+Connect AI starts a temporary authenticated relay on **127.0.0.1** at a random
+port. It exposes only chat request/response/connection endpoints, not file access
+or desktop-control routes. No public listener, remote-control tunnel, autostart
+or background monitoring is installed. [Toolkit](JARVIS-TOOLKIT.md).
 
-**Stop:** STOP button, app-focused Esc, global Ctrl+Alt+F12 when registered, or PyAutoGUI's screen-corner fail-safe during input.
+The separate **web/** browser edition also supports Puter sign-in with no desktop
+bridge. Preview with `python -m http.server 8000 --directory web`. Private GitHub
+Codespaces/Pages and build artifacts depend on your GitHub account/plan settings;
+no repository visibility, paid plan or public deployment is changed automatically.
 
-## Scope and cost
-
-- Local commands need no AI/API key. Local AI uses your hardware and the downloaded model; no per-message cloud API bill. It can be slow on an 8 GB laptop and is less capable than large hosted models.
-- Cloud chat opens the existing hosted Haseeb AI app; its free monthly allowance applies and it does not control your PC.
-- This is a limited desktop assistant, not unrestricted autonomous control. It supports opt-in Urdu/English voice transcription, Windows speech output, registered app launch and named UI Automation controls. Visual scene understanding, continuous listening, UAC/elevated windows and multi-monitor pixel control are not included.
-- Screenshots, file listings and file contents are not automatically uploaded. No inbound server, arbitrary shell command execution, autostart or background monitoring.
-- Mouse/keyboard input is disabled by default. Review the actual target before approving click/Enter; input does not understand financial or messaging context.
-- GitHub Actions consumes the repository owner's included build allowance. No billing upgrade or paid plan is configured by this repository.
-
-## Free neural Urdu / English voices
-
-Open **Voices → Edge Neural (free online)**. Choose **Asad/Uzma** for Urdu or
-Ryan/Sonia/Guy/Jenny for English, choose a speed, accept the spoken-text
-notification, save and press **Test voice**. Enable **Speak replies** to hear chat
-responses. No API key or paid account is needed by the client. This uses the
-open-source [edge-tts client](https://github.com/rany2/edge-tts) for Microsoft's
-online speech service: **internet is required**. It does not download or run an
-offline neural model. Use Urdu script for clear Urdu pronunciation.
-
-Mic recognition remains local. Only spoken reply text is sent; audio stays in
-memory. No automatic fallback to a paid provider. Availability/quality are not
-guaranteed; use Windows speech for offline output. [Setup and verification](FREE-VOICES.md).
-
-## ElevenLabs spoken replies
-
-Open **Voices** under the chat box or **••• → Voices / Free neural / ElevenLabs**. Select
-**ElevenLabs**, enter your own API key and voice ID, choose `auto`, `ur` or `en`,
-and accept sending spoken reply text to ElevenLabs. Save, press **Test voice**,
-then enable **Speak replies**. Main chat and Sandbox use the same voice settings.
-
-This uses the official ElevenLabs HTTPS Text to Speech API with `eleven_v3` and
-24 kHz PCM output. Internet, an ElevenLabs account/key and available account
-credits are required. No live cloud generation was verified without a real key.
-Only spoken reply text (up to 1,800 characters) is sent; microphone transcription
-remains local. Urdu script and a voice with a matching accent give clearer Urdu
-pronunciation; Roman Urdu pronunciation is not guaranteed.
-
-Keys stay in memory unless **Remember key** is enabled. Remembered keys are
-protected with Windows DPAPI for the current Windows user, outside the repository.
-**Forget key** removes the app's stored credential; revoke a key in ElevenLabs to
-invalidate it. **STOP** cancels local playback and discards pending audio, but a
-request already submitted may still consume credits. No automatic paid retries.
-Choose **Windows** for offline speech. See [the setup guide](ELEVENLABS-VOICE.md).
-
-## Device readiness and voice setup
-
-Open **Readiness** in the System Status card (or **••• → Device readiness**).
-The panel checks the selected local Ollama model, default microphone and 16 kHz
-input settings, cached Whisper files and the selected speech provider. Checks run off the
-UI thread. Refresh after installing a model or changing audio devices.
-
-These checks do not record audio, download models or run desktop commands.
-“Device found” and “Files found” are readiness hints; use **Mic** and **Test voice**
-for a real recording/transcription and audible output test on your PC.
-Voice model setup now reports its own completion without changing your chat mode
-or claiming that Ollama is ready.
+Actions → **Windows test and build** produces the source archive and unsigned
+Windows executable. Source and dependency notices are included; free speech
+client source/license/rebuild information is in THIRD-PARTY-NOTICES.txt.
 
 ## Validation
 
-Read [the desktop-first guide](DESKTOP-FIRST.md) in this order: desktop controls → local chatbot → voice → local memory/shortcuts.
+`python -m unittest discover -s tests -v` checks native behavior and boundaries.
+Windows CI tests UI geometry, reviewed synthetic window input, installation,
+voice codecs and EXE startup. Browser CI tests the real loopback relay with
+explicitly mocked Puter sign-in/model replies, including quotas and STOP.
 
-`python -m unittest discover -s tests -v` runs the integration/validation suite. The Windows workflow installs dependencies, runs these tests, tests its own UI, a synthetic target window, named-window typing and exact-button invocation, then synthesizes an English WAV and transcribes it with the bundled tiny model. It builds with PyInstaller and checks the resulting EXE's `--self-test` exit code before uploading it.
-
-Windows CI success demonstrates a hosted Windows runner, not successful installation or AI performance on your own laptop. Run the guide's smoke test on the target PC.
-
-
-## Browser test coverage
-
-The separate browser-check workflow tests sign-in gating, conversation context, new-chat reset, safe text rendering, quota errors/retry, abort and mobile layout with an explicitly mocked Puter provider. It does not claim a real Puter model reply or account sign-in was verified. That needs a user-signed-in browser.
-
-
-## New desktop capabilities
-
-| Control | Example |
-| --- | --- |
-| List/inspect windows | `windows`, `inspect: Calculator` |
-| Wait/focus window | `wait: Notepad`, `focus: Notepad` |
-| Targeted input | `write: Notepad | Hello Haseeb`, `press: Notepad | ctrl+s` |
-| Exact accessible button | `button: Calculator | Nine` (verify the name using inspect) |
-| Registered app | Add app → choose .exe → `open photoshop` |
-| Local preference | `remember: Reply in short Roman Urdu` |
-| Reviewed shortcut | Save last plan → `shortcut: work` |
-
-Preferences and saved action sequences are not self-modifying code or automatic retraining. See DESKTOP-FIRST.md for the complete limitations and target-PC smoke test.
-
+A passing mock test does **not** verify real account sign-in, account allowance,
+or a real model reply. Those need your signed-in connection page on the target
+PC. Live free-speech sample generation is a separate optional CI step; inspect
+its own result before calling it verified. [Desktop smoke guide](DESKTOP-FIRST.md).

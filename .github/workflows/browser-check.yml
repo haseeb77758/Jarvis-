@@ -2,7 +2,7 @@ name: Browser preview checks
 on:
   push:
     branches: [main]
-    paths: ['web/**', 'tools/test_browser.py', '.github/workflows/browser-check.yml', '.devcontainer/**']
+    paths: ['web/**', 'tools/test_browser.py', 'tools/test_account_browser.py', 'account_chat.py', '.github/workflows/browser-check.yml', '.devcontainer/**']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -26,3 +26,8 @@ jobs:
         env:
           JARVIS_BROWSER_CHANNEL: chrome
         run: python tools/test_browser.py
+      - name: Test native account relay in browser using mocked sign-in and AI
+        env:
+          JARVIS_BROWSER_CHANNEL: chrome
+        run: python tools/test_account_browser.py
+

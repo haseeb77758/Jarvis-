@@ -22,18 +22,18 @@ class MemoryTests(unittest.TestCase):
             self.assertEqual(restored.facts, ['Roman Urdu mein short jawab do'])
             self.assertEqual(len(restored.shortcuts['work']), 2)
 
-    def test_chat_model_choice_survives_restart_and_is_allowlisted(self):
+    def test_retired_model_preference_migrates_without_erasing_memory(self):
+        from core import MODEL
         with tempfile.TemporaryDirectory() as directory:
             first = PreferenceStore(directory)
-            self.assertEqual(first.chat_model, 'qwen2.5:1.5b')
-            first.chat_model = 'qwen2.5:3b'
-            first.save()
-            self.assertEqual(PreferenceStore(directory).chat_model, 'qwen2.5:3b')
-            file = Path(directory) / 'preferences.json'
-            data = json.loads(file.read_text(encoding='utf-8'))
-            data['chat_model'] = 'arbitrary-remote:model'
-            file.write_text(json.dumps(data), encoding='utf-8')
-            self.assertEqual(PreferenceStore(directory).chat_model, 'qwen2.5:1.5b')
+            first.remember('Short Roman Urdu')
+            path = Path(directory) / 'preferences.json'
+            data = json.loads(path.read_text())
+            data['chat_model'] = 'qwen2.5:3b'
+            path.write_text(json.dumps(data))
+            restored = PreferenceStore(directory)
+            self.assertEqual(restored.chat_model, MODEL)
+            self.assertEqual(restored.facts, ['Short Roman Urdu'])
 
     def test_memory_cannot_load_unvalidated_shell_actions(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -154,3 +154,4 @@ class DesktopTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

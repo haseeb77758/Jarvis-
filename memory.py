@@ -43,6 +43,8 @@ class PreferenceStore:
                 if not re.fullmatch(r'[a-z0-9][a-z0-9 -]{0,39}', alias) or not isinstance(path, str) or not Path(path).is_absolute() or Path(path).suffix.lower() != '.exe':
                     raise ValueError('bad app path')
             selected = data.get('chat_model', MODEL)
+            if selected in ('qwen2.5:1.5b', 'qwen2.5:3b'):
+                selected = MODEL  # Preserve existing memory while retiring the old backend.
             if selected not in CHAT_MODELS:
                 raise ValueError('unsupported AI model preference')
             self.facts, self.shortcuts, self.apps = facts, verified, apps
@@ -99,3 +101,4 @@ class PreferenceStore:
             raise ValueError('Maximum 20 custom apps.')
         self.apps[alias] = str(executable)
         self.save()
+

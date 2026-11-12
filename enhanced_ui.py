@@ -128,13 +128,15 @@ def code_studio(app):
         return
     try:
         source = read_code_for_review(selected)
+        if len(source) > 3000:
+            raise ValueError("Cloud review ke liye 3,000 characters tak ki chhoti file select karein.")
     except (ValueError, OSError) as exc:
         messagebox.showerror("Code review", str(exc), parent=app.root)
         return
     if not messagebox.askyesno(
-        "Review code with local Ollama",
+        "Review code with connected account AI",
         "File: " + Path(selected).name + "\n\n"
-        "Is file ka text local Ollama model ko send hoga. 25KB limit hai. "
+        "Is selected file ka text Puter/model provider ko send hoga. 3,000-character limit hai. "
         "Koi code execute ya file overwrite nahi hogi.\n\n"
         "Passwords, API keys aur private data wali files select na karein. Continue?",
         parent=app.root
@@ -171,7 +173,7 @@ def code_generator(app):
         return
     if not messagebox.askyesno(
         "Generate suggested code",
-        "Local Ollama model code suggest karega. "
+        "Yeh request Puter/model provider ko bheji jayegi; account allowance apply hogi. "
         "Code execute nahi hoga, koi file automatically overwrite nahi hogi.\n\nContinue?",
         parent=app.root
     ):
@@ -211,7 +213,7 @@ def system_window(app):
 def image_studio(app):
     win = window(app.root, "AI image studio (optional paid API)", "730x610")
     info(win, "Cloud image generation optional hai. OpenAI API billing ChatGPT subscription se alag hai.\n"
-              "Prompt aur API request cloud provider ko jayenge; local Ollama 3B model images generate nahi karta.\n"
+              "Prompt aur API request cloud provider ko jayenge; account text-chat se images generate nahi hoti.\n"
               "API key sirf is request ke liye memory mein rahegi, file mein save nahi hoti.")
     tk.Label(win, text="Image prompt", bg=BG, fg=FG).pack(anchor="w", padx=22)
     prompt = tk.Text(win, height=6, bg=PANEL, fg=FG, insertbackground=CYAN,
@@ -293,9 +295,9 @@ def toolkit_window(app):
         ("Weather in browser", lambda: weather_window(app),
          "Uses browser search; never guesses a forecast"),
         ("AI Code Review", lambda: code_studio(app),
-         "Read a selected code file; local model suggests fixes, never writes code"),
+         "Read a selected code file; account AI suggests fixes after disclosure, never writes code"),
         ("AI Code Generator", lambda: code_generator(app),
-         "Ask the local model for draft code; never auto-executes"),
+         "Ask account AI for draft code; never auto-executes"),
         ("AI Image Studio", lambda: image_studio(app),
          "Optional paid image API; per-request approval and no saved key"),
         ("Reviewed power controls", lambda: system_window(app),
@@ -310,3 +312,4 @@ def toolkit_window(app):
         tk.Label(panel, text=detail, bg=PANEL, fg=MUTE,
                  justify="left", wraplength=330, font=("Segoe UI", 9)).pack(
             side="left", padx=6, pady=7)
+

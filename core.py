@@ -1,4 +1,4 @@
-"""Local-only Windows controls. No HTTP listener, shell execution or remote bridge."""
+"""Reviewed Windows controls and account-chat prompts; chat cannot execute tools."""
 from __future__ import annotations
 import json
 import os
@@ -6,16 +6,13 @@ from pathlib import Path
 import re
 import subprocess
 import shutil
-import tempfile
 import threading
 import time
 from urllib.parse import urlparse, urlencode
 from datetime import datetime
-from urllib.request import Request, build_opener, ProxyHandler
 
-MODEL = 'qwen2.5:1.5b'
-CHAT_MODELS = ('qwen2.5:1.5b', 'qwen2.5:3b')  # bounded, CPU-friendly options for 8 GB PCs
-CLOUD_URL = 'https://haseeb-ai-4ybb30.v2.appdeploy.ai/'
+MODEL = 'Puter account default'
+CHAT_MODELS = (MODEL,)
 APP_NAMES = ('chrome', 'edge', 'notepad', 'calculator', 'paint', 'explorer')
 KEYS = {'ctrl+c': ('ctrl', 'c'), 'ctrl+v': ('ctrl', 'v'),
         'ctrl+a': ('ctrl', 'a'), 'ctrl+s': ('ctrl', 's'),
@@ -329,38 +326,6 @@ class Controller:
         subprocess.Popen([str(exe)], shell=False)
 
 
-def ollama_binary():
-    """Find only a normal installed Ollama command; never download or run installers."""
-    installed = Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs' / 'Ollama' / 'ollama.exe'
-    return str(installed) if installed.is_file() else shutil.which('ollama.exe')
-
-
-def ollama_status(model=MODEL, opener=None, executable=None):
-    """Return a bounded, read-only status for this device's local Ollama API.
-
-    "missing": no installed Ollama command; "stopped": API not available;
-    "model_missing": Ollama running but our chat model not downloaded;
-    "ready": configured and installed locally. Status does not generate text.
-    """
-    if executable is None:
-        executable = ollama_binary()
-    if not executable:
-        return 'missing'
-    client = opener if opener is not None else build_opener(ProxyHandler({}))
-    try:
-        request = Request('http://127.0.0.1:11434/api/tags', method='GET')
-        with client.open(request, timeout=3) as response:
-            models = json.loads(response.read(512_000)).get('models', [])
-        if not isinstance(models, list):
-            return 'stopped'
-        names = {name for entry in models if isinstance(entry, dict)
-                 for name in (entry.get('name'), entry.get('model'))
-                 if isinstance(name, str)}
-        return 'ready' if model in names else 'model_missing'
-    except (OSError, ValueError, TypeError, KeyError):
-        return 'stopped'
-
-
 def _looks_like_echo(user_text, answer):
     """Detect short near-verbatim replies rather than penalizing normal conversation."""
     import difflib
@@ -420,7 +385,7 @@ def _verified_jarvis_intro(text):
     """Return an accurate, reviewed local self-introduction for simple Roman Urdu requests.
 
     A small model may produce plausible but nonsensical self-descriptions. This
-    narrow identity FAQ uses fixed truthful text; other requests still use Ollama.
+    narrow identity FAQ uses fixed truthful text; other requests use the connected account model.
     """
     if not isinstance(text, str) or len(text) > 450:
         return None
@@ -435,7 +400,7 @@ def _verified_jarvis_intro(text):
     )):
         return None
     # One to three sentences, with the requested identity and capabilities.
-    identity = 'Main Jarvis hoon, Haseeb Crafts ka local AI assistant.'
+    identity = 'Main Jarvis hoon, Haseeb Crafts ka AI assistant.'
     capabilities = ('Main website ideas, video scripts, content planning aur '
                     'sawalon ke jawab dene mein madad kar sakta hoon.')
     closing = 'Batao, tumhe kis kaam mein madad chahiye?'
@@ -446,10 +411,10 @@ def _verified_jarvis_intro(text):
     requested = int(count_match.group(1)) if count_match else 3
     if requested == 1:
         return (('Wa alaikum assalam, ' if is_greeting else '')
-                + 'main Jarvis hoon, Haseeb Crafts ka local AI assistant, '
+                + 'main Jarvis hoon, Haseeb Crafts ka AI assistant, '
                 'jo website ideas, video scripts aur planning mein madad karta hai.')
     if requested == 2 and is_greeting:
-        return 'Wa alaikum assalam! Main Jarvis hoon, Haseeb Crafts ka local AI assistant jo ideas aur planning mein madad karta hai.'
+        return 'Wa alaikum assalam! Main Jarvis hoon, Haseeb Crafts ka AI assistant jo ideas aur planning mein madad karta hai.'
     return ' '.join(sentences[:requested])
 
 
@@ -474,7 +439,7 @@ CHAT_SYSTEM = (
     'For a greeting, reply warmly and ask a short follow-up question. '
     'If the user asks for both a greeting AND your introduction, fulfill both; never answer only the greeting. '
     'If asked for your introduction in 3 Roman Urdu sentences, clearly say: 1) your name and creator, 2) what you can help with, 3) a relevant friendly closing. '
-    'Example for introduction: "Wa alaikum assalam! Main Jarvis, Haseeb Crafts ka local AI assistant hoon. Main sawalon, ideas aur planning mein madad kar sakta hoon; tumhe kis cheez mein madad chahiye?" '
+    'Example for introduction: "Wa alaikum assalam! Main Jarvis, Haseeb Crafts ka AI assistant hoon. Main sawalon, ideas aur planning mein madad kar sakta hoon; tumhe kis cheez mein madad chahiye?" '
     'For small talk such as "aur sunao", say something conversational and invite the user to continue. '
     'For a specific question, give a useful and accurate answer instead of restating the question. '
     'Remember earlier turns in this chat but do not invent personal details or claim to know private information. '
@@ -485,11 +450,12 @@ CHAT_SYSTEM = (
 )
 
 
-class LocalAI:
-    def __init__(self, model=MODEL):
-        self.model = model
-        # Never proxy local prompts through HTTP_PROXY from the environment.
-        self.opener = build_opener(ProxyHandler({}))
+class ChatAI:
+    def __init__(self, model=MODEL, bridge=None, cancel=None):
+        from account_chat import AccountChat
+        self.model = MODEL
+        self.bridge = bridge if bridge is not None else AccountChat()
+        self.cancel = cancel
 
     def ask(self, messages, plan=False, preferences=(), applications=()):
         system = CHAT_SYSTEM
@@ -541,42 +507,24 @@ class LocalAI:
             elif attempt and problem == 'intro':
                 instruction += ('\nIMPORTANT CORRECTION: The user asked for YOUR introduction. '
                                 'The previous answer only greeted them. Explicitly say your name Jarvis, '
-                                'that you are Haseeb Crafts local AI assistant, and what you can help with. '
+                                'that you are Haseeb Crafts AI assistant, and what you can help with. '
                                 'If the user requested three sentences, give three complete sentences. '
                                 'Keep Roman Urdu natural, without Urdu script.')
             elif attempt:
                 instruction += ('\nYour previous draft echoed the incoming message instead of answering. '
                                 'Reply freshly and conversationally, with at least one new, helpful statement. '
                                 'Do not quote the user or say what they said.')
-            body = {
-                'model': self.model,
-                'messages': [{'role': 'system', 'content': instruction}] + messages[-8:],
-                'stream': False,
-                'options': {
-                    'num_ctx': 2048,
-                    'num_predict': 600,
-                    'temperature': 0.2 if plan else (0.75 if attempt else 0.6),
-                    'top_p': 0.9,
-                    'repeat_penalty': 1.14 if not plan else 1.0,
-                },
-                'keep_alive': '2m',
-            }
-            if plan:
-                body['format'] = 'json'
-            req = Request('http://127.0.0.1:11434/api/chat',
-                          json.dumps(body).encode(), {'Content-Type': 'application/json'})
-            try:
-                with self.opener.open(req, timeout=180) as response:
-                    data = json.loads(response.read(2_000_000))
-            except Exception as exc:
-                raise RuntimeError(
-                    'Ollama se jawab nahi mila. Jarvis mein Setup AI dabayein, Ollama Start menu se '
-                    'kholein aur selected model ' + self.model + ' install/download confirm karein. '
-                    'SETUP-LOCAL-AI.bat bhi optional fallback hai. Direct commands chalti rahengi.'
-                ) from exc
+            selected = messages[-8:]
+            if any(not isinstance(item, dict) or item.get('role') not in ('user', 'assistant')
+                   or not isinstance(item.get('content'), str) or len(item['content']) > 4000 for item in selected):
+                raise ValueError('Chat messages invalid hain ya bohat lambay hain.')
+            body = {'messages': [{'role': 'system', 'content': instruction}] + selected, 'plan': bool(plan)}
+            if sum(len(item['content']) for item in body['messages']) > 24000:
+                raise ValueError('Conversation lambi hai. New chat shuru karein.')
+            data = self.bridge.complete(body, cancel=self.cancel)
             content = data.get('message', {}).get('content')
             if not isinstance(content, str) or not content.strip():
-                raise RuntimeError('Local AI ne khali reply diya. Direct command try karein.')
+                raise RuntimeError('AI chatbot ne khali reply diya. Direct command try karein.')
             content = content.strip()
             if plan:
                 return content
@@ -592,54 +540,18 @@ class LocalAI:
             return content
         if problem == 'intro':
             raise RuntimeError(
-                'Local model ne apna introduction dene ka hissa chhor diya. '
+                'Chat model ne apna introduction dene ka hissa chhor diya. '
                 'New chat mein sirf "Jarvis apna introduction do" likh kar try karein.'
             )
         if problem == 'script':
             raise RuntimeError(
-                'Local AI ne Roman Urdu ke bajaye Urdu script likhi. '
+                'AI chatbot ne Roman Urdu ke bajaye Urdu script likhi. '
                 'New chat se dobara try karein ya chhota aur seedha sawal poochhein. '
                 'Selected model ' + self.model + ' se correct Roman Urdu guarantee nahi hoti.'
             )
         raise RuntimeError(
-            'Local AI aapki baat repeat kar raha hai. '
+            'AI chatbot aapki baat repeat kar raha hai. '
             'New chat se retry karein ya thora detailed sawal poochhein; '
-            'behtar local model se jawab improve ho sakta hai.'
+            'Sawal dobara saaf alfaaz mein poochhein.'
         )
 
-def setup_local_model(stop, model=MODEL):
-    """Download only an explicitly allowed local model with the Ollama app."""
-    if model not in CHAT_MODELS:
-        raise ValueError('Only approved local Ollama chat models are supported.')
-    if os.name != 'nt':
-        raise RuntimeError('Model setup button Windows ke liye hai.')
-    executable = ollama_binary()
-    if not executable:
-        raise FileNotFoundError('Ollama installed nahi. Jarvis ka Setup AI button official Windows download page kholta hai.')
-    status = ollama_status(model=model, executable=executable)
-    if status == 'stopped':
-        raise RuntimeError('Ollama installed hai magar local server band hai. Windows Start menu mein Ollama kholo, phir Setup AI dobara dabao.')
-    if status == 'ready':
-        return 'Ollama model already downloaded. Local AI chat mein sawal likhein.'
-    with tempfile.TemporaryFile(mode='w+b') as log:
-        process = subprocess.Popen([executable, 'pull', model], stdout=log, stderr=subprocess.STDOUT,
-                                   shell=False, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        deadline = time.monotonic() + 900
-        while process.poll() is None:
-            if stop.wait(0.25) or time.monotonic() > deadline:
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                raise RuntimeError('Model download stopped. Setup button se baad mein retry kar sakte hain.')
-        if process.returncode:
-            log.seek(0, 2)
-            length = log.tell()
-            log.seek(max(0, length - 1500))
-            details = log.read().decode('utf-8', errors='replace')
-            raise RuntimeError('Ollama model download fail hua. Ollama Start menu se open karein aur internet check karein.\n' + details)
-    if ollama_status(model=model, executable=executable) != 'ready':
-        raise RuntimeError('Download khatam hua magar Ollama API par model confirm nahi hua. Ollama app khol kar Setup AI dobara dabayein.')
-    return 'Ollama ' + model + ' model ready. Local AI chat mein sawal likhein.'

@@ -14,7 +14,7 @@
 
 ## What should work
 
-Supported local commands such as `notepad kholo`, `calculator kholo`, `chrome kholo`, `youtube kholo`, `windows`, `screenshot` and `play pause`. AI chat is a separate optional **Ollama** model setup. Voice transcription requires a local voice model setup if not already present. Desktop input is opt-in, reviewed and cancellable.
+Account AI uses **Connect AI** → Puter browser sign-in, with internet and limited account allowance; no local chatbot model download. Voice transcription setup remains separate. See ACCOUNT-CHAT.md.
 
 ## If Windows still blocks the GUI file
 
@@ -25,6 +25,7 @@ Do **not** disable Smart App Control or Defender. Do not use the `Unblock` trick
 - **No window appears:** confirm Python **3.12** is installed, that the file was extracted, and try **Open with → Python**.
 - **Setup error in GUI:** the last lines in its error log identify the failing dependency or test. Copy the **error text only** (no passwords).
 - **Install succeeds but application doesn't open:** use the Desktop shortcut and share the exact error or screenshot.
-- **Performance:** the tiny local transcription model and optional small Ollama AI model may be slow on an 8 GB machine.
+- **Performance:** voice transcription depends on local CPU/RAM; chatbot replies use the connected online account.
 
 These steps require only File Explorer and mouse interactions. They do not publish Jarvis on the Internet or require Microsoft Partner Center identity verification.
+

@@ -38,7 +38,7 @@ jobs:
       - name: Verify synthetic speech and recognition
         run: python tools/voice_smoke.py
       - name: Build inspectable Windows distribution
-        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name Jarvis --collect-all edge_tts --copy-metadata edge-tts --collect-all certifi --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "build-assets/voice-model;voice-model" --add-data "EDGE-TTS-LICENSE.txt;." --add-data "GPL-3.0.txt;." --add-data "THIRD-PARTY-NOTICES.txt;." app.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name Jarvis --collect-all edge_tts --copy-metadata edge-tts --collect-all certifi --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "web/connect.html;web" --add-data "web/connect.js;web" --add-data "web/connect.css;web" --add-data "build-assets/voice-model;voice-model" --add-data "EDGE-TTS-LICENSE.txt;." --add-data "GPL-3.0.txt;." --add-data "THIRD-PARTY-NOTICES.txt;." app.py
       - name: Verify executable startup
         shell: pwsh
         run: |

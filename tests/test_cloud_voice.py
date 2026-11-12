@@ -191,13 +191,6 @@ class CloudVoiceTests(unittest.TestCase):
         sandbox.stop.assert_called_once()
         host.speaker.stop.assert_called_once()
 
-    def test_ai_model_setup_dialog_is_not_a_string_function_call(self):
-        host = SimpleNamespace(ai=SimpleNamespace(model='qwen2.5:1.5b'), ai_status=Mock(), root=Mock(), worker=Mock())
-        with patch('app.messagebox.askokcancel', return_value=False) as dialog:
-            App.confirm_model_setup(host, 'model_missing')
-        self.assertIn('Lagbhag 1 GB', dialog.call_args.args[1])
-        host.worker.assert_not_called()
-
     def test_native_settings_require_consent_and_hide_key(self):
         import tkinter as tk
         from voice_settings_ui import VoiceSettingsWindow

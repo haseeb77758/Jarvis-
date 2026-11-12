@@ -12,7 +12,7 @@ import subprocess
 import re
 from memory import PreferenceStore
 from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
-from core import Controller, LocalAI, CLOUD_URL, parse_command, parse_plan, setup_local_model, ollama_binary, ollama_status, MODEL
+from core import Controller, ChatAI, parse_command, parse_plan, MODEL
 from tools.update_windows import check_update, install_update, installed_commit, UpdateError, GitHubAuthenticationRequired, github_cli, launch_github_login
 from sandbox_chat import SandboxWindow, SandboxSession
 
@@ -44,9 +44,11 @@ class App:
         self.voice_settings = VoiceSettings(self.store.directory)
         self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)), settings=self.voice_settings)
         self.control = Controller(Path.home(), self.stop, self.store.apps)
-        self.ai = LocalAI(model=self.store.chat_model)
-        self.mode = tk.StringVar(value='Local AI chat')
-        self.ai_status = tk.StringVar(value='OLLAMA · CHECKING')
+        from account_chat import AccountChat
+        self.chat_bridge = AccountChat()
+        self.ai = ChatAI(bridge=self.chat_bridge, cancel=self.stop)
+        self.mode = tk.StringVar(value='AI chat')
+        self.ai_status = tk.StringVar(value='AI · SIGN IN')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
         self.permission = tk.BooleanVar(value=False)
@@ -55,11 +57,11 @@ class App:
         root.bind('<Escape>', lambda e: self.halt())
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(100, self.poll)
-        root.after(600, self.check_ollama)
+        root.after(600, self.poll_chat_connection)
         root.after(2400, self.check_updates_silently)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
-        self.say('HASEEB AI', 'Salam! Yeh Jarvis AI Chat hai. Apna sawal neeche likho aur SEND dabao. Ollama ready na ho to Setup AI dabao. Computer control ke liye Desktop mode alag se select karo.')
+        self.say('HASEEB AI', 'Salam! Yeh Jarvis AI Chat hai. Apna sawal neeche likho aur SEND dabao. Connect AI dabao, browser mein sign in karo aur connection tab khula rakho. Computer control ke liye Desktop mode alag se select karo.')
 
     def global_stop(self):
         import ctypes
@@ -128,7 +130,7 @@ class App:
             self.status.set('Ready · local controls')
 
     def open_sandbox(self):
-        """Open the chat-only Ollama conversation space, never desktop controls."""
+        """Open the chat-only account conversation space, never desktop controls."""
         if self.sandbox_window is not None and not self.sandbox_window.closed:
             if self.sandbox_window.window.winfo_exists():
                 self.sandbox_window.window.deiconify()
@@ -137,82 +139,13 @@ class App:
                 return
         self.sandbox_window = SandboxWindow(self.root, self, self.sandbox_session)
 
-    def make_ui(self):
-        tk.Frame(self.root, bg=CYAN, height=3).pack(fill='x')
-        header = tk.Frame(self.root, bg=BG)
-        header.pack(fill='x', padx=24, pady=(18, 10))
-        tk.Label(header, text='◉', fg=CYAN, bg=BG, font=('Segoe UI', 26)).pack(side='left', padx=(0, 10))
-        tk.Label(header, text='JARVIS', fg=TEXT, bg=BG, font=('Segoe UI', 25, 'bold')).pack(side='left')
-        tk.Label(header, text='  DESKTOP INTELLIGENCE  /  WINDOWS 11\n  Created by Haseeb Crafts', fg=MUTED, bg=BG,
-                 justify='left', font=('Segoe UI', 9)).pack(side='left')
-        self.button(header, 'STOP / Esc', self.halt, True).pack(side='right', padx=5)
-        self.button(header, 'Resume', self.resume).pack(side='right', padx=5)
-        self.button(header, 'Setup local AI', self.setup_ai).pack(side='right', padx=5)
-        self.button(header, 'Cloud chat ↗', lambda: webbrowser.open(CLOUD_URL)).pack(side='right', padx=5)
-        statebar = tk.Frame(self.root, bg=DEEP, highlightbackground=BORDER, highlightthickness=1)
-        statebar.pack(fill='x', padx=24, pady=(2, 2))
-        tk.Label(statebar, text='●  SYSTEM STATUS', fg=CYAN, bg=DEEP, font=('Segoe UI', 9, 'bold')).pack(side='left', padx=(13, 18), pady=11)
-        tk.Label(statebar, textvariable=self.status, fg=TEXT, bg=DEEP, anchor='w', font=('Segoe UI', 9)).pack(side='left', fill='x', expand=True)
-        tk.Label(statebar, text='LOCAL  •  PRIVATE  •  REVIEWED ACTIONS', fg=MUTED, bg=DEEP, font=('Segoe UI', 8)).pack(side='right', padx=14)
-        tools = tk.Frame(self.root, bg=BG)
-        tools.pack(fill='x', padx=24, pady=12)
-        tk.Label(tools, text='QUICK ACTIONS', fg=MUTED, bg=BG, font=('Segoe UI', 9, 'bold')).pack(side='left', padx=(0, 14))
-        for text, command in [('Chrome', 'chrome kholo'), ('Notepad', 'notepad kholo'),
-                              ('Calculator', 'calculator kholo'), ('Screen', 'screenshot')]:
-            self.button(tools, text, lambda c=command: self.submit(c)).pack(side='left', padx=(0, 7))
-        self.button(tools, 'New chat', self.clear).pack(side='right')
-        tk.Checkbutton(tools, text='Enable mouse / keyboard controls', variable=self.permission,
-                       fg=TEXT, bg=BG, selectcolor=PANEL, activebackground=BG, activeforeground=TEXT).pack(side='left', padx=8)
-        voicebar = tk.Frame(self.root, bg=BG)
-        voicebar.pack(fill='x', padx=24, pady=(0, 12))
-        self.button(voicebar, 'Mic · 6 seconds', self.listen_voice, True).pack(side='left', padx=(0, 6))
-        self.button(voicebar, 'Setup voice', self.setup_voice).pack(side='left', padx=4)
-        self.button(voicebar, 'Test voice', self.test_voice).pack(side='left', padx=4)
-        ttk.Combobox(voicebar, textvariable=self.voice_language, state='readonly', width=8,
-                     values=['Auto', 'Urdu', 'English']).pack(side='left', padx=6)
-        tk.Checkbutton(voicebar, text='Speak replies', variable=self.speak_enabled,
-                       bg=BG, fg=TEXT, selectcolor=PANEL, activebackground=BG).pack(side='left', padx=5)
-        self.button(voicebar, 'Memory', self.show_memory).pack(side='right', padx=4)
-        self.button(voicebar, 'Save last plan', self.save_plan).pack(side='right', padx=4)
-        self.button(voicebar, 'Add app', self.add_app).pack(side='right', padx=4)
-        self.button(voicebar, 'Updates ↗', lambda: webbrowser.open('https://github.com/haseeb77758/Jarvis-/actions')).pack(side='right', padx=4)
-        loc = tk.Frame(self.root, bg=SURFACE, highlightbackground=BORDER, highlightthickness=1)
-        loc.pack(fill='x', padx=24)
-        tk.Label(loc, text='  WORKSPACE  ', fg=CYAN, bg=SURFACE, font=('Segoe UI', 9, 'bold')).pack(side='left', padx=10, pady=11)
-        tk.Label(loc, textvariable=self.workspace, fg=TEXT, bg=SURFACE, anchor='w').pack(side='left', fill='x', expand=True)
-        self.button(loc, 'Choose folder', self.choose).pack(side='right')
-        self.log = tk.Text(self.root, bg=DEEP, fg=TEXT, insertbackground=CYAN, relief='flat', wrap='word',
-                           highlightthickness=1, highlightbackground=BORDER,
-                           selectbackground='#245d67', selectforeground=TEXT,
-                           font=('Segoe UI', 11), padx=22, pady=20, state='disabled', spacing3=6)
-        self.log.pack(fill='both', expand=True, padx=24, pady=12)
-        self.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=10)
-        self.log.tag_config('user', foreground='#a8beec')
-        self.log.tag_config('error', foreground='#ffab9f')
-        bottom = tk.Frame(self.root, bg=BG)
-        bottom.pack(fill='x', padx=24, pady=(0, 8))
-        style = ttk.Style()
-        style.theme_use('clam')
-        self.select = ttk.Combobox(bottom, textvariable=self.mode, state='readonly', width=20,
-                                  values=['Computer commands', 'Local AI chat', 'AI action plan'])
-        self.select.pack(side='left', padx=(0, 8))
-        self.entry = tk.Entry(bottom, bg=SURFACE, fg=TEXT, insertbackground=CYAN, relief='flat',
-                              highlightthickness=1, highlightbackground=BORDER,
-                              highlightcolor=CYAN, font=('Segoe UI', 12))
-        self.entry.pack(side='left', fill='x', expand=True, ipady=10)
-        self.entry.bind('<Return>', lambda e: self.submit())
-        self.send = self.button(bottom, 'Send', self.submit, True)
-        self.send.pack(side='left', padx=(8, 0))
-        tk.Label(self.root, text='Screen input: enable → review → 4-second countdown. Global STOP: Ctrl+Alt+F12. Mouse corner = fail-safe.\nNo delete, shell execution, automatic messages or payments. Screenshots stay local.',
-                 fg=MUTED, bg=BG, justify='left', anchor='w', font=('Segoe UI', 9)).pack(fill='x', padx=26, pady=(0, 15))
-
     def say(self, name, text):
         # Text tags provide real chat styling without converting model text
         # into commands, HTML, or untrusted UI instructions.
         self.log.configure(state='normal')
         self.log.insert('end', name + '\n', 'error' if 'ERROR' in name else 'user' if name == 'YOU' else 'name')
         body_tag = 'user_body' if name == 'YOU' else (
-            'ai_body' if name in {'HASEEB AI', 'HASEEB AI · LOCAL MODEL'} else None
+            'ai_body' if name in {'HASEEB AI', 'HASEEB AI · ACCOUNT CHAT'} else None
         )
         if body_tag:
             self.log.insert('end', str(text) + '\n\n', body_tag)
@@ -225,7 +158,7 @@ class App:
             self.activity_log.insert('end', name + '  ·  ' + str(text)[:240] + '\n\n')
             self.activity_log.configure(state='disabled')
             self.activity_log.see('end')
-        if name in {'RESULT', 'HASEEB AI · LOCAL MODEL'} and self.speak_enabled.get():
+        if name in {'RESULT', 'HASEEB AI · ACCOUNT CHAT'} and self.speak_enabled.get():
             self.speaker.speak(str(text))
 
     def set_busy(self, on):
@@ -336,14 +269,13 @@ class App:
         if self.pending and not self.stop.is_set():
             self.approve(self.pending.pop(0), from_plan=True)
 
-    def check_ollama(self):
-        """Refresh the local status label without blocking the tkinter UI."""
-        if not self.root.winfo_exists():
-            return
-        def check():
-            state = ollama_status(model=self.ai.model)
-            self.events.put((self.generation, 'ollama_status', state, '', None))
-        threading.Thread(target=check, daemon=True).start()
+    def check_chat(self):
+        if self.root.winfo_exists():
+            self.ai_status.set('AI · CONNECTED' if self.chat_bridge.status() == 'ready' else 'AI · SIGN IN')
+
+    def poll_chat_connection(self):
+        self.check_chat()
+        self.root.after(3000, self.poll_chat_connection)
 
     def check_updates_silently(self):
         """Background notification only: never install code without approval."""
@@ -406,7 +338,7 @@ class App:
             'New main commit: ' + sha[:12] + '\n\n'
             'Official GitHub source code download hoga. Runtime tests aur GUI '
             'smoke test pass honay par code files replace hongi.\n'
-            'Ollama models, user memory aur local shortcuts preserve honge.\n'
+            'User memory, voice settings aur local shortcuts preserve honge.\n'
             'Failed code update automatically rollback karega.\n'
             'Third-party Python dependencies requirements.txt ke mutabiq '
             'update ho sakti hain, jo rollback mein automatically reverse nahi hoti.\n'
@@ -420,67 +352,16 @@ class App:
         self.worker(lambda: install_update(Path(__file__).resolve().parent, sha), 'update_apply')
 
     def setup_ai(self):
-        """Guided local setup: explicit approval for official Ollama and model."""
-        if self.busy:
-            return
-        if self.stop.is_set():
-            self.say('HASEEB AI', 'Pehle Resume dabayein.')
-            return
-        executable = ollama_binary()
-        if not executable:
-            self.ai_status.set('OLLAMA · INSTALL REQUIRED')
-            if messagebox.askokcancel(
-                'Install official Ollama',
-                'AI jawabat ke liye Ollama alag se install hoga.\n'
-                'Official website kholun? Installer ko apne Windows par confirm karna hoga.\n'
-                'Windows Security settings change nahi hongi.',
-                parent=self.root
-            ):
-                webbrowser.open('https://ollama.com/download/windows')
-            return
-        self.ai_status.set('OLLAMA · CHECKING')
-        self.worker(lambda: ollama_status(model=self.ai.model, executable=executable), 'setup_status')
-
-    def confirm_model_setup(self, state):
-        if state == 'ready':
-            self.ai_status.set('OLLAMA · READY')
-            self.mode.set('Local AI chat')
-            self.say('HASEEB AI', 'Ollama model ready hai. Ab neeche apna sawal likhein.')
-            self.entry.focus_set()
-            return
-        if state == 'stopped':
-            self.ai_status.set('OLLAMA · OPEN APP')
-            self.say('AI SETUP', 'Ollama install hai magar background service available nahi. Windows Start menu se Ollama khol kar Setup AI dobara dabayein.')
-            if messagebox.askokcancel(
-                'Ollama is not running',
-                'Ollama Start menu se kholna hoga. Kya Ollama app ko abhi launch karun?',
-                parent=self.root
-            ):
-                executable = ollama_binary()
-                if not executable:
-                    self.say('ERROR', 'Ollama executable nahi mila. Setup AI dabayein.')
-                    return
-                try:
-                    subprocess.Popen([executable, 'serve'], shell=False,
-                                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                    self.say('AI SETUP', 'Ollama local server start karne ki request bhej di. Setup AI dobara dabayein.')
-                except OSError as exc:
-                    self.say('ERROR', 'Ollama start nahi hua: ' + str(exc))
-            return
-        if state == 'model_missing':
-            self.ai_status.set('OLLAMA · MODEL NEEDED')
-            if messagebox.askokcancel(
-                'Install local AI model',
-                'Ollama chal raha hai, lekin ' + self.ai.model + ' model missing hai.\n' +
-                ('Lagbhag 1.9 GB' if self.ai.model == 'qwen2.5:3b' else 'Lagbhag 1 GB') + ' model download hoga. Internet aur disk space required.\n'
-                'Model apne PC par chalega; cloud API key nahi chahiye.\n'
-                'Download shuru karun?',
-                parent=self.root
-            ):
-                self.worker(lambda: setup_local_model(self.stop, model=self.ai.model), 'setup')
-            return
-        self.ai_status.set('OLLAMA · NOT INSTALLED')
-        self.say('AI SETUP', 'Ollama install nahi. Setup AI button se official site kholo.')
+        """Account sign-in via the user's browser; no API-key or model download."""
+        if messagebox.askokcancel('Connect account AI',
+            'Browser mein Puter account sign-in hoga. Chat messages, recent context aur saved reply preferences '
+            'Puter/model provider ko bheje jayenge. Free allowance aur limits apply hoti hain. '
+            'Koi paid upgrade automatic nahi. Connection tab khula rakhein. Connect karein?', parent=self.root):
+            try:
+                webbrowser.open(self.chat_bridge.start())
+                self.say('AI CONNECTION', 'Browser mein disclosure tick karke Sign in & connect dabayein, phir yahan chat karein. API key nahi chahiye.')
+            except Exception:
+                self.say('ERROR', 'Browser connection start nahi hui. Jarvis restart karke Connect AI dobara try karein.')
 
     def choose(self):
         if self.busy:
@@ -509,7 +390,7 @@ class App:
         self.generation += 1
         self.pending.clear()
         self.status.set('STOPPED · pending results/actions discarded · Resume to continue')
-        # Running local inference may finish in Ollama, but its result is discarded.
+        # An already-sent cloud request may finish, but its result is discarded.
 
     def resume(self):
         if self.busy:
@@ -518,7 +399,7 @@ class App:
         self.stop.clear()
         self.status.set('Ready · local controls')
 
-    def send_local_chat(self, text):
+    def send_chat(self, text):
         """Chat must never be interpreted as a privileged desktop command."""
         messages = self.history + [{'role': 'user', 'content': text}]
         self.worker(
@@ -561,13 +442,13 @@ class App:
             return
         self.entry.delete(0, 'end')
         self.say('YOU', text)
-        if self.mode.get() == 'Local AI chat':
-            self.send_local_chat(text)
+        if self.mode.get() == 'AI chat':
+            self.send_chat(text)
             return
         try:
             if text.casefold().startswith('remember:'):
                 fact = text.split(':', 1)[1].strip()
-                if messagebox.askokcancel('Save preference locally', fact + '\n\nYeh local AI replies mein preference ke taur par use hogi. Passwords ya secrets save na karein.', parent=self.root):
+                if messagebox.askokcancel('Save preference locally', fact + '\n\nYeh connected AI replies ke liye cloud ko bheji ja sakti hai. Passwords ya secrets save na karein.', parent=self.root):
                     self.store.remember(fact)
                     self.say('RESULT', 'Preference saved. Memory button se view/remove kar sakte hain.')
                 return
@@ -588,7 +469,7 @@ class App:
                 self.last_plan = [action]
                 self.approve(action)
             elif self.mode.get() == 'Computer commands':
-                self.say('COMMAND HELP', 'windows · inspect: Window title · focus: Window title · wait: Window title\nbutton: Window title | Exact button name\nwrite: Window title | Hello Haseeb · press: Window title | ctrl+s\nremember: reply in Roman Urdu · shortcut: saved name\nchrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nvolume up · volume down · volume mute · play pause · next song · previous song\nyoutube kholo · whatsapp kholo · google par search karo: website design\nwhatsapp draft: Hello (draft only — never auto sends)\ngoogle: website design · youtube: python tutorial · kitne baje hain\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nFree local AI ke liye Local AI chat / AI action plan select karein.')
+                self.say('COMMAND HELP', 'windows · inspect: Window title · focus: Window title · wait: Window title\nbutton: Window title | Exact button name\nwrite: Window title | Hello Haseeb · press: Window title | ctrl+s\nremember: reply in Roman Urdu · shortcut: saved name\nchrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nvolume up · volume down · volume mute · play pause · next song · previous song\nyoutube kholo · whatsapp kholo · google par search karo: website design\nwhatsapp draft: Hello (draft only — never auto sends)\ngoogle: website design · youtube: python tutorial · kitne baje hain\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nAccount chat ke liye AI chat / AI action plan select karein.')
             else:
                 planning = self.mode.get() == 'AI action plan'
                 messages = [{'role': 'user', 'content': text}] if planning else self.history + [{'role': 'user', 'content': text}]
@@ -651,14 +532,6 @@ class App:
                     if generation == self.generation and value[1]:
                         self.status.set('GitHub update available · Update Jarvis')
                     continue
-                if kind == 'ollama_status':
-                    self.ai_status.set({
-                        'ready': 'OLLAMA · READY',
-                        'model_missing': 'OLLAMA · MODEL NEEDED',
-                        'missing': 'OLLAMA · INSTALL REQUIRED',
-                        'stopped': 'OLLAMA · OPEN APP',
-                    }.get(value, 'OLLAMA · CHECKING'))
-                    continue
                 if kind == 'voice_status':
                     if generation == self.generation and not self.stop.is_set():
                         self.status.set(value)
@@ -688,19 +561,12 @@ class App:
                     messagebox.showinfo('Jarvis update installed',
                                         value + '\\n\\nClose Jarvis and reopen the Desktop shortcut to activate it.',
                                         parent=self.root)
-                elif kind == 'setup_status':
-                    self.confirm_model_setup(value)
                 elif kind == 'voice_setup':
                     self.say('VOICE SETUP', value)
                     self.status.set('Voice model ready · press Mic to test')
-                elif kind == 'setup':
-                    self.ai_status.set('OLLAMA · READY')
-                    self.mode.set('Local AI chat')
-                    self.say('AI SETUP', value)
-                    self.entry.focus_set()
                 elif kind == 'ai':
                     self.history = (self.history + [{'role': 'user', 'content': user}, {'role': 'assistant', 'content': value}])[-8:]
-                    self.say('HASEEB AI · LOCAL MODEL', value)
+                    self.say('HASEEB AI · ACCOUNT CHAT', value)
                 elif kind == 'plan':
                     try:
                         actions = parse_plan(value)
@@ -758,6 +624,7 @@ class App:
             self.sandbox_window.close()
         self.speaker.stop()
         self.stop.set()
+        self.chat_bridge.close()
         self.root.destroy()
 
 

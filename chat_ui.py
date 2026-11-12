@@ -1,4 +1,4 @@
-"""Chat composer for HASEEB AI Jarvis's visible, local Ollama conversation.
+"""Chat composer for HASEEB AI Jarvis's visible account conversation.
 
 Compatible with the older Entry methods used by the controller, but supports
 multiline prompts: Enter sends, Shift+Enter adds a new line.
@@ -38,3 +38,4 @@ def preset_prompt(entry, prompt):
     entry.delete(0, "end")
     entry.insert(0, prompt)
     entry.focus_set()
+

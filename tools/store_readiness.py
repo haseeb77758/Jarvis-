@@ -47,7 +47,7 @@ def examine(root: Path = ROOT) -> tuple[list[str], list[str]]:
             errors.append("Listing does not explain Store certification.")
     if privacy.is_file():
         data = privacy.read_text(encoding="utf-8")
-        for term in ("Microphone", "LOCALAPPDATA", "Ollama", "Google", "WhatsApp"):
+        for term in ("Microphone", "LOCALAPPDATA", "Puter", "Google", "WhatsApp"):
             if term.casefold() not in data.casefold():
                 errors.append(f"Privacy draft missing disclosed topic: {term}")
         for marker in PRIVACY_MARKERS:
@@ -87,3 +87,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

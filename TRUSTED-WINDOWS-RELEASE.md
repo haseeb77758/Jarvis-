@@ -22,7 +22,7 @@ The private key and password must remain protected; only the publisher should pr
 3. PyInstaller builds an **onedir** bundle, allowing all bundled EXE, DLL and PYD files to be inspected and signed.
 4. Script verifies the signing certificate has a private key, proper Code Signing extended key usage and valid dates; signs every Windows binary with a trusted timestamp, then runs Windows Authenticode verification. Any failure aborts without uploading a release.
 5. Only after every check passes, download `Jarvis-TRUSTED-SIGNED-Windows-x64`. Unzip and run the Jarvis executable in its bundle directory.
-6. On the actual Windows 11 laptop, additionally test Smart App Control trust, microphone, application launch, screen approval, STOP and local AI setup before calling it production-ready.
+6. On the actual Windows 11 laptop, additionally test Smart App Control trust, microphone, application launch, screen approval, STOP and account chat sign-in before calling it production-ready.
 
 **Important:** Code signing establishes publisher authenticity and makes an app eligible for trust assessment; it is not a malware clearance or a guarantee that Smart App Control will accept a particular release. Publisher identity, certificate trust chain and Windows reputation policies can still matter. The same signing identity should be maintained across releases.
 
@@ -34,3 +34,4 @@ Until the publisher provides valid credentials and the signed workflow passes, *
 
 - https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control
 - https://support.microsoft.com/en-us/windows/smart-app-control-frequently-asked-questions-285ea03d-fa88-4c5c-882e-6718e9ae06e3
+
