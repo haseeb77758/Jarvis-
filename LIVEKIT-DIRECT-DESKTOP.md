@@ -119,3 +119,34 @@ https://docs.livekit.io/agents/server/agent-dispatch/
 https://docs.livekit.io/transport/data/rpc/
 https://docs.livekit.io/agents/start/builder/
 https://docs.livekit.io/reference/other/roomservice-api/
+
+
+## Cloud agent joins but stays silent: realtime_model_error
+
+If LiveKit Cloud **Agents > training-2057 > Console > Events** contains
+`type='realtime_model_error'`, the *Cloud realtime inference/model pipeline*
+has reported an error. A connected room, two participants, and a published
+microphone do **not** prove the model is replying. This is a different
+failure category from Chrome microphone permission or speaker autoplay.
+
+1. End the active test session to avoid unnecessary metered usage.
+2. In the same deployed agent's Console > Events, expand the error and
+   inspect the **full unredacted message in your private dashboard**.
+   The short `realtime_model_error` label does not establish its root
+   cause by itself. Do **not** paste API keys, secrets, or tokens into chat.
+3. Review the **Builder** configuration for `training-2057`: the
+   selected realtime model/voice, valid deployment version, and any
+   provider eligibility or availability issue shown by LiveKit.
+   Check project Usage/Billing and relevant limits if the full error
+   indicates credits, quota or authorization failure.
+4. Re-deploy the corrected Builder configuration and test voice inside
+   its LiveKit Console **before** retrying the Jarvis desktop window.
+   If the Console itself still shows this error, changing Windows mic
+   permissions, reinstalling Jarvis, or unlocking speakers will not
+   repair the Cloud model failure.
+
+The Jarvis desktop window shows a **Cloud inference** hint when an agent
+joins but no remote voice audio arrives after 20 seconds. This is only a
+troubleshooting hint, **not** proof of a model error. LiveKit Builder is
+private Cloud configuration; GitHub source updates cannot automatically
+change or deploy it.
