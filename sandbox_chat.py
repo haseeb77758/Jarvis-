@@ -69,8 +69,8 @@ class SandboxWindow:
         self.parent = parent
         self.host = host
         self.session = session if session is not None else SandboxSession()
-        self.selected_model = tk.StringVar(master=parent, value=MODEL)
-        self.ai = LocalAI(model=MODEL)
+        self.selected_model = tk.StringVar(master=parent, value=host.store.chat_model)
+        self.ai = LocalAI(model=host.store.chat_model)
         self.events = queue.Queue()
         self.cancel = threading.Event()
         self.generation = 0
@@ -268,6 +268,9 @@ class SandboxWindow:
             self.selected_model.set(self.ai.model)
             return
         self.ai.model = selected
+        self.host.store.chat_model = selected
+        self.host.store.save()
+        self.host.ai.model = selected
         self.status.set("● CHECKING " + selected)
         self.activity.set("Selected " + selected + " · model check ho raha hai")
         self.refresh_status()
