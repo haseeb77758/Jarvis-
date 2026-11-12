@@ -63,6 +63,7 @@ class LiveKitOptionalTests(unittest.TestCase):
             self.assertNotIn('super-secret-example', str(call_args))
             self.assertNotIn('private-example', str(call_args))
             self.assertEqual(launch.call_args.kwargs['env']['JARVIS_LIVEKIT_ENV_FILE'], str(creds))
+            self.assertEqual(launch.call_args.kwargs['env']['JARVIS_LIVEKIT_AI_COUSTICS'], '0')
             self.assertTrue(session.is_running())
             session.stop()
             process.terminate.assert_called_once()
