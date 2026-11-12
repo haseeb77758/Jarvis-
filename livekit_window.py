@@ -45,6 +45,14 @@ class LiveKitVoiceWindow:
                  font=('Segoe UI', 10), justify='left', wraplength=620,
                  padx=17, pady=15).pack(fill='x', padx=20, pady=6)
 
+        self.noise_enhancement = tk.BooleanVar(master=self.window, value=False)
+        tk.Checkbutton(
+            self.window,
+            text='AI-Coustics noise enhancement (optional, can cost extra)',
+            variable=self.noise_enhancement, bg=BG, fg=MUTED, selectcolor=PANEL,
+            activebackground=BG, activeforeground=TEXT,
+        ).pack(anchor='w', padx=26, pady=(3, 0))
+
         self.setup_button = self._button('1  Install separate LiveKit voice tools',
                                          self.install)
         self.setup_button.pack(fill='x', padx=25, pady=6)
