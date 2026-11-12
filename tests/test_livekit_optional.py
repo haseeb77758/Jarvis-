@@ -126,10 +126,10 @@ class LiveKitOptionalTests(unittest.TestCase):
 
     def test_invalid_cloud_url_is_rejected_before_start(self):
         file = lk.create_credentials_template()
-        file.write_text('LIVEKIT_URL=https://cloud.livekit.io/projects/test\\n'
-                        'LIVEKIT_API_KEY=secret-key\\n'
-                        'LIVEKIT_API_SECRET=secret-value\\n', encoding='utf-8')
-        with patch.object(lk.os, 'name', 'nt'), \\
+        file.write_text('LIVEKIT_URL=https://cloud.livekit.io/projects/test\n'
+                        'LIVEKIT_API_KEY=secret-key\n'
+                        'LIVEKIT_API_SECRET=secret-value\n', encoding='utf-8')
+        with patch.object(lk.os, 'name', 'nt'), \
              patch('livekit_bridge.subprocess.Popen') as launched:
             with self.assertRaisesRegex(lk.LiveKitSetupError, 'wss://'):
                 lk.LiveKitConsole().start(consent=True)
@@ -154,9 +154,9 @@ class LiveKitOptionalTests(unittest.TestCase):
 
     def test_failure_log_scrubs_known_cloud_keys(self):
         credentials = lk.create_credentials_template()
-        credentials.write_text('LIVEKIT_URL=wss://valid.livekit.cloud\\n'
-                               'LIVEKIT_API_KEY=sample-private-key\\n'
-                               'LIVEKIT_API_SECRET=sample-private-secret\\n',
+        credentials.write_text('LIVEKIT_URL=wss://valid.livekit.cloud\n'
+                               'LIVEKIT_API_KEY=sample-private-key\n'
+                               'LIVEKIT_API_SECRET=sample-private-secret\n',
                                encoding='utf-8')
         lk.session_log_path().write_text(
             'LiveKit HTTP auth failed: sample-private-key sample-private-secret '
@@ -172,7 +172,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         python.parent.mkdir(parents=True, exist_ok=True)
         python.touch()
         completed = Mock(returncode=0)
-        with patch('livekit_bridge.subprocess.run', return_value=completed) as run, \\
+        with patch('livekit_bridge.subprocess.run', return_value=completed) as run, \
              patch('livekit_bridge.subprocess.Popen') as launch:
             self.assertTrue(lk.preflight_runtime())
             cmd = run.call_args.args[0]
