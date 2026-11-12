@@ -100,7 +100,7 @@ def make_admin_token(settings, room):
     return jwt_sign({
         "iss": settings["LIVEKIT_API_KEY"], "sub": "jarvis-desktop-admin",
         "iat": now, "nbf": now - 1, "exp": now + 60,
-        "video": {"room": room, "roomAdmin": True},
+        "video": {"room": room, "roomCreate": True},
     }, settings["LIVEKIT_API_KEY"], settings["LIVEKIT_API_SECRET"])
 
 
