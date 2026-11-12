@@ -11,7 +11,6 @@ import shutil
 import subprocess
 import re
 from memory import PreferenceStore
-from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
 from core import Controller, parse_command
 from tools.update_windows import check_update, install_update, installed_commit, UpdateError, GitHubAuthenticationRequired, github_cli, launch_github_login
 
@@ -37,11 +36,6 @@ class App:
         self.pending = []
         self.last_plan = []
         self.store = PreferenceStore(data_directory)
-        self.speak_enabled = tk.BooleanVar(value=False)
-        self.voice_language = tk.StringVar(value='Auto')
-        from cloud_voice import VoiceSettings
-        self.voice_settings = VoiceSettings(self.store.directory)
-        self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)), settings=self.voice_settings)
         self.control = Controller(Path.home(), self.stop, self.store.apps)
         # Only LiveKit provides AI conversation. The legacy Puter relay and
         # other chatbot engines are NOT constructed or connected.
@@ -87,15 +81,6 @@ class App:
         item.bind('<Enter>', lambda _e: item.configure(bg=hover) if str(item['state']) != 'disabled' else None)
         item.bind('<Leave>', lambda _e: item.configure(bg=base))
         return item
-
-    def open_voice_settings(self):
-        from voice_settings_ui import VoiceSettingsWindow
-        current = getattr(self, "voice_settings_window", None)
-        if current is not None and not current.closed:
-            current.window.deiconify()
-            current.window.lift()
-            return
-        self.voice_settings_window = VoiceSettingsWindow(self)
 
     def open_livekit_voice(self):
         """Open reusable LiveKit primary-voice settings without starting billing."""
@@ -165,51 +150,11 @@ class App:
             self.activity_log.insert('end', name + '  ·  ' + str(text)[:240] + '\n\n')
             self.activity_log.configure(state='disabled')
             self.activity_log.see('end')
-        if False and name == 'RESULT' and self.speak_enabled.get():  # Legacy TTS permanently off in LiveKit-only UI
-            self.speaker.speak(str(text))
 
     def set_busy(self, on):
         self.busy = on
         self.send.configure(state='disabled' if on else 'normal')
         self.status.set('Working…' if on else ('Stopped · Resume to continue' if self.stop.is_set() else 'Ready · local controls'))
-
-    def test_voice(self):
-        if not self.busy and not self.stop.is_set():
-            self.speaker.speak('Jarvis ready. Aap ka desktop assistant tayyar hai.')
-
-    def listen_voice(self):
-        if self.busy or self.stop.is_set():
-            return
-        self.speaker.stop()
-        language = {'Auto': 'auto', 'Urdu': 'ur', 'English': 'en'}[self.voice_language.get()]
-        generation = self.generation
-        notify = lambda text: self.events.put((generation, 'voice_status', text, '', None))
-        self.worker(lambda: listen(self.stop, language, notify), 'voice')
-        self.status.set('Preparing mic · recording ends after a pause (max 6s) · STOP cancels')
-
-    def setup_voice(self):
-        if self.busy or self.stop.is_set():
-            return
-        if bundled_model():
-            self.say('NOTICE', 'Voice model is EXE mein included hai. Mic dabayein; speech ke baad recording auto-stop hogi (max 6s). Pehli recognition CPU par kuch seconds le sakti hai.')
-            return
-        if messagebox.askokcancel('Setup offline voice',
-            'Multilingual Whisper tiny model ek dafa internet se download hoga (approximately 75–100 MB).\nUske baad microphone audio local CPU par process hoti hai. Voice quality mic aur language par depend karegi. Download karein?', parent=self.root):
-            self.worker(lambda: setup_voice(self.stop), 'voice_setup')
-
-    def review_voice(self, text):
-        normalized = normalize_command(text)
-        self.say('HEARD — NOT EXECUTED', text)
-        if normalized.casefold() in {'stop', 'stop jarvis', 'jarvis stop'}:
-            self.halt()
-            return
-        if messagebox.askokcancel('Review voice instruction',
-            'Heard: ' + text + '\n\nRun: ' + normalized + '\n\nCancel karke entry box mein correction kar sakte hain.', parent=self.root):
-            self.submit(normalized)
-        else:
-            self.entry.delete(0, 'end')
-            self.entry.insert(0, normalized)
-            self.entry.focus_set()
 
     def add_app(self):
         if self.busy:
@@ -375,8 +320,6 @@ class App:
         livekit = getattr(self, 'livekit_window', None)
         if livekit is not None and not livekit.closed:
             livekit.stop()  # Global STOP also ends the billable voice process.
-        if hasattr(self, 'speaker'):
-            self.speaker.stop()
         self.stop.set()
         self.generation += 1
         self.pending.clear()
@@ -508,10 +451,6 @@ class App:
                     if generation == self.generation and value[1]:
                         self.status.set('GitHub update available · Update Jarvis')
                     continue
-                if kind == 'voice_status':
-                    if generation == self.generation and not self.stop.is_set():
-                        self.status.set(value)
-                    continue
                 if kind == 'notice':
                     self.say('NOTICE', value)
                     continue
@@ -525,8 +464,6 @@ class App:
                     self.say('ERROR', issue)
                     if kind in {'update_check', 'update_apply'} and 'PRIVATE GITHUB ACCESS' in issue:
                         self.say('UPDATE', 'Connect GitHub dabayein. GitHub repo private hai; browser sign-in required hai.')
-                elif kind == 'voice':
-                    self.review_voice(value)
                 elif kind == 'screenshot':
                     self.show_screen(value)
                 elif kind == 'update_check':
@@ -537,9 +474,6 @@ class App:
                     messagebox.showinfo('Jarvis update installed',
                                         value + '\\n\\nClose Jarvis and reopen the Desktop shortcut to activate it.',
                                         parent=self.root)
-                elif kind == 'voice_setup':
-                    self.say('VOICE SETUP', value)
-                    self.status.set('Voice model ready · press Mic to test')
                 else:
                     self.say('RESULT', value)
                 if not issue and self.pending and not self.busy:
