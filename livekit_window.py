@@ -378,6 +378,12 @@ class LiveKitVoiceWindow:
         """Advanced, user-approved native Python console; may be blocked by policy."""
         if self.closed or self.busy:
             return False
+        if self.direct_service and self.direct_service.status()["active"]:
+            messagebox.showwarning(
+                "Duplicate LiveKit session",
+                "Pehle direct WebRTC voice session STOP karo.",
+                parent=self.window)
+            return False
         if self.console.is_running():
             self.refresh()
             return True
