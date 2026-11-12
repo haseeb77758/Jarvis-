@@ -152,6 +152,38 @@ def code_studio(app):
                "ai", "Review file: " + Path(selected).name)
 
 
+def code_generator(app):
+    """Generate a read-only code suggestion; no shell, files or auto-execution."""
+    if app.busy or app.stop.is_set():
+        messagebox.showinfo("Jarvis is busy", "Pehle request finish karein ya Resume dabayein.", parent=app.root)
+        return
+    description = simpledialog.askstring(
+        "AI Code Generator",
+        "Kya code banana hai? Details likhein (1-500 characters).\n"
+        "Generated code sirf chat mein dikhaya jayega, run/save nahi hoga.",
+        parent=app.root
+    )
+    if description is None:
+        return
+    description = description.strip()
+    if not 1 <= len(description) <= 500:
+        messagebox.showerror("Invalid request", "Code description 1-500 characters ki honi chahiye.", parent=app.root)
+        return
+    if not messagebox.askyesno(
+        "Generate suggested code",
+        "Local Ollama model code suggest karega. "
+        "Code execute nahi hoga, koi file automatically overwrite nahi hogi.\n\nContinue?",
+        parent=app.root
+    ):
+        return
+    task = ("Generate a minimal, explained code example for this request. "
+            "Return code and practical next steps. Avoid shell commands that alter system settings. "
+            "Do not claim the code was executed or tested.\n\nRequest: " + description)
+    app.say("YOU", "Generate code: " + description)
+    app.worker(lambda: app.ai.ask([{"role": "user", "content": task}]),
+               "ai", "Generate code: " + description)
+
+
 def system_window(app):
     win = window(app.root, "Reviewed Windows system controls", "600x420")
     info(win, "Sensitive system operations AI chat se automatically run nahi hotin.\n"
@@ -260,14 +292,16 @@ def toolkit_window(app):
          "Add/delete dated tasks in a local CSV; no automatic reminders"),
         ("Weather in browser", lambda: weather_window(app),
          "Uses browser search; never guesses a forecast"),
-        ("AI Code Studio", lambda: code_studio(app),
+        ("AI Code Review", lambda: code_studio(app),
          "Read a selected code file; local model suggests fixes, never writes code"),
+        ("AI Code Generator", lambda: code_generator(app),
+         "Ask the local model for draft code; never auto-executes"),
         ("AI Image Studio", lambda: image_studio(app),
          "Optional paid image API; per-request approval and no saved key"),
         ("Reviewed power controls", lambda: system_window(app),
          "Manual lock, delayed restart/shutdown and cancel"),
         ("Sleep / Wake Jarvis", app.toggle_sleep_mode,
-         "Pause chat and desktop commands; say Wake up Jarvis to resume"),
+         "Pause main chat/commands; type Wake up Jarvis to resume"),
     ]
     for label, invoke, detail in entries:
         panel = tk.Frame(win, bg=PANEL)
