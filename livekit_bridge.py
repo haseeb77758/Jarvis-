@@ -8,6 +8,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import threading
+import time
 
 ENV_KEYS = ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET")
 
@@ -134,14 +136,19 @@ def install_optional():
 class LiveKitConsole:
     def __init__(self):
         self.process = None
+        self.started_at = None
+        self.max_minutes = None
+        self._stop_timer = None
 
     def is_running(self):
         return self.process is not None and self.process.poll() is None
 
-    def start(self, *, consent=False, noise_enhancement=False):
+    def start(self, *, consent=False, noise_enhancement=False, max_minutes=10):
         """Start a separate console only with explicit cost consent."""
         if not consent:
             raise LiveKitSetupError("LiveKit cloud-usage consent required hai.")
+        if type(max_minutes) is not int or max_minutes not in (5, 10, 15):
+            raise LiveKitSetupError("Voice safety limit 5, 10 ya 15 minutes hona chahiye.")
         if os.name != "nt":
             raise LiveKitSetupError("Windows console mode only.")
         if self.is_running():
@@ -166,9 +173,25 @@ class LiveKitConsole:
             creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
             close_fds=True,
         )
+        self.started_at = time.monotonic()
+        self.max_minutes = max_minutes
+        # Hard local runtime cap even if the Tk dashboard is hidden or stalled.
+        # This caps session duration, not the provider's monetary charges.
+        self._stop_timer = threading.Timer(max_minutes * 60, self.stop)
+        self._stop_timer.daemon = True
+        self._stop_timer.start()
         return self.process
 
+    def remaining_seconds(self):
+        if not self.is_running() or self.started_at is None or self.max_minutes is None:
+            return 0
+        return max(0, int(self.max_minutes * 60 - (time.monotonic() - self.started_at)))
+
     def stop(self):
+        timer = self._stop_timer
+        self._stop_timer = None
+        if timer is not None:
+            timer.cancel()
         process = self.process
         if process is None:
             return
@@ -186,3 +209,5 @@ class LiveKitConsole:
             pass
         finally:
             self.process = None
+            self.started_at = None
+            self.max_minutes = None
