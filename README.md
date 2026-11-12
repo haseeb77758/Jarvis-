@@ -80,9 +80,23 @@ Windows Smart App Control may block unsigned EXE or downloaded CMD files even if
 - Mouse/keyboard input is disabled by default. Review the actual target before approving click/Enter; input does not understand financial or messaging context.
 - GitHub Actions consumes the repository owner's included build allowance. No billing upgrade or paid plan is configured by this repository.
 
+## Free neural Urdu / English voices
+
+Open **Voices → Edge Neural (free online)**. Choose **Asad/Uzma** for Urdu or
+Ryan/Sonia/Guy/Jenny for English, choose a speed, accept the spoken-text
+notification, save and press **Test voice**. Enable **Speak replies** to hear chat
+responses. No API key or paid account is needed by the client. This uses the
+open-source [edge-tts client](https://github.com/rany2/edge-tts) for Microsoft's
+online speech service: **internet is required**. It does not download or run an
+offline neural model. Use Urdu script for clear Urdu pronunciation.
+
+Mic recognition remains local. Only spoken reply text is sent; audio stays in
+memory. No automatic fallback to a paid provider. Availability/quality are not
+guaranteed; use Windows speech for offline output. [Setup and verification](FREE-VOICES.md).
+
 ## ElevenLabs spoken replies
 
-Open **Voices** under the chat box or **••• → Voice / ElevenLabs**. Select
+Open **Voices** under the chat box or **••• → Voices / Free neural / ElevenLabs**. Select
 **ElevenLabs**, enter your own API key and voice ID, choose `auto`, `ur` or `en`,
 and accept sending spoken reply text to ElevenLabs. Save, press **Test voice**,
 then enable **Speak replies**. Main chat and Sandbox use the same voice settings.

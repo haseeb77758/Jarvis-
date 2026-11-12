@@ -32,6 +32,18 @@ jobs:
         run: python tools/smoke_local_installer.py
       - name: Windows UI and screen smoke test
         run: python tools/windows_smoke.py
+      - name: Test live free neural Urdu and English speech (optional network)
+        id: free-voice-live
+        continue-on-error: true
+        run: python tools/smoke_free_voice.py
+      - name: Upload live free voice samples when available
+        if: steps.free-voice-live.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jarvis-Free-Voice-Samples
+          path: dist/free-voice-samples/*.wav
+          if-no-files-found: error
+          retention-days: 14
       - name: Prepare bundled voice model
         env:
           HF_HUB_DISABLE_XET: '1'
@@ -39,7 +51,7 @@ jobs:
       - name: Test synthetic voice output and local recognition
         run: python tools/voice_smoke.py
       - name: Build the Windows executable
-        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "build-assets/voice-model;voice-model" app.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis --collect-all edge_tts --copy-metadata edge-tts --collect-all certifi --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "build-assets/voice-model;voice-model" --add-data "EDGE-TTS-LICENSE.txt;." --add-data "GPL-3.0.txt;." --add-data "THIRD-PARTY-NOTICES.txt;." app.py
       - name: Verify the built app starts
         shell: pwsh
         run: |
@@ -67,3 +79,4 @@ jobs:
           path: dist/Jarvis.exe
           if-no-files-found: error
           retention-days: 14
+

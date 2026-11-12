@@ -1,0 +1,19 @@
+Jarvis free neural voice client
+
+This application uses edge-tts 7.3.1, copyright Christopher Down and rany.
+Upstream source: https://github.com/rany2/edge-tts/tree/7.3.1
+Source release: https://github.com/rany2/edge-tts/archive/refs/tags/7.3.1.tar.gz
+The upstream client is unmodified. Most files are LGPLv3; its srt_composer.py is
+MIT-licensed. Full upstream notices are in EDGE-TTS-LICENSE.txt, with GPLv3 in
+GPL-3.0.txt. Microsoft voice models are not distributed by this application.
+
+The reviewable Jarvis source, requirements.txt and BUILD-EXE.bat are provided
+alongside the Windows build. To use a modified, interface-compatible edge-tts,
+run Jarvis from source, install the modified package into its .venv, and run
+app.py; or rebuild using BUILD-EXE.bat. No code-signature check in Jarvis prevents
+such a rebuild. Modification/rebuilding and reverse engineering for debugging
+modifications to this library are permitted for that purpose.
+
+The LGPL applies to the edge-tts library; it does not grant ownership of or
+unlimited access to Microsoft's online speech service. Service terms,
+availability and voice availability are controlled by the service provider.

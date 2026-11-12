@@ -299,7 +299,7 @@ def make_dashboard(app):
                          font=('Segoe UI', 10), cursor='hand2')
     menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
                    activebackground=PANEL_2, activeforeground=CYAN)
-    menu.add_command(label='Voice / ElevenLabs', command=app.open_voice_settings)
+    menu.add_command(label='Voices / Free neural / ElevenLabs', command=app.open_voice_settings)
     menu.add_command(label='Device readiness', command=app.open_diagnostics)
     menu.add_command(label='Connect GitHub', command=app.connect_github)
     menu.add_command(label='Resume', command=app.resume)

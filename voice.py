@@ -128,6 +128,22 @@ class Speaker:
                 previous.join(timeout=2)
             if cancel.is_set():
                 return
+            if config["provider"] == "Edge Neural (free online)":
+                from free_voice import generate_mp3, decode_mp3
+                from cloud_voice import play_pcm, VoiceError
+                try:
+                    compressed = generate_mp3(text, config, cancel)
+                    if not cancel.is_set():
+                        audio = decode_mp3(compressed, cancel)
+                        if not cancel.is_set():
+                            play_pcm(audio, cancel)
+                except VoiceError as exc:
+                    if not cancel.is_set():
+                        self.notify(str(exc))
+                except Exception:
+                    if not cancel.is_set():
+                        self.notify("Free voice playback unavailable. Audio output settings check karein.")
+                return
             if config["provider"] == "ElevenLabs":
                 from cloud_voice import generate_pcm, play_pcm, VoiceError
                 try:
