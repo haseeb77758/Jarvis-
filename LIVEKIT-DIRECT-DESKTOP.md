@@ -78,6 +78,34 @@ a separate short-lived roomCreate-scoped token (LiveKit DeleteRoom requirement) 
 That stop can fail during network outages; the UI must not claim confirmed
 Cloud termination when LiveKit is unreachable.
 
+## Connected but Jarvis silent: check mic and speaker separately
+
+An `AGENT JOINED` badge confirms only room participation, not audible
+speech. The desktop voice window now shows **Microphone**, **Mic input
+level**, **Agent subscribed to mic**, **Agent audio**, and **Speaker output**.
+
+- Speak and watch the **MIC INPUT LEVEL** bar. If it never moves, select
+  the correct **Microphone** from the dropdown. Also check Windows
+  **Settings > Privacy & security > Microphone** (desktop apps access).
+- If **MIC FAILED** appears, allow microphone for the current
+  `127.0.0.1` Chrome/Edge window, check that another app has not
+  captured the input, then click **Retry microphone**.
+- If mic level moves but **Agent subscribed to mic** remains "Not yet",
+  inspect your deployed agent's LiveKit Cloud Sessions/Events. A joined
+  agent is not automatically proof that it is receiving audio.
+- If the agent is responding but **Speaker output** shows "BLOCKED",
+  click **Enable speaker audio** once. Per official LiveKit SDK guidance,
+  `room.startAudio()` must be invoked from a direct browser user click
+  when autoplay is blocked; Chrome/Edge app-mode launch from Jarvis is
+  not itself that click.
+- **Agent audio: No remote track** means no subscribed voice output has
+  been received, even if the remote agent joined.
+
+A new loopback port can request browser microphone permission again.
+The voice window displays mic activity locally; it does not record or
+upload microphone diagnostics elsewhere. Neither reinstalling pip nor
+disabling Windows Application Control fixes browser audio autoplay.
+
 ## Evidence, integration limits and docs
 
 Windows CI tests local auth/CSRF, JWT dispatch, allowed/denied native

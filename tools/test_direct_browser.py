@@ -18,8 +18,10 @@ import direct_livekit as lk
 
 MOCK_BROWSER_SDK = r"""
 window.__rooms = [];
+window.__denyMic = false;
+window.__permitAudio = false;
 window.LivekitClient = {
-  Track: {Kind:{Audio:"audio"}},
+  Track: {Kind:{Audio:"audio"}, Source:{Microphone:"microphone"}},
   RoomEvent: {
     ParticipantConnected:"participantConnected",
     ParticipantDisconnected:"participantDisconnected",
@@ -29,21 +31,47 @@ window.LivekitClient = {
     ConnectionQualityChanged:"connectionQualityChanged",
     TranscriptionReceived:"transcriptionReceived",
     ParticipantAttributesChanged:"attributesChanged",
+    AudioPlaybackStatusChanged:"audioPlaybackChanged",
+    MediaDevicesError:"mediaDevicesError",
+    LocalTrackSubscribed:"localTrackSubscribed",
+    LocalAudioSilenceDetected:"localAudioSilenceDetected",
+    TrackSubscriptionFailed:"trackSubscriptionFailed",
   },
   Room: class MockRoom {
+    static async getLocalDevices(kind, requestPermissions){
+      return [{deviceId:"default-mic",label:"Real Windows Microphone"}];
+    }
     constructor(){
       window.__rooms.push(this);
       this.events = {};
       this.remoteParticipants = new Map();
+      this.canPlaybackAudio = false;
       this.localParticipant = {
-        setMicrophoneEnabled: async(value) => {this.micOn = value;},
+        isMicrophoneEnabled: false,
+        audioLevel: 0.24,
+        setMicrophoneEnabled: async(value) => {
+          if (window.__denyMic) {
+            const err = new Error("Microphone permission denied");
+            err.name = "NotAllowedError";
+            throw err;
+          }
+          this.localParticipant.isMicrophoneEnabled = value;
+          this.micOn = value;
+          return {audioTrack:{mediaStreamTrack:{readyState:"live"}}};
+        }
       };
     }
     on(name, handler){this.events[name] = handler;}
     registerRpcMethod(name, handler){ if(name === "desktop_command")window.__desktopRPC=handler; }
     async connect(url, token){ this.connected = true; window.__lastConnect = {url,token}; }
-    async startAudio(){return true;}
-    async disconnect(){ this.connected = false; if(this.events.disconnected)this.events.disconnected(); }
+    async startAudio(){
+      if (!window.__permitAudio) throw new Error("Autoplay blocked without direct click");
+      this.canPlaybackAudio = true;
+      if(this.events.audioPlaybackChanged)this.events.audioPlaybackChanged();
+    }
+    async switchActiveDevice(kind, deviceId){this.micDevice=kind+":"+deviceId;return true;}
+    async disconnect(){this.connected=false;this.localParticipant.isMicrophoneEnabled=false;
+      if(this.events.disconnected)this.events.disconnected();}
   }
 };
 """
@@ -100,6 +128,51 @@ class DirectBrowserTests(unittest.TestCase):
         self.page.locator("#disconnect").click()
         self.page.get_by_text("DISCONNECTED", exact=True).first.wait_for()
         self.assertFalse(self.service.status()["active"])
+
+    def test_app_mode_autoplay_requires_click_and_explicit_unlock(self):
+        # Opening Chrome --app from a native Python process is not a browser
+        # click; LiveKit's startAudio fails until invoked by user interaction.
+        unlock = self.page.locator("#enableAudio")
+        unlock.wait_for(state="visible", timeout=10000)
+        self.assertIn("BLOCKED", self.page.locator("#speakerStatus").inner_text())
+        self.assertTrue(self.page.evaluate("window.__rooms[0].micOn"))
+        self.page.evaluate("window.__permitAudio=true")
+        unlock.click()
+        unlock.wait_for(state="hidden", timeout=5000)
+        self.assertIn("Enabled", self.page.locator("#speakerStatus").inner_text())
+        self.assertTrue(self.page.evaluate("window.__rooms[0].canPlaybackAudio"))
+
+    def test_microphone_is_published_and_input_level_is_visible(self):
+        self.page.wait_for_function(
+            "() => Number(document.querySelector('#micLevel').value) > 0",
+            timeout=4000)
+        self.assertIn("Input signal", self.page.locator("#micStatus").inner_text())
+        self.assertTrue(self.page.evaluate("window.__rooms[0].micOn"))
+
+    def test_microphone_input_selector_can_switch_devices(self):
+        select = self.page.locator("#micDevice")
+        select.wait_for(state="visible")
+        self.page.wait_for_function(
+            "() => !document.querySelector('#micDevice').disabled", timeout=3000)
+        select.select_option("default-mic")
+        self.assertEqual(
+            self.page.evaluate("window.__rooms[0].micDevice"),
+            "audioinput:default-mic")
+
+    def test_microphone_permission_failure_is_visible_and_retryable(self):
+        # New session: simulate rejected microphone permission.
+        self.page.locator("#disconnect").click()
+        self.page.get_by_text("DISCONNECTED", exact=True).first.wait_for()
+        self.page.evaluate("window.__denyMic=true")
+        self.page.once("dialog", lambda dialog: dialog.accept())
+        self.page.locator("#connect").click()
+        self.page.get_by_text("CONNECTED", exact=True).first.wait_for(timeout=6000)
+        self.page.locator("#retryMic").wait_for(state="visible", timeout=5000)
+        self.assertIn("MIC FAILED", self.page.locator("#micStatus").inner_text())
+        self.page.evaluate("window.__denyMic=false")
+        self.page.locator("#retryMic").click()
+        self.page.locator("#retryMic").wait_for(state="hidden", timeout=5000)
+        self.assertTrue(self.page.evaluate("window.__rooms[1].micOn"))
 
     def test_client_rpc_denies_unknown_remote_caller(self):
         response = self.page.evaluate("""async () => {

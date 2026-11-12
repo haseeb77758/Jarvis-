@@ -30,3 +30,16 @@ code{color:#5ffae6}footer{display:flex;justify-content:space-between;gap:16px;pa
 @keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{box-shadow:0 0 95px #23daccbb}}
 @media(max-width:850px){main{grid-template-columns:1fr}aside{max-height:none;border-top:1px solid #1b4558}.visual{border-right:0}header{padding:17px 20px}.identity{font-size:10px}footer{display:block;line-height:1.8}}
 @media(prefers-reduced-motion:reduce){.ring,.core{animation:none!important}}
+
+[hidden]{display:none!important}
+.mic-monitor{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;color:#8ee8e5;font:600 11px "Segoe UI",sans-serif;letter-spacing:.09em;margin:18px 0 8px}
+.mic-monitor progress{width:170px;height:14px;accent-color:#49edcc;overflow:hidden;border-radius:8px}
+.mic-monitor progress::-webkit-progress-bar{background:#1b3345;border-radius:8px}
+.mic-monitor progress::-webkit-progress-value{background:#4debd2;border-radius:8px}
+.input-select{display:flex;align-items:center;gap:10px;color:#9bbdca;font-size:12px;margin:7px auto 12px}
+.input-select select{max-width:300px;min-width:180px;padding:8px;color:#e2f9fc;background:#132f42;border:1px solid #286578;border-radius:7px}
+.input-select select:disabled{opacity:.5}
+#enableAudio{border-color:#8defba;background:#217f76;color:white;font-weight:750;box-shadow:0 0 20px #25e2bd55}
+#retryMic{border-color:#da9e54;color:#ffdda7}
+
+.offscreen-audio{position:fixed;left:-10000px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none}
