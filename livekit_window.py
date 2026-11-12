@@ -201,6 +201,10 @@ class LiveKitVoiceWindow:
             while True:
                 task = self.tool_requests.get_nowait()
                 action = task.action
+                if task.cancelled:
+                    task.result = "DENIED: Voice command approval expired."
+                    task.event.set()
+                    continue
                 if getattr(self.host, "stop", None) is not None and self.host.stop.is_set():
                     task.result = "DENIED: Jarvis is STOPPED."
                     task.event.set()
