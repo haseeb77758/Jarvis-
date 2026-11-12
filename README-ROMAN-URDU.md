@@ -57,6 +57,16 @@ maximum 6 seconds. Noisy room mein 6 seconds tak ja sakti hai. Transcription
 local hoti hai; transcript review ke baad instruction chalti hai. Voice model
 first-time download ho sakta hai; ye chatbot language model se alag hai.
 
+## LiveKit realtime voice (optional, billed)
+
+Naya **LiveKit Voice** button regular Voices ke saath milega. Yeh user ke
+`training-2057.zip` par based independent voice-console test hai. GPT-Live-1
+LiveKit Cloud par billed model hai; **fully free ya unlimited nahi**.
+LiveKit project credentials apne PC ke private file mein rakhni hongi,
+GitHub ya chat mein nahi. Button se separate setup consent aur har voice
+session se pehle usage/billing confirmation milta hai. Existing free voice
+aur desktop-command review bilkul alag rahenge. Steps: [LIVEKIT-VOICE.md](LIVEKIT-VOICE.md).
+
 ## Target-PC check
 
 App kholo → Connect AI/sign-in → sawal bhejo → jawab/voice test karo → STOP test

@@ -1,0 +1,6 @@
+# Optional LiveKit voice dependencies; NOT installed by regular Jarvis setup.
+# Adapted from user-provided training-2057.zip, Python 3.12 on Windows.
+livekit-agents>=1.8.8,<2
+livekit-plugins-ai-coustics~=0.2
+livekit-plugins-noise-cancellation~=0.2
+python-dotenv>=1,<2
