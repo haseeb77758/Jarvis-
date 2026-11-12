@@ -59,7 +59,7 @@ first-time download ho sakta hai; ye chatbot language model se alag hai.
 
 ## LiveKit realtime voice (optional, billed)
 
-Naya **LiveKit Voice** button regular Voices ke saath milega. Yeh user ke
+Main dashboard par **Talk Live** ab primary voice button hai. **LiveKit setup** alag settings kholta hai aur **Free Mic** purana free fallback hai. Yeh user ke
 `training-2057.zip` par based independent voice-console test hai. GPT-Live-1
 LiveKit Cloud par billed model hai; **fully free ya unlimited nahi**.
 LiveKit project credentials apne PC ke private file mein rakhni hongi,
