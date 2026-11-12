@@ -2,11 +2,12 @@
 from pathlib import Path
 import sys
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from sandbox_chat import SandboxSession, sandbox_reply
+from sandbox_chat import SandboxSession, SandboxWindow, sandbox_reply
+from core import CHAT_MODELS, LocalAI, setup_local_model
 from tools.package_source import source_files
 from tools.update_windows import REQUIRED, LOCAL_TESTS
 
@@ -49,6 +50,26 @@ class SandboxTests(unittest.TestCase):
         self.assertEqual(args[0], [{"role": "user", "content": "calculator kholo"}])
         self.assertFalse(kwargs["plan"])
         self.assertEqual(session.history, [])
+
+    def test_approved_models_and_selected_download(self):
+        self.assertEqual(CHAT_MODELS, ('qwen2.5:1.5b', 'qwen2.5:3b'))
+        with self.assertRaisesRegex(ValueError, 'approved'):
+            setup_local_model(Mock(), model='malicious:latest')
+
+    def test_model_change_updates_local_ai_without_desktop_control(self):
+        fake = SandboxWindow.__new__(SandboxWindow)
+        fake.busy = False
+        fake.selected_model = Mock()
+        fake.selected_model.get.return_value = 'qwen2.5:3b'
+        fake.ai = LocalAI()
+        fake.status = Mock()
+        fake.activity = Mock()
+        fake.refresh_status = Mock()
+        fake.on_model_change()
+        self.assertEqual(fake.ai.model, 'qwen2.5:3b')
+        fake.refresh_status.assert_called_once()
+        fake.activity.set.assert_called_once()
+        self.assertFalse(hasattr(fake, 'control'))
 
     def test_installer_and_updater_include_sandbox(self):
         paths = [p.as_posix() for p in source_files(ROOT)]
