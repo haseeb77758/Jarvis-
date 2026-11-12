@@ -153,7 +153,7 @@ class LiveKitVoiceWindow:
         ):
             return
         try:
-            self.console.start(consent=True)
+            self.console.start(consent=True, noise_enhancement=self.noise_enhancement.get())
             self.status.set('Voice console launched. Close/STOP to end session.')
         except (OSError, LiveKitSetupError) as exc:
             messagebox.showerror('LiveKit voice', str(exc), parent=self.window)
