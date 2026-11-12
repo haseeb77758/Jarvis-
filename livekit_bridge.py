@@ -168,6 +168,20 @@ class LiveKitConsole:
         return self.process
 
     def stop(self):
-        if self.is_running():
-            self.process.terminate()
-        self.process = None
+        process = self.process
+        if process is None:
+            return
+        try:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=4)
+                except subprocess.TimeoutExpired:
+                    # A stalled console must not keep cloud audio billed.
+                    process.kill()
+                    process.wait(timeout=4)
+        except (OSError, subprocess.TimeoutExpired):
+            # The process may have exited between poll and terminate.
+            pass
+        finally:
+            self.process = None
