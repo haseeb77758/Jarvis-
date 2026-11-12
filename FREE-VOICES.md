@@ -27,19 +27,24 @@ and service/voice availability is controlled by the provider.
 7. Press **Test voice**, then enable **Speak replies**. Sandbox has its own
    Speak replies checkbox and uses the shared provider/voice settings.
 
-For clearer Urdu, leave **Natural Urdu pronunciation** enabled with Asad/Uzma.
-Chat bubbles stay Roman Urdu. Before speaking a Latin-only reply, Jarvis asks
-the already-connected account AI to render it in Urdu script, preserving the
-meaning and punctuation. This adds one bounded request and up to 30 seconds of
-waiting, uses the account's free allowance, and requires Connect AI. It never
-buys credits or switches providers. Rendering is model-generated and can make
-pronunciation/transliteration mistakes; listen on your own PC to assess it.
-If rendering fails, Jarvis keeps the text and reports the speech issue instead
-of silently reading the unprepared Roman Urdu. Turn the option off to send text
-directly to the selected voice. Existing Urdu-script input needs no extra call.
-Speech strips markdown, URLs and fenced code; visible chat content is unchanged.
-English voices should be used with English text. Naturalness is subjective;
-listen on the target PC before considering a voice approved.
+For spoken Roman Urdu, keep **FAST Urdu accent** enabled (default). Jarvis
+now converts the spoken copy locally to Urdu script using `urdunlp`; chat text
+stays Roman Urdu. No extra account AI request or quota is used by this step.
+Free neural speech is streamed: MP3 frames begin playing as they arrive,
+rather than waiting for the entire generated audio. The first reply may spend
+additional time loading the local language tables. The Microsoft online
+speech service still requires internet, consent and availability.
+
+If a name or English technical word is read incorrectly, you can turn FAST
+off and leave **AI Urdu conversion** enabled. That existing mode may improve
+pronunciation for some sentences, but it uses an additional account AI call,
+takes longer, and may also introduce errors. With both FAST and AI checked,
+FAST takes precedence. Using English voices for full English text is best.
+Neither mode guarantees human-quality pronunciation; listen on your PC.
+
+English-only messages and existing Urdu-script messages are not locally
+retransliterated. Markdown, URLs and fenced code are removed from the
+spoken copy, while visible chat content is unchanged.
 
 ## Data and cancellation
 
