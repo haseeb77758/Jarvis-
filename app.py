@@ -34,6 +34,7 @@ class App:
         self.history = []
         self.sandbox_session = SandboxSession()
         self.sandbox_window = None
+        self.sleeping = False
         self.pending = []
         self.last_plan = []
         self.store = PreferenceStore(data_directory)
@@ -86,6 +87,25 @@ class App:
         item.bind('<Enter>', lambda _e: item.configure(bg=hover) if str(item['state']) != 'disabled' else None)
         item.bind('<Leave>', lambda _e: item.configure(bg=base))
         return item
+
+    def open_toolkit(self):
+        """Open user-driven tools without granting model actions."""
+        from enhanced_ui import toolkit_window
+        toolkit_window(self)
+
+    def toggle_sleep_mode(self):
+        """Explicit session-only sleep: no autonomous background wake listener."""
+        if self.busy:
+            self.say('NOTICE', 'Current request finish hone dein, phir Sleep/Wake dabayein.')
+            return
+        self.sleeping = not self.sleeping
+        if self.sleeping:
+            self.pending.clear()
+            self.say('SLEEP', 'Jarvis sleeping hai. Wake up Jarvis likhein ya Toolkit mein Sleep/Wake dabayein. Mic sirf button dabane par sunega.')
+            self.status.set('SLEEP MODE · Wake up Jarvis')
+        else:
+            self.say('WAKE', 'Jarvis awake hai. Commands review aur approval ke sath chalengi.')
+            self.status.set('Ready · local controls')
 
     def open_sandbox(self):
         """Open the chat-only Ollama conversation space, never desktop controls."""
@@ -486,6 +506,21 @@ class App:
             return
         if text.casefold() in {'stop', 'jarvis stop', 'stop jarvis'}:
             self.halt()
+            return
+        if text.casefold() in {'wake up jarvis', 'jarvis wake up', 'jarvis uth jao', 'uth jao jarvis'}:
+            if self.sleeping:
+                self.toggle_sleep_mode()
+            else:
+                self.say('WAKE', 'Jarvis already awake hai.')
+            return
+        if text.casefold() in {'jarvis sleep', 'sleep jarvis', 'jarvis so jao'}:
+            if not self.sleeping:
+                self.toggle_sleep_mode()
+            else:
+                self.say('SLEEP', 'Jarvis already sleeping hai.')
+            return
+        if self.sleeping:
+            self.say('SLEEP', 'Jarvis sleep mode mein hai. Wake up Jarvis likhein. STOP hamesha available hai.')
             return
         if self.stop.is_set():
             self.say('HASEEB AI', 'Stopped hai. Pehle Resume dabayein.')

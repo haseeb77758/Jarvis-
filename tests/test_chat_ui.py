@@ -19,6 +19,7 @@ class LocalChatTests(unittest.TestCase):
     def create_app(self, mode="Local AI chat"):
         app = App.__new__(App)
         app.busy = False
+        app.sleeping = False
         app.stop = threading.Event()
         app.history = [{'role': 'user', 'content': 'Pehla sawal'},
                        {'role': 'assistant', 'content': 'Pehla jawab'}]
@@ -63,6 +64,18 @@ class LocalChatTests(unittest.TestCase):
         app.submit()
         app.worker.assert_not_called()
         app.entry.delete.assert_not_called()
+
+    def test_sleep_mode_blocks_chat_but_wake_command_resumes(self):
+        app = self.create_app()
+        app.sleeping = True
+        app.toggle_sleep_mode = Mock(side_effect=lambda: setattr(app, 'sleeping', False))
+        app.submit()
+        app.worker.assert_not_called()
+        app.say.assert_any_call('SLEEP', unittest.mock.ANY)
+        app.entry.get.return_value = 'wake up jarvis'
+        app.submit()
+        app.toggle_sleep_mode.assert_called_once()
+        self.assertFalse(app.sleeping)
 
     def test_chat_source_is_in_windows_install_bundle(self):
         self.assertIn('chat_ui.py', [p.as_posix() for p in source_files(ROOT)])

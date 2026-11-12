@@ -32,12 +32,13 @@ MAX_SINGLE_FILE = 1_000_000
 MAX_FILES = 250
 REQUIRED = frozenset({
     "app.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "memory.py", "voice.py",
+    "enhanced_tools.py", "enhanced_ui.py",
     "requirements.txt", "tools/install_windows.py", "tools/create_shortcuts.py",
     "tools/update_windows.py", "tests/test_core.py", "tests/test_chat_ui.py",
     "tests/test_updater.py",
 })
 LOCAL_TESTS = (
-    "test_private_github_auth.py",
+    "test_private_github_auth.py", "test_enhanced_tools.py",
     "test_sandbox_chat.py",
     "test_chat_ui.py", "test_core.py", "test_desktop_voice_memory.py",
     "test_safety_regressions.py", "test_stonic_tools.py",
