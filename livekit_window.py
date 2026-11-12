@@ -369,8 +369,12 @@ class LiveKitVoiceWindow:
         ):
             return False
         try:
-            if self.direct_service is None:
-                self.direct_service = DirectVoiceService(self.tool_requests)
+            # Re-opening Talk Live after a previous session rotates the
+            # unpredictable loopback session bearer and closes the old port.
+            # A stale/abandoned voice window must not control the new session.
+            if self.direct_service is not None:
+                self.direct_service.close()
+            self.direct_service = DirectVoiceService(self.tool_requests)
             url = self.direct_service.start() + "~auto"
             if not self._launch_direct_browser(url):
                 raise OSError("No compatible desktop browser opened.")
