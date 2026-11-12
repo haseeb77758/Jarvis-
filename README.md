@@ -80,6 +80,19 @@ Windows Smart App Control may block unsigned EXE or downloaded CMD files even if
 - Mouse/keyboard input is disabled by default. Review the actual target before approving click/Enter; input does not understand financial or messaging context.
 - GitHub Actions consumes the repository owner's included build allowance. No billing upgrade or paid plan is configured by this repository.
 
+## Device readiness and voice setup
+
+Open **Readiness** in the System Status card (or **••• → Device readiness**).
+The panel checks the selected local Ollama model, default microphone and 16 kHz
+input settings, cached Whisper files and Windows speech voice. Checks run off the
+UI thread. Refresh after installing a model or changing audio devices.
+
+These checks do not record audio, download models or run desktop commands.
+“Device found” and “Files found” are readiness hints; use **Mic** and **Test voice**
+for a real recording/transcription and audible output test on your PC.
+Voice model setup now reports its own completion without changing your chat mode
+or claiming that Ollama is ready.
+
 ## Validation
 
 Read [the desktop-first guide](DESKTOP-FIRST.md) in this order: desktop controls → local chatbot → voice → local memory/shortcuts.
@@ -107,3 +120,4 @@ The separate browser-check workflow tests sign-in gating, conversation context, 
 | Reviewed shortcut | Save last plan → `shortcut: work` |
 
 Preferences and saved action sequences are not self-modifying code or automatic retraining. See DESKTOP-FIRST.md for the complete limitations and target-PC smoke test.
+

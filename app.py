@@ -88,6 +88,15 @@ class App:
         item.bind('<Leave>', lambda _e: item.configure(bg=base))
         return item
 
+    def open_diagnostics(self):
+        from diagnostics import DiagnosticsWindow
+        current = getattr(self, "diagnostics_window", None)
+        if current is not None and not current.closed:
+            current.window.deiconify()
+            current.window.lift()
+            return
+        self.diagnostics_window = DiagnosticsWindow(self)
+
     def open_toolkit(self):
         """Open user-driven tools without granting model actions."""
         from enhanced_ui import toolkit_window
@@ -235,7 +244,7 @@ class App:
             return
         if messagebox.askokcancel('Setup offline voice',
             'Multilingual Whisper tiny model ek dafa internet se download hoga (approximately 75–100 MB).\nUske baad microphone audio local CPU par process hoti hai. Voice quality mic aur language par depend karegi. Download karein?', parent=self.root):
-            self.worker(lambda: setup_voice(self.stop), 'setup')
+            self.worker(lambda: setup_voice(self.stop), 'voice_setup')
 
     def review_voice(self, text):
         normalized = normalize_command(text)
@@ -667,6 +676,9 @@ class App:
                                         parent=self.root)
                 elif kind == 'setup_status':
                     self.confirm_model_setup(value)
+                elif kind == 'voice_setup':
+                    self.say('VOICE SETUP', value)
+                    self.status.set('Voice model ready · press Mic to test')
                 elif kind == 'setup':
                     self.ai_status.set('OLLAMA · READY')
                     self.mode.set('Local AI chat')
@@ -760,3 +772,4 @@ if __name__ == '__main__':
         root.destroy()
     else:
         root.mainloop()
+
