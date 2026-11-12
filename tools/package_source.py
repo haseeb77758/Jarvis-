@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FOLDER = "Jarvis-Source-Windows"
 FILES = (
     "app.py", "account_chat.py", "adaptive_capture.py", "roman_urdu_speech.py", "free_voice.py", "cloud_voice.py", "voice_settings_ui.py", "diagnostics.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
-    "enhanced_tools.py", "enhanced_ui.py",
+    "enhanced_tools.py", "enhanced_ui.py", "livekit_bridge.py", "livekit_window.py",
+    "livekit_voice/agent.py", "livekit_voice/requirements.txt",
     "RUN-JARVIS.py", "START-JARVIS-GUI.pyw", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
     "requirements.txt", "README.md", "ACCOUNT-CHAT.md",
     "README-ROMAN-URDU.md", "ELEVENLABS-VOICE.md", "FREE-VOICES.md",
