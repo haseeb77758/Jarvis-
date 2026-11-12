@@ -114,7 +114,7 @@ def tasks_window(app):
     label(win, 'TASKS  /  REVIEWED SHORTCUTS', 13, CYAN, True).pack(anchor='w', padx=20, pady=(20, 8))
     label(win, 'Saved actions require their normal approvals. Reminders are not enabled.', 9, MUTED).pack(anchor='w', padx=20, pady=(0, 14))
     if not app.store.shortcuts:
-        label(win, 'No shortcuts saved. Generate an AI action plan, then Save last plan.', 10, MUTED,
+        label(win, 'No shortcuts saved. Local reviewed shortcuts will appear here.', 10, MUTED,
               wraplength=500, justify='left').pack(anchor='w', padx=20)
     else:
         for title, actions in list(app.store.shortcuts.items())[:20]:
@@ -129,8 +129,8 @@ def system_window(app):
     details = [
         'OS: ' + platform.platform(),
         'Workspace: ' + str(app.control.workspace),
-        'Account AI: Puter account sign-in; internet and account allowance required',
-        'Voice: opt-in, transcription runs locally after setup',
+        'AI Voice: LiveKit GPT-Live-1 only; cloud session needs consent and credentials',
+        'Puter, Ollama and other chatbots: disabled',
         'Control: explicit action approval, emergency STOP enabled',
         'Network: no remote desktop-control server',
     ]
@@ -274,12 +274,11 @@ def make_dashboard(app):
     navigation = tk.Frame(header, bg=DEEP)
     navigation.pack(side='left')
     for title, action in [
-        ('AI Chat', lambda: (app.mode.set('AI chat'), app.entry.focus_set())),
+        ('LiveKit Voice', app.toggle_livekit_voice),
         ('Notes', lambda: note_window(app)),
         ('Tasks', lambda: tasks_window(app)),
-        ('Toolbox', app.open_toolkit),
     ]:
-        is_chat = title == 'AI Chat'
+        is_chat = title == 'LiveKit Voice'
         item = tk.Button(navigation, text=title, command=action,
                          bg=DEEP, fg=CYAN if is_chat else MUTED, bd=0,
                          activebackground=DEEP, activeforeground=CYAN,
@@ -299,8 +298,7 @@ def make_dashboard(app):
                          font=('Segoe UI', 10), cursor='hand2')
     menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
                    activebackground=PANEL_2, activeforeground=CYAN)
-    menu.add_command(label='Voices / Free neural / ElevenLabs', command=app.open_voice_settings)
-    menu.add_command(label='Device readiness', command=app.open_diagnostics)
+    menu.add_command(label='LiveKit project / API keys', command=app.open_livekit_voice)
     menu.add_command(label='Connect GitHub', command=app.connect_github)
     menu.add_command(label='Resume', command=app.resume)
     menu.add_separator()
@@ -309,9 +307,8 @@ def make_dashboard(app):
     more.configure(menu=menu)
     more.pack(side='right', padx=3)
     btn(actions, 'Update', app.update_jarvis, compact=True).pack(side='right', padx=3)
-    btn(actions, 'Sandbox', app.open_sandbox, compact=True).pack(side='right', padx=3)
-    btn(actions, 'Connect AI', app.setup_ai, compact=True).pack(side='right', padx=3)
-    label(actions, '', 9, GREEN, True, bg=DEEP, textvariable=app.ai_status).pack(
+    btn(actions, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(side='right', padx=3)
+    label(actions, 'LIVEKIT · ONLY AI', 9, GREEN, True, bg=DEEP).pack(
         side='right', padx=(4, 9))
 
     body = tk.Frame(root, bg=BG)
@@ -360,14 +357,12 @@ def make_dashboard(app):
 
     label(sidebar, 'WORKSPACE TOOLS', 9, MUTED, True).pack(anchor='w', padx=16, pady=(0, 6))
     sidebar_items = [
-        ('◉   AI Chat', lambda: (app.mode.set('AI chat'), app.entry.focus_set())),
+        ('◉   LiveKit Voice', app.toggle_livekit_voice),
         ('⌕   Web search', lambda: command_search(app, 'google')),
         ('▤   Files & workspace', app.choose),
-        ('✉   Message draft', lambda: (app.mode.set('AI chat'),
-                                      preset_prompt(app.entry, 'Draft a professional message: '))),
         ('▣   Notes', lambda: note_window(app)),
         ('≡   Tasks & shortcuts', lambda: tasks_window(app)),
-        ('◈   AI Toolbox / Schedule', app.open_toolkit),
+        ('⌘   Local commands', lambda: app.entry.focus_set()),
         ('⚙   System info', lambda: system_window(app)),
     ]
     for i, (title, action) in enumerate(sidebar_items):
@@ -415,22 +410,16 @@ def make_dashboard(app):
     app.orb = RotatingOrb(intro, width=166, height=130)
     intro_text = tk.Frame(intro, bg=DEEP)
     intro_text.pack(side='left', fill='both', expand=True, padx=(5, 2), pady=(12, 5))
-    label(intro_text, 'JARVIS / AI CHAT', 16, CYAN, True, bg=DEEP).pack(anchor='w', pady=(0, 7))
-    label(intro_text, 'Your AI desktop companion  ·  Roman Urdu & English',
+    label(intro_text, 'JARVIS / LIVEKIT VOICE', 16, CYAN, True, bg=DEEP).pack(anchor='w', pady=(0, 7))
+    label(intro_text, 'Natural Urdu / English voice · consented cloud sessions',
           9, MUTED, bg=DEEP, wraplength=410, justify='left').pack(anchor='w')
-    model_name = tk.StringVar(value='CLOUD  /  ' + app.ai.model)
+    model_name = tk.StringVar(value='LIVEKIT  /  GPT-Live-1 · marin')
     label(intro_text, '', 9, GREEN, True, bg=DEEP, textvariable=model_name).pack(
         anchor='w', pady=(12, 0))
-    def refresh_model_name():
-        if not root.winfo_exists():
-            return
-        model_name.set('CLOUD  /  ' + str(app.ai.model))
-        root.after(2500, refresh_model_name)
-    root.after(2500, refresh_model_name)
 
     controls = tk.Frame(conversation, bg=DEEP)
     controls.pack(fill='x', padx=13, pady=(0, 8))
-    app.mode.set('AI chat')
+    app.mode.set('Computer commands')
     style = ttk.Style()
     style.theme_use('clam')
     style.configure('Jarvis.TCombobox', fieldbackground=PANEL_2,
@@ -438,13 +427,12 @@ def make_dashboard(app):
                     bordercolor=LINE)
     app.select = ttk.Combobox(controls, textvariable=app.mode,
                               state='readonly', width=18, style='Jarvis.TCombobox',
-                              values=['AI chat', 'Computer commands', 'AI action plan'])
+                              values=['Computer commands'])
     app.select.pack(side='left', padx=2)
-    btn(controls, '+ New chat', app.clear, compact=True).pack(side='right', padx=2)
+    btn(controls, 'Clear activity', app.clear, compact=True).pack(side='right', padx=2)
     btn(controls, 'Desktop mode', lambda: (app.mode.set('Computer commands'),
                                           app.entry.focus_set()), compact=True).pack(side='right', padx=2)
-    btn(controls, 'AI chat', lambda: (app.mode.set('AI chat'), app.entry.focus_set()),
-        compact=True).pack(side='right', padx=2)
+    btn(controls, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(side='right', padx=2)
     motion_button = btn(controls, 'Pause orb', lambda: None, compact=True)
     def toggle_motion():
         running = app.orb.toggle()
@@ -454,21 +442,14 @@ def make_dashboard(app):
 
     # Pack controls from the bottom first, before the expanding conversation.
     # Tk otherwise gives the oversized text area priority and hides Send/Mic.
-    label(conversation, 'Enter: send · Free Mic = old recorder · Talk Live = user-approved session',
+    label(conversation, 'Command box is LOCAL ONLY · Talk Live starts approved LiveKit voice · STOP always available',
           8, MUTED, bg=DEEP).pack(side='bottom', anchor='w', padx=16, pady=(0, 4))
     tk.Label(conversation, textvariable=app.livekit_voice_state, bg=DEEP, fg=CYAN,
              anchor='w', font=('Segoe UI', 9), padx=14).pack(side='bottom', fill='x', pady=(0, 3))
 
     voice_footer = tk.Frame(conversation, bg=DEEP)
     voice_footer.pack(side='bottom', fill='x', padx=13, pady=(0, 8))
-    btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=2)
-    btn(voice_footer, 'Voices', app.open_voice_settings, compact=True).pack(side='left', padx=2)
-    btn(voice_footer, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
-    ttk.Combobox(voice_footer, textvariable=app.voice_language, width=7,
-                 state='readonly', values=['Auto', 'Urdu', 'English']).pack(side='left', padx=3)
-    tk.Checkbutton(voice_footer, text='Speak replies', variable=app.speak_enabled,
-                   bg=DEEP, fg=MUTED, activebackground=DEEP, activeforeground=TEXT,
-                   selectcolor=PANEL_2).pack(side='left', padx=2)
+    btn(voice_footer, 'LiveKit voice settings / API key', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
     tk.Checkbutton(voice_footer, text='Reviewed screen input',
                    variable=app.permission, bg=DEEP, fg=MUTED,
                    activebackground=DEEP, activeforeground=TEXT,
@@ -486,19 +467,19 @@ def make_dashboard(app):
     app.send.pack(side='right', padx=(8, 0))
     app.livekit_primary_button = btn(footer, '● Talk Live', app.toggle_livekit_voice, True)
     app.livekit_primary_button.pack(side='right', padx=3)
-    btn(footer, 'Free Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
+
 
     prompts = tk.Frame(conversation, bg=DEEP)
     prompts.pack(side='bottom', fill='x', padx=15, pady=(0, 5))
-    label(prompts, '✦  QUICK PROMPTS:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
-    for title, prompt in [
-        ('Salam', 'Salam Jarvis, tum kaise ho?'),
-        ('Website idea', 'Mujhe Haseeb Crafts ke liye 3 creative website ideas do.'),
-        ('Video script', 'Haseeb Crafts ke liye 15 second ki professional video script do.'),
-        ('Plan', 'Mujhe aaj ke 3 practical tasks suggest karo.'),
+    label(prompts, '⌘  LOCAL COMMAND EXAMPLES:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
+    for title, command in [
+        ('Calculator', 'calculator kholo'),
+        ('Notepad', 'notepad kholo'),
+        ('Windows', 'windows'),
+        ('Screenshot', 'screenshot'),
     ]:
-        btn(prompts, title, lambda p=prompt: (app.mode.set('AI chat'),
-                                              preset_prompt(app.entry, p)),
+        btn(prompts, title, lambda p=command: (app.mode.set('Computer commands'),
+                                               preset_prompt(app.entry, p)),
             compact=True).pack(side='left', padx=2)
 
     chat_frame = tk.Frame(conversation, bg=PANEL, highlightthickness=1, highlightbackground=LINE)
@@ -527,9 +508,9 @@ def make_dashboard(app):
         anchor='w', padx=13, pady=(13, 11))
     local_row = tk.Frame(status_card, bg=PANEL_2)
     local_row.pack(fill='x', padx=12, pady=(0, 10))
-    label(local_row, '◉  Account AI', 10, CYAN, True, bg=PANEL_2).pack(
+    label(local_row, '◉  LiveKit voice', 10, CYAN, True, bg=PANEL_2).pack(
         anchor='w', padx=9, pady=(9, 3))
-    label(local_row, '', 9, GREEN, bg=PANEL_2, textvariable=app.ai_status,
+    label(local_row, '', 9, GREEN, bg=PANEL_2, textvariable=app.livekit_voice_state,
           wraplength=218, justify='left').pack(anchor='w', padx=9, pady=(0, 8))
     label(status_card, 'Model:', 9, MUTED, True).pack(anchor='w', padx=13)
     label(status_card, '', 9, TEXT, textvariable=model_name,
@@ -539,7 +520,7 @@ def make_dashboard(app):
         anchor='w', padx=13, pady=(8, 2))
     label(status_card, '', 9, TEXT, textvariable=app.status,
           wraplength=212, justify='left').pack(anchor='w', padx=13, pady=(0, 9))
-    btn(status_card, 'Readiness', app.open_diagnostics, compact=True).pack(
+    btn(status_card, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(
         side='left', padx=(12, 4), pady=(0, 11))
     btn(status_card, 'Workspace', app.choose, compact=True).pack(
         side='left', padx=3, pady=(0, 11))
@@ -561,6 +542,6 @@ def make_dashboard(app):
                                padx=12, pady=8, highlightthickness=0)
     app.activity_log.pack(fill='both', expand=True, padx=4, pady=4)
 
-    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   ACCOUNT CHAT + LOCAL CONTROLS  ·  STOP: Ctrl+Alt+F12 or Esc  ·  Screen actions need review',
+    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   LIVEKIT ONLY + REVIEWED LOCAL CONTROLS  ·  STOP: Ctrl+Alt+F12 or Esc',
           8, MUTED, bg=BG).pack(anchor='w', padx=17, pady=(0, 7))
 

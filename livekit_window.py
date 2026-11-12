@@ -28,7 +28,7 @@ class LiveKitVoiceWindow:
         self.busy = False
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
-        self.window.title('Jarvis · Primary LiveKit Voice · GPT-Live-1')
+        self.window.title('Jarvis · LiveKit ONLY Voice · GPT-Live-1')
         self.window.geometry('720x695')
         self.window.minsize(660, 625)
         self.window.configure(bg=BG)
@@ -44,10 +44,10 @@ class LiveKitVoiceWindow:
             'conversation. Same agent and voice you tested; its audio still runs '
             'in a separate LiveKit console for now.\n\n'
             'Important: inference is usage-metered, not unlimited free. '
-            'The free Edge Neural voice is preserved as a fallback. '
+            'No other chatbot or alternate voice mode runs in Jarvis. '
             'Every new cloud session requires your approval; '
             'no automatic voice session starts with Windows.\n\n'
-            'Voice conversation cannot execute desktop actions, '
+            'The typed command box is local, not another chatbot. Voice conversation cannot execute desktop actions, '
             'access private files or use your Windows login.'
         )
         tk.Label(self.window, text=description, bg=PANEL, fg=TEXT,

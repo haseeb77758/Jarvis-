@@ -11,10 +11,8 @@ import shutil
 import subprocess
 import re
 from memory import PreferenceStore
-from voice import Speaker, listen, setup_voice, normalize_command, bundled_model
-from core import Controller, ChatAI, parse_command, parse_plan, MODEL
+from core import Controller, parse_command
 from tools.update_windows import check_update, install_update, installed_commit, UpdateError, GitHubAuthenticationRequired, github_cli, launch_github_login
-from sandbox_chat import SandboxWindow, SandboxSession
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
 BORDER, SURFACE, DEEP = '#253b4d', '#142537', '#0b1521'
@@ -32,26 +30,16 @@ class App:
         self.busy = False
         self.generation = 0
         self.history = []
-        self.sandbox_session = SandboxSession()
-        self.sandbox_window = None
         self.livekit_window = None
         self.livekit_voice_state = tk.StringVar(value='LIVEKIT · OFF · click Talk Live to begin')
         self.sleeping = False
         self.pending = []
         self.last_plan = []
         self.store = PreferenceStore(data_directory)
-        self.speak_enabled = tk.BooleanVar(value=False)
-        self.voice_language = tk.StringVar(value='Auto')
-        from cloud_voice import VoiceSettings
-        self.voice_settings = VoiceSettings(self.store.directory)
-        self.speaker = Speaker(lambda text: self.events.put((self.generation, 'notice', text, '', None)), settings=self.voice_settings)
         self.control = Controller(Path.home(), self.stop, self.store.apps)
-        from account_chat import AccountChat
-        self.chat_bridge = AccountChat()
-        self.ai = ChatAI(bridge=self.chat_bridge, cancel=self.stop)
-        self.speaker.prepare_speech = self.ai.prepare_speech
-        self.mode = tk.StringVar(value='AI chat')
-        self.ai_status = tk.StringVar(value='AI · SIGN IN')
+        # Only LiveKit provides AI conversation. The legacy Puter relay and
+        # other chatbot engines are NOT constructed or connected.
+        self.mode = tk.StringVar(value='Computer commands')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
         self.permission = tk.BooleanVar(value=False)
@@ -60,11 +48,10 @@ class App:
         root.bind('<Escape>', lambda e: self.halt())
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(100, self.poll)
-        root.after(600, self.poll_chat_connection)
         root.after(2400, self.check_updates_silently)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
-        self.say('HASEEB AI', 'Salam! Talk Live ab Jarvis ka primary voice button hai. Cloud voice sirf tumhari ijazat se start hogi. Text AI chat, Free Mic aur reviewed desktop controls alag available hain.')
+        self.say('JARVIS', 'LiveKit only AI mode active. Talk Live dabao aur voice session approve karo. Neeche sirf local reviewed desktop commands likh sakte ho; koi Puter/other AI chatbot connect nahi hoga.')
 
     def global_stop(self):
         import ctypes
@@ -94,15 +81,6 @@ class App:
         item.bind('<Enter>', lambda _e: item.configure(bg=hover) if str(item['state']) != 'disabled' else None)
         item.bind('<Leave>', lambda _e: item.configure(bg=base))
         return item
-
-    def open_voice_settings(self):
-        from voice_settings_ui import VoiceSettingsWindow
-        current = getattr(self, "voice_settings_window", None)
-        if current is not None and not current.closed:
-            current.window.deiconify()
-            current.window.lift()
-            return
-        self.voice_settings_window = VoiceSettingsWindow(self)
 
     def open_livekit_voice(self):
         """Open reusable LiveKit primary-voice settings without starting billing."""
@@ -153,23 +131,13 @@ class App:
             self.say('WAKE', 'Jarvis awake hai. Commands review aur approval ke sath chalengi.')
             self.status.set('Ready · local controls')
 
-    def open_sandbox(self):
-        """Open the chat-only account conversation space, never desktop controls."""
-        if self.sandbox_window is not None and not self.sandbox_window.closed:
-            if self.sandbox_window.window.winfo_exists():
-                self.sandbox_window.window.deiconify()
-                self.sandbox_window.window.lift()
-                self.sandbox_window.entry.focus_set()
-                return
-        self.sandbox_window = SandboxWindow(self.root, self, self.sandbox_session)
-
     def say(self, name, text):
         # Text tags provide real chat styling without converting model text
         # into commands, HTML, or untrusted UI instructions.
         self.log.configure(state='normal')
         self.log.insert('end', name + '\n', 'error' if 'ERROR' in name else 'user' if name == 'YOU' else 'name')
         body_tag = 'user_body' if name == 'YOU' else (
-            'ai_body' if name in {'HASEEB AI', 'HASEEB AI · ACCOUNT CHAT'} else None
+            'ai_body' if name in {'HASEEB AI', 'JARVIS'} else None
         )
         if body_tag:
             self.log.insert('end', str(text) + '\n\n', body_tag)
@@ -182,51 +150,11 @@ class App:
             self.activity_log.insert('end', name + '  ·  ' + str(text)[:240] + '\n\n')
             self.activity_log.configure(state='disabled')
             self.activity_log.see('end')
-        if name in {'RESULT', 'HASEEB AI · ACCOUNT CHAT'} and self.speak_enabled.get():
-            self.speaker.speak(str(text))
 
     def set_busy(self, on):
         self.busy = on
         self.send.configure(state='disabled' if on else 'normal')
         self.status.set('Working…' if on else ('Stopped · Resume to continue' if self.stop.is_set() else 'Ready · local controls'))
-
-    def test_voice(self):
-        if not self.busy and not self.stop.is_set():
-            self.speaker.speak('Jarvis ready. Aap ka desktop assistant tayyar hai.')
-
-    def listen_voice(self):
-        if self.busy or self.stop.is_set():
-            return
-        self.speaker.stop()
-        language = {'Auto': 'auto', 'Urdu': 'ur', 'English': 'en'}[self.voice_language.get()]
-        generation = self.generation
-        notify = lambda text: self.events.put((generation, 'voice_status', text, '', None))
-        self.worker(lambda: listen(self.stop, language, notify), 'voice')
-        self.status.set('Preparing mic · recording ends after a pause (max 6s) · STOP cancels')
-
-    def setup_voice(self):
-        if self.busy or self.stop.is_set():
-            return
-        if bundled_model():
-            self.say('NOTICE', 'Voice model is EXE mein included hai. Mic dabayein; speech ke baad recording auto-stop hogi (max 6s). Pehli recognition CPU par kuch seconds le sakti hai.')
-            return
-        if messagebox.askokcancel('Setup offline voice',
-            'Multilingual Whisper tiny model ek dafa internet se download hoga (approximately 75–100 MB).\nUske baad microphone audio local CPU par process hoti hai. Voice quality mic aur language par depend karegi. Download karein?', parent=self.root):
-            self.worker(lambda: setup_voice(self.stop), 'voice_setup')
-
-    def review_voice(self, text):
-        normalized = normalize_command(text)
-        self.say('HEARD — NOT EXECUTED', text)
-        if normalized.casefold() in {'stop', 'stop jarvis', 'jarvis stop'}:
-            self.halt()
-            return
-        if messagebox.askokcancel('Review voice instruction',
-            'Heard: ' + text + '\n\nRun: ' + normalized + '\n\nCancel karke entry box mein correction kar sakte hain.', parent=self.root):
-            self.submit(normalized)
-        else:
-            self.entry.delete(0, 'end')
-            self.entry.insert(0, normalized)
-            self.entry.focus_set()
 
     def add_app(self):
         if self.busy:
@@ -292,14 +220,6 @@ class App:
     def next_action(self):
         if self.pending and not self.stop.is_set():
             self.approve(self.pending.pop(0), from_plan=True)
-
-    def check_chat(self):
-        if self.root.winfo_exists():
-            self.ai_status.set('AI · CONNECTED' if self.chat_bridge.status() == 'ready' else 'AI · SIGN IN')
-
-    def poll_chat_connection(self):
-        self.check_chat()
-        self.root.after(3000, self.poll_chat_connection)
 
     def check_updates_silently(self):
         """Background notification only: never install code without approval."""
@@ -376,16 +296,8 @@ class App:
         self.worker(lambda: install_update(Path(__file__).resolve().parent, sha), 'update_apply')
 
     def setup_ai(self):
-        """Account sign-in via the user's browser; no API-key or model download."""
-        if messagebox.askokcancel('Connect account AI',
-            'Browser mein Puter account sign-in hoga. Chat messages, recent context aur saved reply preferences '
-            'Puter/model provider ko bheje jayenge. Free allowance aur limits apply hoti hain. '
-            'Koi paid upgrade automatic nahi. Connection tab khula rakhein. Connect karein?', parent=self.root):
-            try:
-                webbrowser.open(self.chat_bridge.start())
-                self.say('AI CONNECTION', 'Browser mein disclosure tick karke Sign in & connect dabayein, phir yahan chat karein. API key nahi chahiye.')
-            except Exception:
-                self.say('ERROR', 'Browser connection start nahi hui. Jarvis restart karke Connect AI dobara try karein.')
+        """Compatibility entry point: direct legacy callers to LiveKit only."""
+        return self.open_livekit_voice()
 
     def choose(self):
         if self.busy:
@@ -402,17 +314,12 @@ class App:
         self.log.configure(state='normal')
         self.log.delete('1.0', 'end')
         self.log.configure(state='disabled')
-        self.say('HASEEB AI', 'Nayi conversation shuru.')
+        self.say('JARVIS', 'Local activity cleared. LiveKit voice session is separate.')
 
     def halt(self):
         livekit = getattr(self, 'livekit_window', None)
         if livekit is not None and not livekit.closed:
             livekit.stop()  # Global STOP also ends the billable voice process.
-        sandbox = getattr(self, 'sandbox_window', None)
-        if sandbox is not None and not sandbox.closed:
-            sandbox.stop()
-        if hasattr(self, 'speaker'):
-            self.speaker.stop()
         self.stop.set()
         self.generation += 1
         self.pending.clear()
@@ -425,14 +332,6 @@ class App:
             return
         self.stop.clear()
         self.status.set('Ready · local controls')
-
-    def send_chat(self, text):
-        """Chat must never be interpreted as a privileged desktop command."""
-        messages = self.history + [{'role': 'user', 'content': text}]
-        self.worker(
-            lambda: self.ai.ask(messages, False, self.store.facts, self.store.apps),
-            'ai', text
-        )
 
     def submit(self, value=None):
         if isinstance(value, str) and value.strip().casefold() in {'stop', 'jarvis stop', 'stop jarvis'}:
@@ -469,13 +368,10 @@ class App:
             return
         self.entry.delete(0, 'end')
         self.say('YOU', text)
-        if self.mode.get() == 'AI chat':
-            self.send_chat(text)
-            return
         try:
             if text.casefold().startswith('remember:'):
                 fact = text.split(':', 1)[1].strip()
-                if messagebox.askokcancel('Save preference locally', fact + '\n\nYeh connected AI replies ke liye cloud ko bheji ja sakti hai. Passwords ya secrets save na karein.', parent=self.root):
+                if messagebox.askokcancel('Save local preference', fact + '\n\nYeh sirf PC par save hogi. Isay LiveKit ya kisi chatbot ko automatically nahi bheja jayega.', parent=self.root):
                     self.store.remember(fact)
                     self.say('RESULT', 'Preference saved. Memory button se view/remove kar sakte hain.')
                 return
@@ -495,12 +391,8 @@ class App:
             if action:
                 self.last_plan = [action]
                 self.approve(action)
-            elif self.mode.get() == 'Computer commands':
-                self.say('COMMAND HELP', 'windows · inspect: Window title · focus: Window title · wait: Window title\nbutton: Window title | Exact button name\nwrite: Window title | Hello Haseeb · press: Window title | ctrl+s\nremember: reply in Roman Urdu · shortcut: saved name\nchrome kholo · notepad kholo · calculator kholo · edge kholo · explorer kholo\nopen https://example.com\nfolder banao: Client Work\nfind: invoice\nnote: client meeting Monday\nscreenshot\nvolume up · volume down · volume mute · play pause · next song · previous song\nyoutube kholo · whatsapp kholo · google par search karo: website design\nwhatsapp draft: Hello (draft only — never auto sends)\ngoogle: website design · youtube: python tutorial · kitne baje hain\nScreen input: type: Hello Haseeb · key: ctrl+s · click: 300,400\nAccount chat ke liye AI chat / AI action plan select karein.')
             else:
-                planning = self.mode.get() == 'AI action plan'
-                messages = [{'role': 'user', 'content': text}] if planning else self.history + [{'role': 'user', 'content': text}]
-                self.worker(lambda: self.ai.ask(messages, planning, self.store.facts, self.store.apps), 'plan' if planning else 'ai', text)
+                self.say('COMMAND HELP', 'Sirf LiveKit voice se AI conversation hogi. Is box mein local desktop commands dein: calculator kholo, notepad kholo, windows, screenshot, volume up, note: meeting, ya folder banao: Client Work. Unknown text ko kisi chatbot par nahi bheja jayega.')
         except Exception as exc:
             self.say('ACTION ERROR', str(exc))
 
@@ -559,10 +451,6 @@ class App:
                     if generation == self.generation and value[1]:
                         self.status.set('GitHub update available · Update Jarvis')
                     continue
-                if kind == 'voice_status':
-                    if generation == self.generation and not self.stop.is_set():
-                        self.status.set(value)
-                    continue
                 if kind == 'notice':
                     self.say('NOTICE', value)
                     continue
@@ -576,8 +464,6 @@ class App:
                     self.say('ERROR', issue)
                     if kind in {'update_check', 'update_apply'} and 'PRIVATE GITHUB ACCESS' in issue:
                         self.say('UPDATE', 'Connect GitHub dabayein. GitHub repo private hai; browser sign-in required hai.')
-                elif kind == 'voice':
-                    self.review_voice(value)
                 elif kind == 'screenshot':
                     self.show_screen(value)
                 elif kind == 'update_check':
@@ -588,20 +474,6 @@ class App:
                     messagebox.showinfo('Jarvis update installed',
                                         value + '\\n\\nClose Jarvis and reopen the Desktop shortcut to activate it.',
                                         parent=self.root)
-                elif kind == 'voice_setup':
-                    self.say('VOICE SETUP', value)
-                    self.status.set('Voice model ready · press Mic to test')
-                elif kind == 'ai':
-                    self.history = (self.history + [{'role': 'user', 'content': user}, {'role': 'assistant', 'content': value}])[-8:]
-                    self.say('HASEEB AI · ACCOUNT CHAT', value)
-                elif kind == 'plan':
-                    try:
-                        actions = parse_plan(value)
-                        self.say('AI PLAN — NOT EXECUTED', json.dumps(actions, ensure_ascii=False, indent=2))
-                        self.last_plan = actions
-                        self.pending = actions.copy()
-                    except Exception as exc:
-                        self.say('PLAN ERROR', str(exc))
                 else:
                     self.say('RESULT', value)
                 if not issue and self.pending and not self.busy:
@@ -649,11 +521,8 @@ class App:
     def close(self):
         if self.livekit_window is not None and not self.livekit_window.closed:
             self.livekit_window.close()
-        if self.sandbox_window is not None and not self.sandbox_window.closed:
-            self.sandbox_window.close()
         self.speaker.stop()
         self.stop.set()
-        self.chat_bridge.close()
         self.root.destroy()
 
 

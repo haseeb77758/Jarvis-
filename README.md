@@ -1,129 +1,85 @@
-# JARVIS — Haseeb AI for Windows 11
+# JARVIS — LiveKit-only AI for Windows 11
 
 Created by **Haseeb Crafts**.
 
-Jarvis combines a native animated dashboard, account-based AI chat, opt-in voice,
-local notes/memory and reviewed Windows controls. **No API key or local language
-model is required for chat.** Internet, a Puter account sign-in and available
-account allowance are required. This is limited free usage, not unlimited free
-inference. The app does not buy credits or upgrade plans.
+**The only active AI conversation provider is LiveKit Inference
+(`openai/gpt-live-1`, `marin` voice).** Jarvis no longer launches a Puter
+account relay, a sandbox chatbot, local Ollama, alternate AI chat providers,
+AI-generated action plans or a second voice-chat provider. The dashboard
+retains its animated orb, local notes, tasks, direct desktop commands,
+screen-action review, emergency STOP and GitHub updates.
 
-## Start on Windows
+## Start LiveKit conversation
 
-Install official Python 3.12, extract the complete source ZIP, and open
-**START-JARVIS-GUI.pyw** with Python. Approve the dependency installation, wait for
-runtime checks, and use the installed **HASEEB AI - Jarvis** shortcut. See
-[the local install guide](LOCAL-TEST-NO-ID.md). Existing preferences are preserved.
+1. On Windows 11, open Jarvis and use **Update Jarvis**; restart after a
+   successfully verified update.
+2. Choose **LiveKit setup** and install/repair the separately managed LiveKit
+   voice environment if it is not already installed.
+3. In **LiveKit setup**, open your private credentials file and enter your own
+   `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`.
+   Obtain these from [LiveKit Cloud](https://cloud.livekit.io/). Keep your
+   secret private; never put it in GitHub or a chat.
+4. Click **Talk Live** and explicitly approve the metered Cloud session.
+   The proven LiveKit voice console opens separately while Jarvis displays
+   session status and its remaining duration.
+5. Click **End Live Voice** / STOP to end the session. There is a selectable
+   5/10/15-minute local time cap, **not a cash-spending cap**.
 
-Unsigned EXE/CMD distributions may be blocked by Windows Smart App Control. Keep
-Windows security enabled. See [Smart App Control](SMART-APP-CONTROL.md) and the
-[trusted release guide](TRUSTED-WINDOWS-RELEASE.md). A successful CI build does not
-make an unsigned executable trusted or prove installation on your laptop.
+**This is usage-metered cloud inference, not an unlimited free AI.** Check
+[LiveKit pricing](https://livekit.com/pricing/inference) and project usage.
+No billable voice session is started on Jarvis launch, update, or opening
+the settings window. AI-Coustics remains opt-in.
 
-## Connect AI — account sign-in, no API key
+See [LiveKit setup, keys, privacy and safety](LIVEKIT-VOICE.md).
 
-1. Open Jarvis and click **Connect AI**.
-2. Accept opening the connection page. In the browser, tick the chat-data
-   disclosure and click **Sign in & connect**.
-3. Sign in to your own Puter account and return to the desktop dashboard.
-4. Keep the connection tab open while using main chat, Sandbox or AI action plans.
-5. Click Disconnect in that tab to sign out, or close Jarvis to stop the relay.
+## Local desktop commands (not AI chat)
 
-Puter provides a free monthly allowance, subject to account/model limits. Exact
-message counts vary with model, context and reply length. Use a free account and
-check its usage view. Existing paid account entitlements are controlled by the
-provider; Jarvis does not automatically subscribe, purchase or switch providers.
-Quota errors are shown in chat. [Connection details and limits](ACCOUNT-CHAT.md).
+The text box now accepts *reviewed local commands only*. Typed general
+questions are **never forwarded to an alternate chatbot** and are answered
+with a local command-help notice. Examples:
 
-Chat messages, recent context and saved response preferences are sent to
-Puter/model providers after opt-in. User-selected code review sends the selected
-file text only after its additional disclosure. No automatic screenshots or raw
-microphone audio are attached. Authentication is managed by the browser SDK;
-Jarvis never asks for an account API key, password or manually copied token.
-
-The previous local chat runtime is retired: no service checks, launches, model
-pulls or chat requests use it. Already-installed software/model files on your PC
-are not uninstalled or deleted. Voice recognition still uses a separate small
-local transcription model.
-
-## Free voice replies
-
-Open **Voices → Edge Neural (free online)**, choose **Asad/Uzma** for Urdu or
-Ryan/Sonia/Guy/Jenny for English, accept sending spoken text, save and test.
-Enable **Speak replies**. No API key is required by this client, but internet and
-service availability are required. Urdu script gives clearer Urdu pronunciation;
-Roman Urdu replies now use a **local Roman Urdu → Urdu script** speech copy by default; text chat stays Roman Urdu. This removes the separate AI conversion request, though unusual names and mixed English words may still sound incorrect. The same free neural service is used; live latency depends on the provider and network. Incoming MP3 audio is now decoded and played while subsequent audio is still arriving. [Voice setup](FREE-VOICES.md).
-
-Windows speech is available offline. The previously added ElevenLabs provider is
-optional and requires its own key/credits; it is never a fallback for free chat or
-free speech. Do not select it for free-only usage. [Optional setup](ELEVENLABS-VOICE.md).
-
-Mic recording starts only after pressing **Mic**, ends after a short speech pause
-(with a six-second hard limit), transcribes locally, and asks for transcript review
-before running a command. A noisy room can prevent early stopping; the six-second
-limit still applies. The readiness/response timings are shown in the status bar.
-There is no always-on recording. Use **Readiness** for device/configuration hints;
-a live device test is needed to verify permission, voice quality and audible output.
-
-## Primary LiveKit realtime voice (user-approved, usage-metered)
-
-The main chat bar's **Talk Live** button opens a user-approved, independent voice console based
-on the user's uploaded `training-2057.zip`. It uses GPT-Live-1 through
-LiveKit Inference. Unlike the normal free speech path, this model requires
-LiveKit Cloud credentials and **can incur usage charges**. The button shows
-explicit confirmation before launching cloud audio; the dependencies install
-only after separate permission. It does **not** connect to Jarvis desktop
-controls or ordinary chat history. The original free Mic/Edge voices remain available as fallbacks; **Talk Live** is now the primary voice entry. Sessions are not launched automatically, require explicit cost consent, and have a user-selectable 5/10/15-minute local stop timer (not a billing cap).
-See [LiveKit Voice setup and safety](LIVEKIT-VOICE.md).
-
-## Reviewed desktop controls
-
-| Command | Supported action |
+| Command | Local action |
 | --- | --- |
-| `chrome kholo`, `notepad kholo`, `calculator kholo` | Launch a supported installed app |
-| `windows`, `inspect: Notepad` | List/inspect named app windows |
-| `focus: Notepad`, `wait: Notepad` | Target an exact titled window |
-| `write: Notepad \| Hello Haseeb` | Reviewed targeted text input |
-| `button: Calculator \| Nine` | Invoke an exact accessible control after inspection |
-| `folder banao: Client Work`, `note: Meeting Monday` | Create workspace folder/note without overwriting |
-| `find: invoice`, `screenshot` | Bounded workspace filename search or local screenshot preview |
-| `volume up`, `play pause`, `youtube kholo` | Allowlisted media/site controls |
-| `remember: Reply in short Roman Urdu`, `shortcut: work` | Explicit local preferences/reviewed saved plans |
+| `calculator kholo`, `notepad kholo` | Launch an allowlisted app |
+| `windows`, `inspect: Notepad` | List and inspect accessible windows |
+| `button: Calculator \\| Nine` | Reviewed accessible control invocation |
+| `folder banao: Client Work`, `note: Meeting Monday` | Create local files in a chosen workspace |
+| `screenshot`, `find: invoice` | Screenshot preview and bounded local search |
+| `volume up`, `play pause` | Allowlisted system controls |
+| `shortcut: name` | Run an existing saved shortcut with review |
 
-Select **Computer commands** for direct controls or **AI action plan** for a
-proposed bounded plan. AI output never directly calls desktop functions. Each
-plan is validated, screen input requires opt-in, and actions are reviewed.
-Unsupported requests, elevated/UAC windows, arbitrary shell execution and
-unrestricted autonomous PC operation are not supported.
+Local desktop commands **do not come from the LiveKit voice agent**: the voice
+agent currently has *no* desktop-control tools or filesystem access. You
+cannot voice-control Windows apps through LiveKit until a separate,
+permission-reviewed tool integration is developed.
 
-STOP: app button, app-focused Esc, global Ctrl+Alt+F12 when registered, or the
-PyAutoGUI corner fail-safe during input. Cloud requests already submitted can
-still consume account allowance, but cancelled/late answers are discarded.
+Screen input requires user permission and individual review. STOP via the
+app button, focused Esc or global Ctrl+Alt+F12 (if registered).
+Never disable Windows security or enable unrestricted shell commands.
 
-## Network and packaging
+## Installation and updates
 
-Connect AI starts a temporary authenticated relay on **127.0.0.1** at a random
-port. It exposes only chat request/response/connection endpoints, not file access
-or desktop-control routes. No public listener, remote-control tunnel, autostart
-or background monitoring is installed. [Toolkit](JARVIS-TOOLKIT.md).
+Install official Python 3.12, extract the reviewed
+`Jarvis-Source-Windows.zip` from the authenticated repository's GitHub Actions
+artifacts and open `START-JARVIS-GUI.pyw`. The installer uses a per-user venv
+and keeps local preferences and LiveKit credentials across updates. See
+[Windows installation](LOCAL-TEST-NO-ID.md) and
+[updating Jarvis](UPDATE-JARVIS-NO-CODE.md).
 
-The separate **web/** browser edition also supports Puter sign-in with no desktop
-bridge. Preview with `python -m http.server 8000 --directory web`. Private GitHub
-Codespaces/Pages and build artifacts depend on your GitHub account/plan settings;
-no repository visibility, paid plan or public deployment is changed automatically.
+The old chatbot and free-TTS source files are intentionally left in the
+**reviewed source bundle solely for compatibility with already-installed
+updaters and their offline migration tests**. They are not imported,
+initialized, connected or exposed as providers by the native Jarvis UI.
+No old Puter account service is automatically connected; Jarvis does not
+uninstall unrelated Windows software or delete model files on your computer.
 
-Actions → **Windows test and build** produces the source archive and unsigned
-Windows executable. Source and dependency notices are included; free speech
-client source/license/rebuild information is in THIRD-PARTY-NOTICES.txt.
+## Verification
 
-## Validation
+Windows CI validates the desktop dashboard, legacy-disabled runtime behavior,
+safe local controls, source ZIP, installer and Windows EXE startup without
+using your personal LiveKit credentials. These tests **do not prove** real
+LiveKit account connectivity, voice quality, latency or billable usage on your PC.
+You have to consent to and run a live device test yourself.
 
-`python -m unittest discover -s tests -v` checks native behavior and boundaries.
-Windows CI tests UI geometry, reviewed synthetic window input, installation,
-voice codecs and EXE startup. Browser CI tests the real loopback relay with
-explicitly mocked Puter sign-in/model replies, including quotas and STOP.
-
-A passing mock test does **not** verify real account sign-in, account allowance,
-or a real model reply. Those need your signed-in connection page on the target
-PC. Live free-speech sample generation is a separate optional CI step; inspect
-its own result before calling it verified. [Desktop smoke guide](DESKTOP-FIRST.md).
+Unsigned development EXEs may be blocked by Windows Smart App Control; keep
+Defender and Smart App Control enabled.

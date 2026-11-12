@@ -59,7 +59,7 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(results[0].state, 'Unavailable')
         self.assertEqual(results[1].state, 'Device found')
 
-    def test_voice_setup_completion_preserves_chat_mode_and_ai_status(self):
+    def test_retired_voice_setup_result_does_not_start_another_chatbot(self):
         host = SimpleNamespace(events=queue.Queue(), generation=3, stop=threading.Event(),
                                root=Mock(), poll=Mock(), set_busy=Mock(), say=Mock(),
                                ai_status=Mock(), mode=Mock(), status=Mock(), pending=[], busy=False)
@@ -67,8 +67,8 @@ class ReadinessTests(unittest.TestCase):
         App.poll(host)
         host.ai_status.set.assert_not_called()
         host.mode.set.assert_not_called()
-        host.say.assert_called_once_with('VOICE SETUP', 'Voice model ready')
-        host.status.set.assert_called_once_with('Voice model ready · press Mic to test')
+        host.say.assert_called_once_with('RESULT', 'Voice model ready')
+        host.status.set.assert_not_called()
 
     def test_cancelled_voice_setup_does_not_claim_readiness(self):
         host = SimpleNamespace(events=queue.Queue(), generation=4, stop=threading.Event(),

@@ -1,75 +1,61 @@
-# Haseeb AI Jarvis — istemal ka tareeqa
+# HASEEB AI / JARVIS — LiveKit-only voice assistant
 
 Created by Haseeb Crafts.
 
-## Install / update
+## Ab sirf LiveKit chatbot / voice AI hai
 
-Official Python 3.12 install karo, complete source ZIP extract karo aur
-START-JARVIS-GUI.pyw ko Python se kholo. Dependency installation approve karke
-checks complete hone do. Phir Desktop shortcut se Jarvis kholo. Pehle se installed
-app mein Update ke baad close/reopen karo. Windows Security ko off nahi karna;
-unsigned EXE block ho sakti hai. LOCAL-TEST-NO-ID.md aur SMART-APP-CONTROL.md dekho.
+Jarvis mein ab **Puter Connect AI, Sandbox, AI Chat, Ollama aur alternate
+voice-chat UI** nahi chalengi. Jarvis ke main dashboard par **Talk Live**
+hi ek AI conversation option hai: `GPT-Live-1`, `marin` voice.
+AI agent abhi alag LiveKit console mein bolta hai; Jarvis orb aur
+dashboard session status/STOP ko control karte hain.
 
-## Chat free allowance par, API key ke baghair
+**Important:** LiveKit GPT-Live-1 usage-based billed provider hai. Free
+unlimited nahi. Session har dafa tumhari permission se start hogi.
 
-1. Jarvis mein **Connect AI** dabao.
-2. Browser page par chat-data checkbox tick karo aur **Sign in & connect** dabao.
-3. Apne Puter account se sign in karo, phir Jarvis desktop mein chat karo.
-4. Connection tab khula rakho. Band ho to Connect AI se dobara kholo.
-5. **Disconnect** se account sign out hota hai. Jarvis close karne par relay band.
+## Windows par chalane ke steps
 
-Puter ki free monthly allowance tak chat chal sakti hai. Unlimited free guarantee
-nahi. Exact messages ka number model, context aur reply ki lambai se badalta hai.
-Free account use karo aur usage dekho; Jarvis koi subscription, credit purchase ya
-paid provider switch automatic nahi karta. Limit aaye to notice dikhata hai.
-Internet zaroor chahiye. Account ki apni billing/paid entitlement provider control
-karta hai. ACCOUNT-CHAT.md mein tafseel hai.
+1. Jarvis mein **Update Jarvis** chalao, verification pass hone par restart karo.
+2. **LiveKit setup** kholo. Pehli dafa ho to **Install / repair LiveKit voice tools**
+   click karo.
+3. `https://cloud.livekit.io/` par apna project kholo, **Manage API keys**
+   se project key aur secret lo; project ka `wss://...` URL bhi copy karo.
+4. **Open LOCAL API key + secret file** mein ye values PC par enter karo:
+   `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`. Secret chat ya
+   screenshot mein expose mat karna.
+5. Main dashboard par **Talk Live** click karo. Billing/usage prompt approve
+   karo. Voice session shuru hogi.
+6. **End Live Voice**, STOP ya Ctrl+Alt+F12 se session band karo.
+   5, 10 ya 15 minute local auto STOP milta hai; ye paison ki cap nahi.
 
-Ab chat ke liye local language-model runtime install, service start ya GBs ka
-model download nahi karna. Pehle se PC par installed software/models delete nahi
-kiye jate. Notes, preferences, shortcuts aur supported desktop commands local hain.
+Detailed help: [LIVEKIT-VOICE.md](LIVEKIT-VOICE.md).
 
-## Data aur controls
+## Purane chatbot ka kya hua?
 
-Chat/recent context aur saved reply preferences account model provider ko bheji
-jati hain. Selected code review mein file ka text additional approval ke baad
-send hota hai. Passwords/private keys wali file select na karo. Screenshots ya raw
-mic audio automatically upload nahi hoti. Native app ko Puter account password
-ya manually copied API token nahi dena.
+Purana Puter browser sign-in, Sandbox, AI action plans, free Edge TTS aur
+Whisper mic **Jarvis native dashboard se remove/disable** hain. Koi
+background alternate chatbot connect nahi hoga. Code ke kuch purane
+compatibility modules sirf installed older updater ke verification ke liye
+source mein hain, use karne ke liye visible nahi hain. Jarvis Windows
+se unrelated installed software/data khud se delete nahi karta.
 
-**Computer commands** mode mein `notepad kholo`, `calculator kholo`, `windows`,
-`inspect: Notepad`, `note: meeting Monday` aur `volume up` jaisay supported kaam
-AI allowance ke baghair chalte hain. **AI action plan** mein generated plan pehle
-validate/review hota hai. Screen input permission aur har action ka review rehta
-hai. STOP/Esc ya global Ctrl+Alt+F12 (jab registered ho) se rok sakte ho.
+## Local desktop commands alag hain
 
-## Voice
+Text input ab **local desktop command box** hai, general AI chat nahi.
+Yahan `calculator kholo`, `notepad kholo`, `windows`,
+`inspect: Notepad`, `screenshot`, `volume up`, `note: meeting`
+jaise supported commands chalenge. Unknown text kisi remote AI ko nahi
+bheja jayega; local help milegi.
 
-**Voices → Edge Neural (free online)** mein Asad/Uzma Urdu aur English voices
-available hain. Disclosure tick, Save, Test voice aur Speak replies on karo.
-Internet chahiye, API key nahi. Voices mein FAST Urdu accent default on hai: Roman Urdu text local taur par Urdu script mein convert ho kar neural voice ko jata hai. Isse second AI call ka delay bachta hai. English brand names kabhi ghalat parh sakte hain. Audio aate hi stream playback hoti hai, lekin network delay rahega.
-Windows voice offline option hai. ElevenLabs paid/key wala optional provider free
-flow ka fallback nahi; free-only use ke liye usay select nahi karna.
+Screen click/type par permission aur review zaroori rehta hai. **LiveKit
+voice agent abhi desktop apps control nahi karta**: voice se Windows
+commands execute karne ke liye alag safe tool integration chahiye.
 
-Mic sirf button dabane par recording shuru karta hai. Aap bol kar rukte hain
-to recording lagbhag 0.7 second ki khamoshi ke baad khud band ho jati hai,
-maximum 6 seconds. Noisy room mein 6 seconds tak ja sakti hai. Transcription
-local hoti hai; transcript review ke baad instruction chalti hai. Voice model
-first-time download ho sakta hai; ye chatbot language model se alag hai.
+## Installation
 
-## LiveKit realtime voice (optional, billed)
+Official Python 3.12 aur Windows 11 chahiye. Complete source ZIP extract
+karke `START-JARVIS-GUI.pyw` chalao. Windows Defender/Smart App Control
+disable mat karo. Existing user memory, apps aur LiveKit keys safe rehengi.
 
-Main dashboard par **Talk Live** ab primary voice button hai. **LiveKit setup** alag settings kholta hai aur **Free Mic** purana free fallback hai. Yeh user ke
-`training-2057.zip` par based independent voice-console test hai. GPT-Live-1
-LiveKit Cloud par billed model hai; **fully free ya unlimited nahi**.
-LiveKit project credentials apne PC ke private file mein rakhni hongi,
-GitHub ya chat mein nahi. Button se separate setup consent aur har voice
-session se pehle usage/billing confirmation milta hai. Cloud voice auto-start nahi hoti. 5/10/15-minute auto STOP available hai; yeh cash spending cap nahi. LiveKit Cloud keys https://cloud.livekit.io/ se project settings mein generate karo. Keys sirf PC ki local file mein rakhna. Existing free voice
-aur desktop-command review bilkul alag rahenge. Steps: [LIVEKIT-VOICE.md](LIVEKIT-VOICE.md).
-
-## Target-PC check
-
-App kholo → Connect AI/sign-in → sawal bhejo → jawab/voice test karo → STOP test
-karo → browser tab disconnect karke dekho AI SIGN IN dikhata hai. Desktop controls
-alag check karo. CI mocked account tests actual sign-in ya model quality ka proof
-nahi. Browser/provider ki apni data retention aur usage policies apply hoti hain.
+CI tests passing hone ka matlab actual PC par LiveKit Cloud connection
+test nahi hua; apni credentials ke saath voice session tumhe test karni hai.
