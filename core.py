@@ -480,9 +480,9 @@ class LocalAI:
         )
 
 def setup_local_model(stop, model=MODEL):
+    """Download only an explicitly allowed local model with the Ollama app."""
     if model not in CHAT_MODELS:
         raise ValueError('Only approved local Ollama chat models are supported.')
-    """Download only the named local model with an existing official Ollama install."""
     if os.name != 'nt':
         raise RuntimeError('Model setup button Windows ke liye hai.')
     executable = ollama_binary()
