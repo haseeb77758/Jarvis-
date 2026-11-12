@@ -107,7 +107,7 @@ class LiveKitVoiceWindow:
 
         self.setup_button = self._button('Advanced 1 · Install / repair local Python voice', self.install)
         self.setup_button.pack(fill='x', padx=25, pady=5)
-        self.credentials_button = self._button('Advanced 2 · Edit local Python API key + secret file',
+        self.credentials_button = self._button('One-time LiveKit project keys (direct voice + advanced)',
                                                self.edit_credentials)
         self.credentials_button.pack(fill='x', padx=25, pady=5)
         self.local_start_button = self._button(
