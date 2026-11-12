@@ -53,7 +53,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         process = Mock()
         process.poll.return_value = None
         with patch.object(lk.os, 'name', 'nt'), \
-                patch.object(lk, 'agent_path', return_value=Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'), \
+                patch.object(lk, 'agent_path', return_value=Path(__file__).resolve().parents[1] / 'livekit_agent.py'), \
                 patch('livekit_bridge.subprocess.Popen', return_value=process) as launch:
             session = lk.LiveKitConsole()
             session.start(consent=True)
