@@ -454,14 +454,16 @@ def make_dashboard(app):
 
     # Pack controls from the bottom first, before the expanding conversation.
     # Tk otherwise gives the oversized text area priority and hides Send/Mic.
-    label(conversation, 'Enter: send  ·  Shift+Enter: new line  ·  No always-on microphone',
-          8, MUTED, bg=DEEP).pack(side='bottom', anchor='w', padx=16, pady=(0, 6))
+    label(conversation, 'Enter: send · Free Mic = old recorder · Talk Live = user-approved session',
+          8, MUTED, bg=DEEP).pack(side='bottom', anchor='w', padx=16, pady=(0, 4))
+    tk.Label(conversation, textvariable=app.livekit_voice_state, bg=DEEP, fg=CYAN,
+             anchor='w', font=('Segoe UI', 9), padx=14).pack(side='bottom', fill='x', pady=(0, 3))
 
     voice_footer = tk.Frame(conversation, bg=DEEP)
     voice_footer.pack(side='bottom', fill='x', padx=13, pady=(0, 8))
     btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=2)
     btn(voice_footer, 'Voices', app.open_voice_settings, compact=True).pack(side='left', padx=2)
-    btn(voice_footer, 'LiveKit Voice', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
+    btn(voice_footer, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
     ttk.Combobox(voice_footer, textvariable=app.voice_language, width=7,
                  state='readonly', values=['Auto', 'Urdu', 'English']).pack(side='left', padx=3)
     tk.Checkbutton(voice_footer, text='Speak replies', variable=app.speak_enabled,
@@ -482,7 +484,9 @@ def make_dashboard(app):
     app.entry.bind('<Return>', lambda event: on_return(event, app.submit))
     app.send = btn(footer, '➤  SEND', app.submit, True)
     app.send.pack(side='right', padx=(8, 0))
-    btn(footer, 'Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
+    app.livekit_primary_button = btn(footer, '● Talk Live', app.toggle_livekit_voice, True)
+    app.livekit_primary_button.pack(side='right', padx=3)
+    btn(footer, 'Free Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
 
     prompts = tk.Frame(conversation, bg=DEEP)
     prompts.pack(side='bottom', fill='x', padx=15, pady=(0, 5))

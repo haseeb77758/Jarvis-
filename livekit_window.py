@@ -1,16 +1,24 @@
-"""Optional LiveKit voice mode UI. Does not replace the free Jarvis voice."""
+"""Jarvis primary realtime voice settings and session controls.
+
+The verified LiveKit console agent is preserved. Dashboard voice is its
+persistent one-click entry point; cloud sessions always require consent.
+"""
 import os
 import subprocess
 import threading
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
+import webbrowser
 
 from livekit_bridge import (
     LiveKitConsole, LiveKitSetupError, configured, create_credentials_template,
-    install_optional,
+    environment_python, install_optional,
 )
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
+LIVEKIT_DASHBOARD = 'https://cloud.livekit.io/'
+LIVEKIT_KEYS_GUIDE = 'https://docs.livekit.io/reference/api/projects/keys/'
+LIVEKIT_PRICING = 'https://livekit.com/pricing/inference'
 
 
 class LiveKitVoiceWindow:
@@ -20,56 +28,75 @@ class LiveKitVoiceWindow:
         self.busy = False
         self.console = LiveKitConsole()
         self.window = tk.Toplevel(host.root)
-        self.window.title('Jarvis · LiveKit realtime voice (optional)')
-        self.window.geometry('700x560')
-        self.window.minsize(640, 500)
+        self.window.title('Jarvis · Primary LiveKit Voice · GPT-Live-1')
+        self.window.geometry('720x695')
+        self.window.minsize(660, 625)
         self.window.configure(bg=BG)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
         self.status = tk.StringVar(
-            master=self.window, value='Cloud voice is OFF · no charges started.'
+            master=self.window, value='Cloud voice OFF · no session running.'
         )
 
-        tk.Label(self.window, text='LIVEKIT · REALTIME VOICE', font=('Segoe UI', 18, 'bold'),
-                 bg=BG, fg=CYAN).pack(anchor='w', padx=22, pady=(20, 8))
+        tk.Label(self.window, text='JARVIS · REALTIME VOICE', font=('Segoe UI', 18, 'bold'),
+                 bg=BG, fg=CYAN).pack(anchor='w', padx=22, pady=(18, 8))
         description = (
-            'Tumhare training-2057 LiveKit agent ka Jarvis version. This uses GPT-Live-1 '
-            'and Marin voice for natural, interruptible conversations. It runs in a '
-            'separate Windows voice console, NOT inside the main Mic/chat window.\n\n'
-            'IMPORTANT: LiveKit Cloud inference is usage-billed. This is not an '
-            'unlimited free voice service. No subscription or payment is initiated '
-            'by Jarvis; the model uses your own configured LiveKit Cloud account. '
-            'Regular Jarvis free voice and desktop review safeguards stay unchanged.\n\n'
-            'This test has no access to desktop control, files or passwords.'
+            'Primary voice: LiveKit GPT-Live-1 / marin. Natural, interruptible '
+            'conversation. Same agent and voice you tested; its audio still runs '
+            'in a separate LiveKit console for now.\n\n'
+            'Important: inference is usage-metered, not unlimited free. '
+            'The free Edge Neural voice is preserved as a fallback. '
+            'Every new cloud session requires your approval; '
+            'no automatic voice session starts with Windows.\n\n'
+            'Voice conversation cannot execute desktop actions, '
+            'access private files or use your Windows login.'
         )
         tk.Label(self.window, text=description, bg=PANEL, fg=TEXT,
-                 font=('Segoe UI', 10), justify='left', wraplength=620,
-                 padx=17, pady=15).pack(fill='x', padx=20, pady=6)
+                 font=('Segoe UI', 10), justify='left', wraplength=660,
+                 padx=17, pady=13).pack(fill='x', padx=20, pady=4)
 
         self.noise_enhancement = tk.BooleanVar(master=self.window, value=False)
         tk.Checkbutton(
             self.window,
-            text='AI-Coustics noise enhancement (optional, can cost extra)',
+            text='AI-Coustics noise enhancement (optional · may cost extra)',
             variable=self.noise_enhancement, bg=BG, fg=MUTED, selectcolor=PANEL,
             activebackground=BG, activeforeground=TEXT,
-        ).pack(anchor='w', padx=26, pady=(3, 0))
+        ).pack(anchor='w', padx=26, pady=(5, 3))
 
-        self.setup_button = self._button('1  Install separate LiveKit voice tools',
-                                         self.install)
-        self.setup_button.pack(fill='x', padx=25, pady=6)
-        self.credentials_button = self._button('2  Open private LiveKit credentials file',
+        cap = tk.Frame(self.window, bg=BG)
+        cap.pack(fill='x', padx=25, pady=(2, 7))
+        tk.Label(cap, text='Automatically STOP after:', bg=BG, fg=TEXT,
+                 font=('Segoe UI', 10)).pack(side='left')
+        self.max_minutes = tk.StringVar(master=self.window, value='10')
+        ttk.Combobox(cap, textvariable=self.max_minutes, values=['5', '10', '15'],
+                     width=4, state='readonly').pack(side='left', padx=12)
+        tk.Label(cap, text='minutes · a time limit, not a money cap',
+                 bg=BG, fg=MUTED, font=('Segoe UI', 9)).pack(side='left')
+
+        links = tk.Frame(self.window, bg=BG)
+        links.pack(fill='x', padx=23, pady=(0, 8))
+        self._button('Get LiveKit API key ↗',
+                     lambda: webbrowser.open(LIVEKIT_DASHBOARD)).pack(side='left', padx=3)
+        self._button('Key instructions ↗',
+                     lambda: webbrowser.open(LIVEKIT_KEYS_GUIDE)).pack(side='left', padx=3)
+        self._button('LiveKit pricing ↗',
+                     lambda: webbrowser.open(LIVEKIT_PRICING)).pack(side='left', padx=3)
+
+        self.setup_button = self._button('1  Install / repair LiveKit voice tools', self.install)
+        self.setup_button.pack(fill='x', padx=25, pady=5)
+        self.credentials_button = self._button('2  Open LOCAL API key + secret file',
                                                self.edit_credentials)
-        self.credentials_button.pack(fill='x', padx=25, pady=6)
-        self.start_button = self._button('3  Start metered LiveKit conversation',
+        self.credentials_button.pack(fill='x', padx=25, pady=5)
+        self.start_button = self._button('3  Start LiveKit voice (metered)',
                                          self.start, primary=True)
-        self.start_button.pack(fill='x', padx=25, pady=6)
-        self.stop_button = self._button('STOP LiveKit voice session',
-                                        self.stop)
-        self.stop_button.pack(fill='x', padx=25, pady=6)
+        self.start_button.pack(fill='x', padx=25, pady=5)
+        self.stop_button = self._button('STOP LiveKit realtime voice', self.stop)
+        self.stop_button.pack(fill='x', padx=25, pady=5)
 
         tk.Label(self.window, textvariable=self.status, bg=BG, fg=CYAN,
-                 wraplength=630, font=('Segoe UI', 10), justify='left').pack(
-                     anchor='w', padx=25, pady=(10, 0))
+                 wraplength=655, font=('Segoe UI', 10), justify='left').pack(
+                     anchor='w', padx=25, pady=(10, 3))
         self.refresh()
+        self.window.after(1000, self._tick)
 
     def _button(self, text, command, primary=False):
         return tk.Button(
@@ -77,29 +104,47 @@ class LiveKitVoiceWindow:
             bg=CYAN if primary else PANEL, fg=BG if primary else TEXT,
             activebackground='#a0fff4' if primary else '#204052',
             activeforeground=BG if primary else TEXT, font=('Segoe UI', 10),
-            relief='flat', bd=0, padx=14, pady=9, cursor='hand2')
+            relief='flat', bd=0, padx=12, pady=8, cursor='hand2')
+
+    def _tick(self):
+        if self.closed:
+            return
+        self.refresh()
+        self.window.after(1000, self._tick)
 
     def refresh(self):
         if self.closed:
             return
-        if not self.busy:
-            self.status.set(
-                'Voice active in separate console · STOP to end billed session.'
-                if self.console.is_running()
-                else ('Credentials present · ready for user-approved cloud session.'
+        active = self.console.is_running()
+        remaining = self.console.remaining_seconds() if active else 0
+        if active:
+            minutes, seconds = divmod(remaining, 60)
+            phrase = f'LIVE · GPT-Live-1 / marin · auto STOP in {minutes}:{seconds:02d}'
+            self.start_button.configure(state='disabled')
+            self.stop_button.configure(state='normal')
+        else:
+            phrase = ('READY · click Talk Live to start a consented session'
                       if configured() else
-                      'Cloud voice OFF · set credentials in your private file first.')
-            )
+                      'NOT CONFIGURED · get project API key, then enter local credentials')
+            self.start_button.configure(state='normal')
+            self.stop_button.configure(state='disabled')
+        if hasattr(self.host, 'livekit_voice_state'):
+            self.host.livekit_voice_state.set(phrase)
+        button = getattr(self.host, 'livekit_primary_button', None)
+        if button is not None:
+            button.configure(text='■ End Live Voice' if active else '● Talk Live')
+        if not self.busy:
+            self.status.set(phrase)
 
     def edit_credentials(self):
         try:
             path = create_credentials_template()
             if os.name != 'nt':
-                raise LiveKitSetupError('Open this file with your text editor on Windows.')
+                raise LiveKitSetupError('Open this file with your editor on Windows.')
             subprocess.Popen(['notepad.exe', str(path)])
             self.status.set(
-                'Credentials file open · save URL/API key/secret, then return. '
-                'Never paste credentials into chat or GitHub.'
+                'Your keys stay in the private local file. Save LIVEKIT_URL, '
+                'LIVEKIT_API_KEY, LIVEKIT_API_SECRET; never share them in chat.'
             )
         except (OSError, LiveKitSetupError) as exc:
             messagebox.showerror('LiveKit credentials', str(exc), parent=self.window)
@@ -108,31 +153,28 @@ class LiveKitVoiceWindow:
         if self.busy:
             return
         if not messagebox.askyesno(
-            'Install optional voice components?',
-            'This installs LiveKit packages in a SEPARATE Python environment and '
-            'downloads speech-processing models. Requires internet and disk space. '
-            'It does NOT start paid cloud voice. Continue?',
+            'Install LiveKit voice tools?',
+            'This installs packages in a separate Python environment and downloads '
+            'audio models. Internet/disk space required. No billed session starts. '
+            'Install or repair?',
             parent=self.window
         ):
             return
         self.busy = True
         self.setup_button.configure(state='disabled')
-        self.status.set('Installing optional voice packages; regular Jarvis remains usable.')
+        self.status.set('Installing voice tools locally; Jarvis remains available.')
         def job():
             try:
                 result, error = install_optional(), None
             except Exception as exc:
-                result, error = None, str(exc) if isinstance(exc, LiveKitSetupError) else (
-                    'Optional voice installation failed; check Python/internet.')
+                result, error = None, (str(exc) if isinstance(exc, LiveKitSetupError)
+                                       else 'Installation failed. Check Python/internet.')
             def finished():
                 if self.closed:
                     return
                 self.busy = False
                 self.setup_button.configure(state='normal')
-                if error:
-                    self.status.set(error)
-                else:
-                    self.status.set(result)
+                self.status.set(error or result)
             try:
                 self.window.after(0, finished)
             except tk.TclError:
@@ -140,23 +182,59 @@ class LiveKitVoiceWindow:
         threading.Thread(target=job, daemon=True).start()
 
     def start(self):
-        if self.busy:
-            return
+        """Called from both the setup dialog and the main Jarvis Talk Live button."""
+        if self.closed or self.busy:
+            return False
+        if self.console.is_running():
+            self.refresh()
+            return True
+        if not configured():
+            self.window.deiconify()
+            self.window.lift()
+            self.status.set('First create project keys, then save them locally.')
+            messagebox.showinfo(
+                'LiveKit API keys required',
+                'Get keys from https://cloud.livekit.io/ and enter the '
+                'LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET in the '
+                'LOCAL credentials file. Your keys are not sent to ChatGPT.',
+                parent=self.window,
+            )
+            return False
+        if not environment_python().is_file():
+            self.window.deiconify()
+            self.window.lift()
+            messagebox.showinfo(
+                'LiveKit not installed',
+                'Install / repair LiveKit voice tools first.',
+                parent=self.window,
+            )
+            return False
+        cap = int(self.max_minutes.get())
         if not messagebox.askyesno(
-            'Start billable LiveKit session?',
-            'GPT-Live-1 usage and delegated backend operations can incur '
-            'charges against YOUR LiveKit Cloud account. AI-Coustics audio '
-            'enhancement can add separate charges if enabled. Use it only if you '
-            'understand and accept your provider plan, limits and charges. '
-            'Proceed with one voice session?',
+            'Start metered LiveKit voice?',
+            f'The GPT-Live-1 voice session uses your LiveKit Cloud credits or '
+            f'billing allowance. It will automatically stop after {cap} minutes '
+            'or earlier if you press STOP. This is NOT a money-spending cap. '
+            'AI-Coustics may cost extra when enabled. '
+            'Start this one voice conversation?',
             parent=self.window
         ):
-            return
+            return False
         try:
-            self.console.start(consent=True, noise_enhancement=self.noise_enhancement.get())
-            self.status.set('Voice console launched. Close/STOP to end session.')
+            self.console.start(
+                consent=True, noise_enhancement=self.noise_enhancement.get(),
+                max_minutes=cap,
+            )
+            self.refresh()
+            # Keep the Jarvis dashboard visible; terminal-based audio continues
+            # separately, exactly as it did in the user-tested integration.
+            self.window.withdraw()
+            self.host.root.lift()
+            return True
         except (OSError, LiveKitSetupError) as exc:
+            self.window.deiconify()
             messagebox.showerror('LiveKit voice', str(exc), parent=self.window)
+            return False
 
     def stop(self):
         self.console.stop()
