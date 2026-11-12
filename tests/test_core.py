@@ -272,7 +272,7 @@ class DesktopTests(unittest.TestCase):
             fake.__exit__ = Mock(return_value=False)
             return fake
         ai.opener.open.side_effect = respond
-        answer = ai.ask([{"role": "user", "content": "Salam Jarvis! Apna introduction 3 simple Roman Urdu sentences mein do."}])
+        answer = ai.ask([{"role": "user", "content": "Salam Jarvis! Apna introduction 3 simple Roman Urdu sentences mein do aur video script likho."}])
         self.assertIn("Main Jarvis", answer)
         self.assertEqual(ai.opener.open.call_count, 2)
         request = json.loads(ai.opener.open.call_args_list[1].args[0].data)
