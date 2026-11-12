@@ -9,7 +9,7 @@ Jarvis now offers a separate **LiveKit Voice** button alongside its ordinary
 LiveKit Inference, `openai/gpt-live-1` and `marin` voice. It supports
 interruptions, voice turn-taking and AI-Coustics audio enhancement.
 
-This is NOT the regular Jarvis Mic, and it is NOT a PC-control interface:
+**AI-Coustics voice isolation is OFF by default** to avoid extra metered audio\nprocessing. Turn it on only with the explicit checkbox if needed.\n\nThis is NOT the regular Jarvis Mic, and it is NOT a PC-control interface:
 LiveKit voice is a separate console conversation window with **no desktop,
 filesystem or browser automation tools**. The original free Edge Neural,
 Whisper mic and account chat remain available and unchanged.
