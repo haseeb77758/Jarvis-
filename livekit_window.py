@@ -184,8 +184,10 @@ class LiveKitVoiceWindow:
             return
         if not messagebox.askyesno(
             'Install LiveKit voice tools?',
-            'This installs packages in a separate Python environment and downloads '
-            'audio models. Internet/disk space required. No billed session starts. '
+            'This installs required LiveKit packages in a separate Python environment. '
+            'Normal GPT-Live-1 voice does NOT download local speech models. '
+            'AI-Coustics downloads optional assets only if checked. '
+            'Internet required; this does not start a billed session. '
             'Install or repair?',
             parent=self.window
         ):
