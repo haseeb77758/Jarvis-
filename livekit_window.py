@@ -149,7 +149,7 @@ class LiveKitVoiceWindow:
             log = session_log_path()
             log.parent.mkdir(parents=True, exist_ok=True)
             if not log.exists():
-                log.write_text("No LiveKit session diagnostics yet.\\n", encoding="utf-8")
+                log.write_text("No LiveKit session diagnostics yet.\n", encoding="utf-8")
             # Display redacted information, NOT the unfiltered SDK raw file.
             view = log.parent / "last-session-redacted.txt"
             view.write_text(safe_log_tail(12000) or "No logged error details available.\\n",
