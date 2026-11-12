@@ -192,6 +192,44 @@ def _install_command(command, root, stage, timeout=360):
         )
 
 
+def ensure_venv_pip(python=None, root=None):
+    """Repair a pre-existing isolated venv that was created without pip.
+
+    `venv\\Scripts\\python.exe` existing is NOT proof `pip` is installed.
+    Use Python's bundled ensurepip only when needed; never delete the venv,
+    download an unofficial bootstrap script, or touch LiveKit credentials.
+    """
+    root = root if root is not None else app_data_root()
+    python = python if python is not None else environment_python()
+    check = [str(python), "-m", "pip", "--version"]
+    try:
+        result = subprocess.run(
+            check, cwd=str(root), capture_output=True, check=False, timeout=35,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _write_install_error("pip detection", type(exc).__name__ + ": " + str(exc))
+        raise LiveKitSetupError(
+            "LiveKit Python/pip check fail hua. View last LiveKit error kholo."
+        ) from None
+    if result.returncode == 0:
+        return False
+    # Python 3.12's standard library bundles ensurepip. Do this entirely
+    # inside the existing LiveKit venv; existing packages stay untouched.
+    try:
+        _install_command(
+            [str(python), "-m", "ensurepip", "--upgrade", "--default-pip"],
+            root, "pip bootstrap (ensurepip)", 180,
+        )
+    except LiveKitSetupError:
+        raise LiveKitSetupError(
+            "LiveKit pip missing tha aur ensurepip repair fail hui. "
+            "Official Python 3.12 installer se Python/pip repair karo; "
+            "View last LiveKit error mein exact reason hai."
+        ) from None
+    _install_command(check, root, "pip verification after bootstrap", 35)
+    return True
+
+
 def preflight_runtime(noise_enhancement=False):
     """Check realtime SDK imports offline; no mic, model download or Cloud charge."""
     python = environment_python()
@@ -241,6 +279,10 @@ def install_optional(noise_enhancement=False):
     if not python.is_file():
         _write_install_error("Python environment", "venv was not created")
         raise LiveKitSetupError("LiveKit Python environment nahi bani. View last LiveKit error kholo.")
+
+    # Some existing Windows venvs were created with --without-pip or
+    # interrupted before pip bootstrap. Auto-repair before pip install.
+    ensure_venv_pip(python=python, root=root)
 
     _install_command(
         [str(python), "-m", "pip", "--disable-pip-version-check",
