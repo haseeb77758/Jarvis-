@@ -22,6 +22,19 @@ class MemoryTests(unittest.TestCase):
             self.assertEqual(restored.facts, ['Roman Urdu mein short jawab do'])
             self.assertEqual(len(restored.shortcuts['work']), 2)
 
+    def test_chat_model_choice_survives_restart_and_is_allowlisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            first = PreferenceStore(directory)
+            self.assertEqual(first.chat_model, 'qwen2.5:1.5b')
+            first.chat_model = 'qwen2.5:3b'
+            first.save()
+            self.assertEqual(PreferenceStore(directory).chat_model, 'qwen2.5:3b')
+            file = Path(directory) / 'preferences.json'
+            data = json.loads(file.read_text(encoding='utf-8'))
+            data['chat_model'] = 'arbitrary-remote:model'
+            file.write_text(json.dumps(data), encoding='utf-8')
+            self.assertEqual(PreferenceStore(directory).chat_model, 'qwen2.5:1.5b')
+
     def test_memory_cannot_load_unvalidated_shell_actions(self):
         with tempfile.TemporaryDirectory() as directory:
             p = Path(directory) / 'preferences.json'
