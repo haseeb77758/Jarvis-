@@ -520,7 +520,7 @@ def make_dashboard(app):
         anchor='w', padx=13, pady=(8, 2))
     label(status_card, '', 9, TEXT, textvariable=app.status,
           wraplength=212, justify='left').pack(anchor='w', padx=13, pady=(0, 9))
-    btn(status_card, 'Readiness', app.open_diagnostics, compact=True).pack(
+    btn(status_card, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(
         side='left', padx=(12, 4), pady=(0, 11))
     btn(status_card, 'Workspace', app.choose, compact=True).pack(
         side='left', padx=3, pady=(0, 11))
