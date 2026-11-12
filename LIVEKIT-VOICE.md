@@ -1,10 +1,11 @@
 # Jarvis primary voice — LiveKit GPT-Live-1
 
-LiveKit GPT-Live-1 (voice `marin`) is now Jarvis's **primary spoken conversation
-mode**, following the user's successful test of the original
-`training-2057.zip` agent. The regular Windows/Edge voice and local Whisper
-microphone remain a **Free Mic fallback**; text/chat and reviewed desktop
-controls are unchanged.
+LiveKit GPT-Live-1 (voice `marin`) is Jarvis's **only active AI
+conversation provider**, following the user's successful test of
+`training-2057.zip`. Puter account chat, AI plans, Ollama and the other voice
+chat modes are no longer initialized or exposed by native Jarvis. The typed
+composer now accepts **local reviewed desktop commands only**; it cannot send
+general questions to the LiveKit voice model.
 
 **What "primary" means:** a big **Talk Live** button on the main Jarvis
 dashboard launches the user-tested separate LiveKit console. The animated
@@ -57,9 +58,11 @@ file. Never paste the API secret into ChatGPT or commit it to a repository.
 6. Click **■ End Live Voice**, use Jarvis global STOP / Ctrl+Alt+F12, or
    close Jarvis to terminate the session.
 
-The former **Mic** button is now labelled **Free Mic**. The existing
-**Voices** button still configures the free Edge Neural TTS provider. Use these
-if you don't want to spend LiveKit Cloud credits.
+**Talk Live** is the only AI conversation button. There is no other
+chatbot, free voice fallback or separate model chooser in the native UI.
+The legacy speech and chatbot source modules remain in the reviewable source
+only so already-installed older updaters can verify and migrate successfully.
+Their providers are not constructed or connected in the current runtime.
 
 ### Safety and ongoing expenses
 
