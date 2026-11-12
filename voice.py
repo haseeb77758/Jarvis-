@@ -39,12 +39,12 @@ def setup_voice(stop):
     voice_model(download=True)
     if stop.is_set():
         raise RuntimeError('Stopped. Model download may have completed locally.')
-    return 'Voice model ready. Mic 6s dabayein; transcript review ke baad Run karein.'
+    return 'Voice model ready. Mic dabayein; bolna khatam karne par recording automatically rukegi (max 6s).'
 
 
 def listen(stop, language='auto', notify=None):
     import numpy as np
-    import sounddevice as sd
+    from adaptive_capture import record_until_silence
     if stop.is_set():
         raise RuntimeError('Stopped.')
     try:
@@ -52,37 +52,30 @@ def listen(stop, language='auto', notify=None):
     except Exception as exc:
         raise RuntimeError('Pehle Setup voice dabayein. Voice model ek dafa download hota hai.') from exc
     try:
-        if notify:
-            notify('Listening now · 6 seconds · STOP cancels')
-        if os.name == 'nt':
-            import winsound
-            winsound.Beep(1000, 120)
-        audio = sd.rec(6 * 16000, samplerate=16000, channels=1, dtype='float32')
-        deadline = time.monotonic() + 6
-        while time.monotonic() < deadline:
-            if stop.wait(0.05):
-                sd.stop()
-                raise RuntimeError('Microphone recording stopped.')
-        sd.wait()
+        audio = record_until_silence(stop, notify=notify)
+    except RuntimeError:
+        raise
     except Exception as exc:
-        sd.stop()
         if stop.is_set():
             raise RuntimeError('Microphone stopped.') from exc
         raise RuntimeError('Microphone record nahi hua. Windows Settings → Privacy & security → Microphone mein desktop-app permission aur default mic check karein.') from exc
     if stop.is_set():
         raise RuntimeError('Stopped.')
-    if float(np.max(np.abs(audio))) < 0.008:
-        raise RuntimeError('Awaaz bohat kam hai. Mic level check karke dobara try karein.')
+    if not len(audio) or float(np.max(np.abs(audio))) < 0.008:
+        raise RuntimeError('Speech detect nahi hui. Mic level check karke dobara try karein.')
     if notify:
-        notify('Transcribing locally · audio stays on this PC')
-    segments, info = model.transcribe(audio.reshape(-1), language=None if language == 'auto' else language,
-                                      task='transcribe', beam_size=1, vad_filter=False,
-                                      condition_on_previous_text=False)
+        notify('Recognizing locally · audio stays on this PC')
+    started = time.monotonic()
+    segments, _info = model.transcribe(audio, language=None if language == 'auto' else language,
+                                        task='transcribe', beam_size=1, vad_filter=False,
+                                        condition_on_previous_text=False)
     result = ' '.join(segment.text.strip() for segment in segments).strip()
     if stop.is_set():
         raise RuntimeError('Stopped. Transcript discarded.')
     if not result:
         raise RuntimeError('Speech samajh nahi aayi. Chhoti aur saaf instruction dobara bolein.')
+    if notify:
+        notify(f'Transcribed {len(audio) / 16000:.1f}s audio in {time.monotonic() - started:.1f}s · review before running')
     return result[:4000]
 
 
