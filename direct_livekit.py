@@ -328,6 +328,7 @@ class DirectVoiceService:
         req = VoiceToolRequest(action=action, event=threading.Event())
         self.command_queue.put(req)
         if not req.event.wait(timeout=20):
+            req.cancelled = True
             return {"ok": False, "result": "DENIED: Native desktop approval timed out."}
         return {"ok": req.result.startswith("DONE:"), "result": req.result[:1800]}
 
