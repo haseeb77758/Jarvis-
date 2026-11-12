@@ -59,7 +59,7 @@ class LiveKitVoiceWindow:
         self.noise_enhancement = tk.BooleanVar(master=self.window, value=False)
         tk.Checkbutton(
             self.window,
-            text='AI-Coustics noise enhancement (optional · may cost extra)',
+            text='AI-Coustics (optional · extra install/download, possibly billed)',
             variable=self.noise_enhancement, bg=BG, fg=MUTED, selectcolor=PANEL,
             activebackground=BG, activeforeground=TEXT,
         ).pack(anchor='w', padx=26, pady=(5, 3))
@@ -192,10 +192,11 @@ class LiveKitVoiceWindow:
             return
         self.busy = True
         self.setup_button.configure(state='disabled')
-        self.status.set('Installing voice tools locally; Jarvis remains available.')
+        noise = bool(self.noise_enhancement.get())
+        self.status.set('Checking/installing only the required LiveKit components...')
         def job():
             try:
-                result, error = install_optional(), None
+                result, error = install_optional(noise_enhancement=noise), None
             except Exception as exc:
                 result, error = None, (str(exc) if isinstance(exc, LiveKitSetupError)
                                        else 'Installation failed. Check Python/internet.')
@@ -240,6 +241,17 @@ class LiveKitVoiceWindow:
                 parent=self.window,
             )
             return False
+        if self.setup_issue:
+            self.window.deiconify()
+            self.window.lift()
+            messagebox.showwarning(
+                'Repair LiveKit setup first',
+                'Pichli LiveKit installation fail hui thi. Install / repair dabao. '
+                'Agar error aaye to View last LiveKit error kholo. '
+                'Abhi metered voice start nahi hogi.',
+                parent=self.window,
+            )
+            return False
         cap = int(self.max_minutes.get())
         if not messagebox.askyesno(
             'Start metered LiveKit voice?',
@@ -260,7 +272,7 @@ class LiveKitVoiceWindow:
 
         def job():
             try:
-                preflight_runtime()
+                preflight_runtime(noise_enhancement=noise)
                 error = None
             except LiveKitSetupError as exc:
                 error = str(exc)
