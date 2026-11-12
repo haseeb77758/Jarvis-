@@ -42,7 +42,7 @@ def agent_path():
 
 
 def dependencies_path():
-    return package_root() / "livekit_voice" / "requirements.txt"
+    return package_root() / "livekit_requirements.txt"
 
 
 def create_credentials_template():
