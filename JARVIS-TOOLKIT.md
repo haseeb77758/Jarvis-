@@ -27,7 +27,7 @@ or execute the third-party Stonic repository.
   opens live Google results in your default browser. Jarvis does not claim to
   have fetched live weather itself.
 - **Code review / generation**: Code Studio reads one explicitly selected,
-  small code file and asks local Ollama to suggest fixes. Code Generator drafts
+  small (up to 3,000 characters) code file and sends explicitly selected text to account AI after disclosure. Code Generator drafts
   code in the chat. **Neither executes, saves nor self-upgrades code**.
 - **Image generation**: optional OpenAI Images API, with your own key and API
   billing (separate from ChatGPT), user approval per request, 1024x1024 PNG,
@@ -53,7 +53,7 @@ or execute the third-party Stonic repository.
 - The image API uses the fixed official HTTPS endpoint, no redirects, one
   image per action, and no stored key. A failed API request may still be
   billable by the provider depending on their policy.
-- Weather, image API and GitHub updates require internet; the Ollama model,
+- Weather, image API and GitHub updates require internet; account chat,
   schedule, basic desktop actions and optional local speech run on your PC.
 - Real-time LiveKit cloud voice, hand-camera gesture detection, image editing,
   automatic software self-updates, arbitrary shell execution and scheduled
@@ -61,3 +61,4 @@ or execute the third-party Stonic repository.
   requires separate design, consent, testing and possibly hardware/API budgets.
 - Existing Windows Security settings must stay enabled; no elevated
   privileges or security-control bypass is required for the provided features.
+

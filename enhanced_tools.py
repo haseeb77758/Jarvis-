@@ -124,7 +124,7 @@ class ScheduleStore:
 
 
 def system_action(mode: str):
-    """Never called by Ollama directly. UI enforces explicit user review."""
+    """Never called by account AI directly. UI enforces explicit user review."""
     if mode not in {"lock", "shutdown", "restart", "cancel"}:
         raise ValueError("System action allowlist mein nahi.")
     if os.name != "nt":
@@ -198,3 +198,4 @@ def generate_cloud_image(prompt: str, api_key: str, output_directory: str | Path
     with target.open("xb") as file:
         file.write(image)
     return target
+

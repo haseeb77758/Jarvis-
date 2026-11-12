@@ -23,9 +23,9 @@ class LayoutRegressionTests(TestCase):
         self.addCleanup(lambda: root.destroy() if root.winfo_exists() else None)
         app = SimpleNamespace(
             root=root,
-            ai=SimpleNamespace(model="qwen2.5:3b"),
-            ai_status=tk.StringVar(master=root, value="OLLAMA READY"),
-            mode=tk.StringVar(master=root, value="Local AI chat"),
+            ai=SimpleNamespace(model="Puter account default"),
+            ai_status=tk.StringVar(master=root, value="AI CONNECTED"),
+            mode=tk.StringVar(master=root, value="AI chat"),
             status=tk.StringVar(master=root, value="Ready"),
             voice_language=tk.StringVar(master=root, value="Auto"),
             speak_enabled=tk.BooleanVar(master=root, value=False),

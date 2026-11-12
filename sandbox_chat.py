@@ -1,10 +1,4 @@
-"""HASEEB AI — private conversation sandbox for the local Ollama chatbot.
-
-Conversation sandbox means chat-only separation from Jarvis desktop actions,
-NOT a Windows process/container/security sandbox. Only text messages are sent to
-Ollama at 127.0.0.1 through the existing LocalAI class. No tool execution,
-shell, file access or remote desktop control is wired into this window.
-"""
+"""Chat-only account conversation; cloud output never executes desktop actions."""
 from __future__ import annotations
 
 from collections import deque
@@ -15,7 +9,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from chat_ui import ChatComposer, on_return, preset_prompt
-from core import LocalAI, MODEL, CHAT_MODELS, ollama_status, setup_local_model
+from core import ChatAI, MODEL, CHAT_MODELS
 from voice import Speaker, listen
 
 BG = "#070e16"
@@ -47,7 +41,7 @@ class SandboxSession:
 
     def commit(self, text, answer):
         if not isinstance(answer, str) or not answer.strip():
-            raise ValueError("Ollama ka jawab khali hai.")
+            raise ValueError("Chatbot ka jawab khali hai.")
         self._messages.extend((
             {"role": "user", "content": text.strip()},
             {"role": "assistant", "content": answer.strip()},
@@ -70,19 +64,19 @@ class SandboxWindow:
         self.host = host
         self.session = session if session is not None else SandboxSession()
         self.selected_model = tk.StringVar(master=parent, value=host.store.chat_model)
-        self.ai = LocalAI(model=host.store.chat_model)
         self.events = queue.Queue()
         self.cancel = threading.Event()
+        self.ai = ChatAI(bridge=host.chat_bridge, cancel=self.cancel)
         self.generation = 0
         self.busy = False
         self.listening = False
         self.closed = False
         self.speaker = Speaker(lambda notice: self.events.put(("speech_notice", notice)), settings=host.voice_settings)
         self.speak_replies = tk.BooleanVar(master=parent, value=False)
-        self.status = tk.StringVar(master=parent, value="LOCAL OLLAMA  ·  CHECKING")
+        self.status = tk.StringVar(master=parent, value="ACCOUNT AI · SIGN IN")
         self.activity = tk.StringVar(master=parent, value="Chat only  •  No desktop actions")
         self.window = tk.Toplevel(parent)
-        self.window.title("HASEEB AI  |  PRIVATE CONVERSATION SANDBOX")
+        self.window.title("HASEEB AI  |  CONVERSATION SANDBOX")
         self.window.geometry("1050x720")
         self.window.minsize(790, 570)
         self.window.configure(bg=BG)
@@ -115,10 +109,10 @@ class SandboxWindow:
         identity.pack(side="left", padx=22, pady=13)
         tk.Label(identity, text="◉   H A S E E B    A I", fg=CYAN, bg=SIDE,
                  font=("Segoe UI", 13, "bold")).pack(anchor="w")
-        tk.Label(identity, text="JARVIS / PRIVATE CONVERSATION SANDBOX",
+        tk.Label(identity, text="JARVIS / CONVERSATION SANDBOX",
                  fg=MUTED, bg=SIDE, font=("Segoe UI", 9)).pack(anchor="w")
         self._button(header, "Close", self.close).pack(side="right", padx=(4, 17), pady=15)
-        self._button(header, "Setup AI", self.host.setup_ai).pack(side="right", padx=4, pady=15)
+        self._button(header, "Connect AI", self.host.setup_ai).pack(side="right", padx=4, pady=15)
         self._button(header, "New chat", self.new_chat).pack(side="right", padx=4, pady=15)
 
         content = tk.Frame(self.window, bg=BG)
@@ -147,16 +141,15 @@ class SandboxWindow:
                                          values=CHAT_MODELS, width=17)
         self.model_picker.pack(fill="x", padx=15, pady=4)
         self.model_picker.bind("<<ComboboxSelected>>", self.on_model_change)
-        tk.Label(side, text="1.5B: faster  |  3B: better quality, slower", fg=MUTED, bg=SIDE,
+        tk.Label(side, text="Online account model · no local download", fg=MUTED, bg=SIDE,
                  font=("Segoe UI", 8), wraplength=192, justify="left").pack(
             anchor="w", padx=17, pady=(1, 7))
-        self._button(side, "Download selected", self.download_model).pack(fill="x", padx=15, pady=4)
-        self._button(side, "Refresh Ollama", self.refresh_status).pack(fill="x", padx=15, pady=4)
+        self._button(side, "Refresh connection", self.refresh_status).pack(fill="x", padx=15, pady=4)
         tk.Frame(side, bg=LINE, height=1).pack(fill="x", padx=15, pady=17)
         tk.Label(side, text="THIS IS A CHAT-ONLY SPACE", fg=GOLD, bg=SIDE,
                  font=("Segoe UI", 9, "bold"), wraplength=200,
                  justify="left").pack(anchor="w", padx=17)
-        tk.Label(side, text="Messages stay in this app session. No auto-run, file edits, shell commands, or screen control. Ollama processes messages locally.",
+        tk.Label(side, text="Chat messages and recent context go to Puter/model provider. No auto-run, file edits, shell commands or screen control.",
                  fg=MUTED, bg=SIDE, font=("Segoe UI", 9), justify="left",
                  wraplength=190).pack(anchor="w", padx=17, pady=(8, 14))
         self._button(side, "Stop response", self.stop).pack(fill="x", padx=15, pady=(0, 6))
@@ -233,7 +226,7 @@ class SandboxWindow:
         holder = tk.Frame(row, bg=USER if mine else PANEL, highlightthickness=1,
                           highlightbackground="#2c7080" if mine else LINE)
         holder.pack(side="right" if mine else "left", padx=4)
-        display = "YOU" if mine else "JARVIS · LOCAL AI"
+        display = "YOU" if mine else "JARVIS · ACCOUNT AI"
         stamp = datetime.now().strftime("%H:%M")
         tk.Label(holder, text=display + "   •   " + stamp, fg=CYAN if mine else GOLD,
                  bg=USER if mine else PANEL,
@@ -245,7 +238,7 @@ class SandboxWindow:
             self._sync_scroll()
 
     def _welcome(self):
-        self._bubble("JARVIS", "Assalamualaikum! Main aapka local Jarvis AI hoon. Roman Urdu mein baat kar sakte hain. Yeh chat-only sandbox hai — yahan se computer commands execute nahi hotin.", True)
+        self._bubble("JARVIS", "Assalamualaikum! Main Jarvis hoon, aapka account-connected AI assistant. Roman Urdu mein baat kar sakte hain. Yeh chat-only sandbox hai — yahan se computer commands execute nahi hotin.", True)
 
     def _restore_messages(self):
         for item in self.session.history:
@@ -259,58 +252,14 @@ class SandboxWindow:
             self.activity.set(message)
 
     def on_model_change(self, _event=None):
-        if self.busy:
-            self.selected_model.set(self.ai.model)
-            self.activity.set("Current response finish hone par model change karein.")
-            return
-        selected = self.selected_model.get()
-        if selected not in CHAT_MODELS:
-            self.selected_model.set(self.ai.model)
-            return
-        self.ai.model = selected
-        self.host.store.chat_model = selected
-        self.host.store.save()
-        self.host.ai.model = selected
-        self.status.set("● CHECKING " + selected)
-        self.activity.set("Selected " + selected + " · model check ho raha hai")
-        self.refresh_status()
-
-    def download_model(self):
-        if self.closed or self.busy:
-            return
-        model = self.selected_model.get()
-        if model not in CHAT_MODELS:
-            return
-        # For the user's 8 GB CPU laptop the 3B quality option may be slower.
-        if not messagebox.askyesno(
-            "Download Ollama model",
-            "Selected: " + model + "\n\n"
-            + ("3B model approx 1.9 GB download karta hai; 8 GB RAM par CPU responses slower ho sakte hain.\n"
-               if model == "qwen2.5:3b" else
-               "1.5B model chhota aur relatively fast hai, lekin Roman Urdu quality limited ho sakti hai.\n")
-            + "Internet aur free disk space required. Model local PC par download karun?",
-            parent=self.window
-        ):
-            return
-        self._set_busy(True, "Downloading " + model + " with your approval...")
-        self.cancel.clear()
-        generation = self.generation
-        def work():
-            try:
-                result = setup_local_model(self.cancel, model=model)
-                self.events.put(("download", (generation, result, None)))
-            except Exception as exc:
-                self.events.put(("download", (generation, None, str(exc))))
-        threading.Thread(target=work, daemon=True).start()
+        self.selected_model.set(MODEL)
 
     def refresh_status(self):
         if self.closed:
             return
-        selected = self.selected_model.get()
-        def work():
-            result = ollama_status(model=selected)
-            self.events.put(("health", (selected, result)))
-        threading.Thread(target=work, daemon=True).start()
+        state = self.host.chat_bridge.status()
+        self.status.set('● ACCOUNT CONNECTED' if state == 'ready' else '● CONNECT AI / SIGN IN')
+        self.window.after(3000, self.refresh_status)
 
     def send(self):
         if self.closed or self.busy:
@@ -326,7 +275,7 @@ class SandboxWindow:
         self.entry.delete(0, "end")
         self._bubble("YOU", text)
         self.ai.model = self.selected_model.get()
-        self._set_busy(True, "Jarvis is thinking locally (" + self.ai.model + ")...")
+        self._set_busy(True, "Jarvis is thinking online (" + self.ai.model + ")...")
         self.cancel.clear()
         generation = self.generation
         def work():
@@ -357,7 +306,7 @@ class SandboxWindow:
         self.cancel.set()
         self.generation += 1
         self.speaker.stop()
-        # Ollama's HTTP request cannot always be interrupted. We discard its
+        # The cloud request cannot always be interrupted. We discard its
         # result if stopped, and wait for it to finish before enabling Send.
         self.activity.set("Stopped · pending answer will be discarded")
 
@@ -381,27 +330,7 @@ class SandboxWindow:
         try:
             while True:
                 kind, data = self.events.get_nowait()
-                if kind == "health":
-                    model, result = data
-                    if model != self.selected_model.get():
-                        continue
-                    self.status.set({
-                        "ready": "● OLLAMA READY",
-                        "model_missing": "● MODEL DOWNLOAD REQUIRED",
-                        "missing": "● INSTALL OLLAMA",
-                        "stopped": "● OLLAMA SERVICE OFF",
-                    }.get(data, "● CHECK OLLAMA"))
-                elif kind == "download":
-                    generation, result, error = data
-                    self._set_busy(False)
-                    if generation != self.generation:
-                        continue
-                    if error:
-                        self.activity.set("Model setup failed: " + error)
-                    else:
-                        self.activity.set(result)
-                    self.refresh_status()
-                elif kind == "voice_status":
+                if kind == "voice_status":
                     generation, notice = data
                     if generation == self.generation:
                         self.activity.set(notice)
@@ -419,7 +348,7 @@ class SandboxWindow:
                         preset_prompt(self.entry, transcript)
                         if messagebox.askyesno(
                             "Review recorded voice",
-                            "Recognized text:\n\n" + transcript + "\n\nSend to Ollama chat?",
+                            "Recognized text:\n\n" + transcript + "\n\nSend to account chat?",
                             parent=self.window
                         ):
                             self.send()
@@ -429,8 +358,8 @@ class SandboxWindow:
                     if generation != self.generation:
                         continue
                     if error:
-                        self._bubble("JARVIS", "Ollama response error: " + error)
-                        self.activity.set("Check Ollama or press Setup AI")
+                        self._bubble("JARVIS", "AI response error: " + error)
+                        self.activity.set("Check account connection or press Connect AI")
                     else:
                         self.session.commit(question, answer)
                         self._bubble("JARVIS", answer)

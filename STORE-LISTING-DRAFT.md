@@ -22,7 +22,7 @@ HASEEB AI Jarvis helps you perform supported tasks on your Windows PC using text
 - Inspect, focus and wait for named Windows windows and interact with supported accessible buttons.
 - Save explicit preferences, reviewed action shortcuts and text notes locally.
 - Control media play/pause, volume and next/previous tracks.
-- Use an optional local language model through Ollama for AI chat and proposed multi-step actions.
+- Use account sign-in chat through Puter without an API key or local language-model download; account allowance and internet are required. Proposed actions remain reviewed.
 - Record up to six seconds of microphone audio only after pressing Mic; review recognized speech before acting.
 - Stop a pending action using the built-in STOP control.
 
@@ -30,7 +30,7 @@ HASEEB AI Jarvis helps you perform supported tasks on your Windows PC using text
 Actions are limited to a supported allowlist. Screen typing and clicking require an opt-in and review. There is no automatic sending of WhatsApp messages, arbitrary shell execution or unrestricted file deletion.
 
 **Important setup**
-Optional free Edge neural voices send spoken reply text to Microsoft after opt-in; internet is required, and the client does not require an API key. Service availability can vary. Optional ElevenLabs spoken replies send reply text to ElevenLabs after opt-in and require your own API key, internet and available account credits. Windows speech remains the default offline option. Local AI chat requires a separate optional Ollama runtime and downloaded language model. An Internet connection may be needed to obtain optional model files, browse websites or open third-party services. Performance depends on your PC's hardware. Jarvis is not a continuous-listening or fully autonomous computer operator.
+Optional free Edge neural voices send spoken reply text to Microsoft after opt-in; internet is required, and the client does not require an API key. Service availability can vary. Optional ElevenLabs spoken replies send reply text to ElevenLabs after opt-in and require your own API key, internet and available account credits. Windows speech remains the default offline option. Account chat requires Puter sign-in, an open browser connection tab and available account allowance. Free allowance is limited; no automatic upgrade is performed. An Internet connection may be needed to obtain optional model files, browse websites or open third-party services. Performance depends on your PC's hardware. Jarvis is not a continuous-listening or fully autonomous computer operator.
 
 ## Suggested Store metadata
 
@@ -55,7 +55,7 @@ These captions are prospective; upload only screenshots of functionality actuall
 
 ## Certification notes to reviewer
 
-HASEEB AI Jarvis is a local Windows desktop application. It uses a full-trust packaged desktop process because it interacts with supported installed application windows. It requests microphone access for explicit six-second, user-initiated speech transcription; audio is processed by a locally downloaded/bundled Whisper model. Screen input is opt-in and reviewed; the app cannot silently delete files or transmit screenshots. Local AI chat is optional through the Ollama service on localhost, with additional model downloads initiated by the user. The Store package does not contain a general remote desktop-control server.
+HASEEB AI Jarvis is a local Windows desktop application. It uses a full-trust packaged desktop process because it interacts with supported installed application windows. It requests microphone access for explicit six-second, user-initiated speech transcription; audio is processed by a locally downloaded/bundled Whisper model. Screen input is opt-in and reviewed; the app cannot silently delete files or transmit screenshots. Account AI sends selected messages/context to Puter/model providers after opt-in through a temporary authenticated 127.0.0.1 text relay. The relay exposes no desktop-control/file endpoints. The Store package does not contain a general remote desktop-control server.
 
 Please test the local app shortcuts, microphone opt-in, review controls and emergency STOP. Offline functionality is available for some commands without setting up a language model. Browser links and optional model downloads need internet connectivity.
 

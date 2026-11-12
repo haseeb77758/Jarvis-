@@ -13,12 +13,10 @@ from app import App
 
 
 class ReadinessTests(unittest.TestCase):
-    def test_ai_missing_model_has_actionable_setup_without_generation(self):
-        with patch.object(diagnostics, 'ollama_status', return_value='model_missing') as status:
-            result = diagnostics.check_ai('qwen2.5:1.5b')
-        status.assert_called_once_with('qwen2.5:1.5b')
-        self.assertEqual(result.state, 'Setup needed')
-        self.assertIn('Setup AI', result.detail)
+    def test_account_chat_readiness_requires_sign_in_not_model_download(self):
+        result = diagnostics.check_ai('Puter account default')
+        self.assertEqual(result.state, 'Sign-in required')
+        self.assertIn('Connect AI', result.detail)
 
     def test_microphone_probe_does_not_record_or_play(self):
         sd = Mock()
@@ -89,7 +87,7 @@ class ReadinessTests(unittest.TestCase):
             self.skipTest('No display for native Tk check: ' + str(exc))
         self.addCleanup(root.destroy)
         host = SimpleNamespace(root=root, ai=SimpleNamespace(model='test'),
-                               setup_ai=Mock(), setup_voice=Mock(), test_voice=Mock(), check_ollama=Mock())
+                               setup_ai=Mock(), setup_voice=Mock(), test_voice=Mock(), check_chat=Mock())
         checks = [diagnostics.Check(name, 'Setup needed', 'Open setup to continue')
                   for name in ('AI', 'Mic', 'Model', 'Speaker')]
         with patch.object(diagnostics, 'collect_checks', return_value=checks), \
@@ -101,7 +99,7 @@ class ReadinessTests(unittest.TestCase):
             self.assertEqual(str(panel.refresh_button['state']), 'normal')
             panel.refresh_button.invoke()
             panel.poll()
-            self.assertEqual(host.check_ollama.call_count, 2)
+            self.assertEqual(host.check_chat.call_count, 2)
             panel.close()
             root.update()
             self.assertTrue(panel.closed)

@@ -21,7 +21,7 @@ A Microsoft Store distribution may solve the trust/distribution problem after Mi
 3. In GitHub, run **Actions → Microsoft Store MSIX submission candidate → Run workflow**, supplying the exact identity/publisher and a four-part version such as 1.0.0.0.
 4. After workflow success, download `Jarvis-UNSIGNED-Microsoft-Store-SUBMISSION-ONLY`, extract its ZIP and upload the contained MSIX to the corresponding Partner Center listing.
 5. Complete Store listing assets, privacy declaration, age classification, capabilities disclosure and certification. Only after Microsoft approves and signs the app should it be installed via the Store.
-6. On your actual PC verify microphone, installed-app control, local AI, STOP, and Smart App Control behavior. A packaged desktop app may have limitations compared with an unpackaged Python application.
+6. On your actual PC verify microphone, installed-app control, account AI, STOP, and Smart App Control behavior. A packaged desktop app may have limitations compared with an unpackaged Python application.
 
 **Do not double-click or sideload** the unsigned MSIX artifact. It is a submission candidate for Partner Center, not a locally trusted installer. A Store approval is not guaranteed. The publisher owns the Store account and listing.
 
@@ -37,3 +37,4 @@ Official guidance:
 - https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/overview
 - https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-manual-conversion
 - https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control
+

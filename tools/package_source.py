@@ -14,10 +14,10 @@ from zipfile import ZipFile, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parents[1]
 FOLDER = "Jarvis-Source-Windows"
 FILES = (
-    "app.py", "free_voice.py", "cloud_voice.py", "voice_settings_ui.py", "diagnostics.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
+    "app.py", "account_chat.py", "free_voice.py", "cloud_voice.py", "voice_settings_ui.py", "diagnostics.py", "chat_ui.py", "sandbox_chat.py", "core.py", "dashboard.py", "desktop.py", "memory.py", "voice.py",
     "enhanced_tools.py", "enhanced_ui.py",
     "RUN-JARVIS.py", "START-JARVIS-GUI.pyw", "START-JARVIS.cmd", "INSTALL-JARVIS.cmd", "SETUP.bat", "START.bat",
-    "SETUP-LOCAL-AI.bat", "requirements.txt", "README.md",
+    "requirements.txt", "README.md", "ACCOUNT-CHAT.md",
     "README-ROMAN-URDU.md", "ELEVENLABS-VOICE.md", "FREE-VOICES.md",
     "EDGE-TTS-LICENSE.txt", "GPL-3.0.txt", "THIRD-PARTY-NOTICES.txt", "DESKTOP-FIRST.md", "SMART-APP-CONTROL.md",
     "UPDATE-JARVIS-NO-CODE.md", "JARVIS-TOOLKIT.md",
@@ -70,7 +70,7 @@ def make_zip(destination: Path, root: Path = ROOT) -> Path:
             "   Select Python if Windows asks which application should open it.\n"
             "5. Tick the install-permission box, then click INSTALL & OPEN JARVIS.\n"
             "6. After setup, use HASEEB AI - Jarvis on your Desktop.\n"
-            "7. Optional AI chat still requires local Ollama/model setup.\n\n"
+            "7. Click Connect AI, sign in to Puter and keep its browser tab open for account chat.\n\n"
             "IMPORTANT: This GUI setup does NOT disable Windows\n"
             "Smart App Control or Defender, and contains no unsigned Jarvis.exe.\n"
             "Windows policies may still block a component or installation.\n"

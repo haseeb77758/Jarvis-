@@ -129,7 +129,7 @@ def system_window(app):
     details = [
         'OS: ' + platform.platform(),
         'Workspace: ' + str(app.control.workspace),
-        'Local AI: optional Ollama model; availability depends on local setup',
+        'Account AI: Puter account sign-in; internet and account allowance required',
         'Voice: opt-in, transcription runs locally after setup',
         'Control: explicit action approval, emergency STOP enabled',
         'Network: no remote desktop-control server',
@@ -274,7 +274,7 @@ def make_dashboard(app):
     navigation = tk.Frame(header, bg=DEEP)
     navigation.pack(side='left')
     for title, action in [
-        ('AI Chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set())),
+        ('AI Chat', lambda: (app.mode.set('AI chat'), app.entry.focus_set())),
         ('Notes', lambda: note_window(app)),
         ('Tasks', lambda: tasks_window(app)),
         ('Toolbox', app.open_toolkit),
@@ -310,7 +310,7 @@ def make_dashboard(app):
     more.pack(side='right', padx=3)
     btn(actions, 'Update', app.update_jarvis, compact=True).pack(side='right', padx=3)
     btn(actions, 'Sandbox', app.open_sandbox, compact=True).pack(side='right', padx=3)
-    btn(actions, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=3)
+    btn(actions, 'Connect AI', app.setup_ai, compact=True).pack(side='right', padx=3)
     label(actions, '', 9, GREEN, True, bg=DEEP, textvariable=app.ai_status).pack(
         side='right', padx=(4, 9))
 
@@ -360,10 +360,10 @@ def make_dashboard(app):
 
     label(sidebar, 'WORKSPACE TOOLS', 9, MUTED, True).pack(anchor='w', padx=16, pady=(0, 6))
     sidebar_items = [
-        ('◉   AI Chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set())),
+        ('◉   AI Chat', lambda: (app.mode.set('AI chat'), app.entry.focus_set())),
         ('⌕   Web search', lambda: command_search(app, 'google')),
         ('▤   Files & workspace', app.choose),
-        ('✉   Message draft', lambda: (app.mode.set('Local AI chat'),
+        ('✉   Message draft', lambda: (app.mode.set('AI chat'),
                                       preset_prompt(app.entry, 'Draft a professional message: '))),
         ('▣   Notes', lambda: note_window(app)),
         ('≡   Tasks & shortcuts', lambda: tasks_window(app)),
@@ -416,21 +416,21 @@ def make_dashboard(app):
     intro_text = tk.Frame(intro, bg=DEEP)
     intro_text.pack(side='left', fill='both', expand=True, padx=(5, 2), pady=(12, 5))
     label(intro_text, 'JARVIS / AI CHAT', 16, CYAN, True, bg=DEEP).pack(anchor='w', pady=(0, 7))
-    label(intro_text, 'Your private AI desktop companion  ·  Roman Urdu & English',
+    label(intro_text, 'Your AI desktop companion  ·  Roman Urdu & English',
           9, MUTED, bg=DEEP, wraplength=410, justify='left').pack(anchor='w')
-    model_name = tk.StringVar(value='LOCAL  /  ' + app.ai.model)
+    model_name = tk.StringVar(value='CLOUD  /  ' + app.ai.model)
     label(intro_text, '', 9, GREEN, True, bg=DEEP, textvariable=model_name).pack(
         anchor='w', pady=(12, 0))
     def refresh_model_name():
         if not root.winfo_exists():
             return
-        model_name.set('LOCAL  /  ' + str(app.ai.model))
+        model_name.set('CLOUD  /  ' + str(app.ai.model))
         root.after(2500, refresh_model_name)
     root.after(2500, refresh_model_name)
 
     controls = tk.Frame(conversation, bg=DEEP)
     controls.pack(fill='x', padx=13, pady=(0, 8))
-    app.mode.set('Local AI chat')
+    app.mode.set('AI chat')
     style = ttk.Style()
     style.theme_use('clam')
     style.configure('Jarvis.TCombobox', fieldbackground=PANEL_2,
@@ -438,12 +438,12 @@ def make_dashboard(app):
                     bordercolor=LINE)
     app.select = ttk.Combobox(controls, textvariable=app.mode,
                               state='readonly', width=18, style='Jarvis.TCombobox',
-                              values=['Local AI chat', 'Computer commands', 'AI action plan'])
+                              values=['AI chat', 'Computer commands', 'AI action plan'])
     app.select.pack(side='left', padx=2)
     btn(controls, '+ New chat', app.clear, compact=True).pack(side='right', padx=2)
     btn(controls, 'Desktop mode', lambda: (app.mode.set('Computer commands'),
                                           app.entry.focus_set()), compact=True).pack(side='right', padx=2)
-    btn(controls, 'AI chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set()),
+    btn(controls, 'AI chat', lambda: (app.mode.set('AI chat'), app.entry.focus_set()),
         compact=True).pack(side='right', padx=2)
     motion_button = btn(controls, 'Pause orb', lambda: None, compact=True)
     def toggle_motion():
@@ -492,7 +492,7 @@ def make_dashboard(app):
         ('Video script', 'Haseeb Crafts ke liye 15 second ki professional video script do.'),
         ('Plan', 'Mujhe aaj ke 3 practical tasks suggest karo.'),
     ]:
-        btn(prompts, title, lambda p=prompt: (app.mode.set('Local AI chat'),
+        btn(prompts, title, lambda p=prompt: (app.mode.set('AI chat'),
                                               preset_prompt(app.entry, p)),
             compact=True).pack(side='left', padx=2)
 
@@ -522,7 +522,7 @@ def make_dashboard(app):
         anchor='w', padx=13, pady=(13, 11))
     local_row = tk.Frame(status_card, bg=PANEL_2)
     local_row.pack(fill='x', padx=12, pady=(0, 10))
-    label(local_row, '◉  Ollama / Local AI', 10, CYAN, True, bg=PANEL_2).pack(
+    label(local_row, '◉  Account AI', 10, CYAN, True, bg=PANEL_2).pack(
         anchor='w', padx=9, pady=(9, 3))
     label(local_row, '', 9, GREEN, bg=PANEL_2, textvariable=app.ai_status,
           wraplength=218, justify='left').pack(anchor='w', padx=9, pady=(0, 8))
@@ -556,6 +556,6 @@ def make_dashboard(app):
                                padx=12, pady=8, highlightthickness=0)
     app.activity_log.pack(fill='both', expand=True, padx=4, pady=4)
 
-    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   LOCAL-FIRST  ·  STOP: Ctrl+Alt+F12 or Esc  ·  Screen actions need review',
+    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   ACCOUNT CHAT + LOCAL CONTROLS  ·  STOP: Ctrl+Alt+F12 or Esc  ·  Screen actions need review',
           8, MUTED, bg=BG).pack(anchor='w', padx=17, pady=(0, 7))
 

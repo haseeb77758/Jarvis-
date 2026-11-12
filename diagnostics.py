@@ -6,7 +6,7 @@ import queue
 import threading
 import tkinter as tk
 
-from core import ollama_status
+from core import MODEL
 from voice import bundled_model, data_dir
 
 
@@ -17,16 +17,11 @@ class Check:
     detail: str
 
 
-def check_ai(model):
-    state = ollama_status(model)
-    details = {
-        'ready': ('Ready', model + ' installed hai. Reply speed aap ke CPU/RAM par depend karegi.'),
-        'model_missing': ('Setup needed', model + ' download nahi hua. Setup AI dabayein.'),
-        'missing': ('Setup needed', 'Ollama nahi mila. Setup AI se official installer kholein.'),
-        'stopped': ('Open Ollama', 'Local service respond nahi kar rahi. Start menu se Ollama kholein, phir Refresh.'),
-    }
-    status, detail = details.get(state, ('Unavailable', 'AI status check nahi ho saka.'))
-    return Check('Local AI chat', status, detail)
+def check_ai(model, state=None):
+    if state == 'ready':
+        return Check('Account AI chat', 'Browser connected', 'Account connection tab active hai. Actual model reply chat mein test karein.')
+    return Check('Account AI chat', 'Sign-in required',
+                 'Connect AI se browser mein sign in karein. Internet aur account allowance required; API key nahi chahiye.')
 
 
 def check_microphone():
@@ -105,10 +100,10 @@ def check_cloud_speaker(config):
                  "Key aur voice ID configured hain. Voice settings → Test voice se API/credits aur playback test karein. Koi cloud request nahi ki gayi.")
 
 
-def collect_checks(model, voice_config=None):
+def collect_checks(model, voice_config=None, chat_state=None):
     checks = []
     for name, fn in (
-        ('Local AI chat', lambda: check_ai(model)),
+        ('Account AI chat', lambda: check_ai(model, chat_state)),
         ('Microphone', check_microphone),
         ('Offline speech recognition', check_voice_model),
         ('Spoken replies', (lambda: check_cloud_speaker(voice_config)) if voice_config and voice_config.get('provider') in ('ElevenLabs', 'Edge Neural (free online)') else check_speaker),
@@ -141,7 +136,7 @@ class DiagnosticsWindow:
         self.summary = tk.StringVar(master=self.window, value='Checking this device…')
         label(self.window, '', 10, TEXT, bg=BG, textvariable=self.summary).pack(anchor='w', padx=20)
         self.rows = []
-        for title in ('Local AI chat', 'Microphone', 'Offline speech recognition', 'Spoken replies'):
+        for title in ('Account AI chat', 'Microphone', 'Offline speech recognition', 'Spoken replies'):
             card = tk.Frame(self.window, bg=PANEL)
             card.pack(fill='x', padx=20, pady=6)
             state = tk.StringVar(master=self.window, value=title + ' · Checking…')
@@ -173,7 +168,9 @@ class DiagnosticsWindow:
         # Worker never touches Tk, app.busy, command queues, or permissions.
         settings = getattr(self.host, "voice_settings", None)
         config = settings.snapshot() if settings is not None else None
-        threading.Thread(target=lambda: self.results.put(collect_checks(model, config)), daemon=True).start()
+        bridge = getattr(self.host, "chat_bridge", None)
+        state = bridge.status() if bridge is not None else None
+        threading.Thread(target=lambda: self.results.put(collect_checks(model, config, state)), daemon=True).start()
 
     def poll(self):
         if self.closed:
@@ -189,7 +186,7 @@ class DiagnosticsWindow:
             self.running = False
             self.refresh_button.configure(state='normal')
             self.summary.set('Checks complete · status is a snapshot; Refresh after setup or device changes.')
-            self.host.check_ollama()
+            self.host.check_chat()
         self.timer = self.window.after(100, self.poll)
 
     def close(self):

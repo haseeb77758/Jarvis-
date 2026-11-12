@@ -20,7 +20,7 @@
 
   function connection() {
     if (!window.puter) {
-      $('status').textContent = 'AI SDK unavailable · reload or use cloud chat';
+      $('status').textContent = 'AI SDK unavailable · reload and connect again';
       return false;
     }
     const signed = window.puter.auth.isSignedIn();
@@ -32,7 +32,7 @@
   $('login').addEventListener('click', async () => {
     if (controller) return;
     if (!window.puter) {
-      message('error', 'AI connection load nahi hui. Internet/ad blocker check karke page reload karein, ya Open existing cloud chat use karein.');
+      message('error', 'AI connection load nahi hui. Internet/ad blocker check karke page reload karein, phir reload karke Connect AI dobara try karein.');
       return;
     }
     try {
@@ -137,3 +137,4 @@
   message('assistant', 'Salam Haseeb bhai! Main Jarvis hoon. Writing, coding, video prompts aur planning mein madad kar sakta hoon. Shuru karne ke liye Connect AI dabayein.');
   connection();
 })();
+
