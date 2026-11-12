@@ -1,5 +1,6 @@
 """Free online voice routing, bounded network work, and offline codec/UI tests."""
 import asyncio
+import gc
 import io
 import json
 from pathlib import Path
@@ -21,6 +22,12 @@ def config():
 
 
 class FreeVoiceTests(unittest.TestCase):
+    def tearDown(self):
+        # Tk variable/window cycles must be finalized on the owning main thread,
+        # before a later speaker worker can trigger cyclic garbage collection.
+        self.doCleanups()
+        gc.collect()
+
     def test_spoken_text_preserves_meaning_but_skips_code_and_markdown(self):
         original = '**Haseeb**, 3 cheezen.\n- [Website](https://example.com) dekho.\n```python\nprint(123)\n```'
         self.assertEqual(spoken_text(original), 'Haseeb, 3 cheezen. Website dekho.')
