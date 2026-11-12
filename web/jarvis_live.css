@@ -41,3 +41,5 @@ code{color:#5ffae6}footer{display:flex;justify-content:space-between;gap:16px;pa
 .input-select select:disabled{opacity:.5}
 #enableAudio{border-color:#8defba;background:#217f76;color:white;font-weight:750;box-shadow:0 0 20px #25e2bd55}
 #retryMic{border-color:#da9e54;color:#ffdda7}
+
+.offscreen-audio{position:fixed;left:-10000px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none}
