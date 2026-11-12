@@ -84,7 +84,7 @@ class LiveKitOptionalTests(unittest.TestCase):
         timer = Mock()
         with patch.object(lk.os, 'name', 'nt'), \
                 patch.object(lk, 'agent_path',
-                             return_value=Path(__file__).resolve().parents[1] / 'livekit_voice' / 'agent.py'), \
+                             return_value=Path(__file__).resolve().parents[1] / 'livekit_agent.py'), \
                 patch('livekit_bridge.subprocess.Popen', return_value=process), \
                 patch('livekit_bridge.threading.Timer', return_value=timer) as create_timer:
             session = lk.LiveKitConsole()
