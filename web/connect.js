@@ -72,7 +72,7 @@
         }
       }
     } catch (_) { await disconnect(); }
-    finally { setTimeout(loop, 500); }
+    finally { setTimeout(loop, 180); }
   }
   loop();
 })();

@@ -39,12 +39,12 @@ def setup_voice(stop):
     voice_model(download=True)
     if stop.is_set():
         raise RuntimeError('Stopped. Model download may have completed locally.')
-    return 'Voice model ready. Mic 6s dabayein; transcript review ke baad Run karein.'
+    return 'Voice model ready. Mic dabayein; bolna khatam karne par recording automatically rukegi (max 6s).'
 
 
 def listen(stop, language='auto', notify=None):
     import numpy as np
-    import sounddevice as sd
+    from adaptive_capture import record_until_silence
     if stop.is_set():
         raise RuntimeError('Stopped.')
     try:
@@ -52,37 +52,30 @@ def listen(stop, language='auto', notify=None):
     except Exception as exc:
         raise RuntimeError('Pehle Setup voice dabayein. Voice model ek dafa download hota hai.') from exc
     try:
-        if notify:
-            notify('Listening now · 6 seconds · STOP cancels')
-        if os.name == 'nt':
-            import winsound
-            winsound.Beep(1000, 120)
-        audio = sd.rec(6 * 16000, samplerate=16000, channels=1, dtype='float32')
-        deadline = time.monotonic() + 6
-        while time.monotonic() < deadline:
-            if stop.wait(0.05):
-                sd.stop()
-                raise RuntimeError('Microphone recording stopped.')
-        sd.wait()
+        audio = record_until_silence(stop, notify=notify)
+    except RuntimeError:
+        raise
     except Exception as exc:
-        sd.stop()
         if stop.is_set():
             raise RuntimeError('Microphone stopped.') from exc
         raise RuntimeError('Microphone record nahi hua. Windows Settings → Privacy & security → Microphone mein desktop-app permission aur default mic check karein.') from exc
     if stop.is_set():
         raise RuntimeError('Stopped.')
-    if float(np.max(np.abs(audio))) < 0.008:
-        raise RuntimeError('Awaaz bohat kam hai. Mic level check karke dobara try karein.')
+    if not len(audio) or float(np.max(np.abs(audio))) < 0.008:
+        raise RuntimeError('Speech detect nahi hui. Mic level check karke dobara try karein.')
     if notify:
-        notify('Transcribing locally · audio stays on this PC')
-    segments, info = model.transcribe(audio.reshape(-1), language=None if language == 'auto' else language,
-                                      task='transcribe', beam_size=1, vad_filter=False,
-                                      condition_on_previous_text=False)
+        notify('Recognizing locally · audio stays on this PC')
+    started = time.monotonic()
+    segments, _info = model.transcribe(audio, language=None if language == 'auto' else language,
+                                        task='transcribe', beam_size=1, vad_filter=False,
+                                        condition_on_previous_text=False)
     result = ' '.join(segment.text.strip() for segment in segments).strip()
     if stop.is_set():
         raise RuntimeError('Stopped. Transcript discarded.')
     if not result:
         raise RuntimeError('Speech samajh nahi aayi. Chhoti aur saaf instruction dobara bolein.')
+    if notify:
+        notify(f'Transcribed {len(audio) / 16000:.1f}s audio in {time.monotonic() - started:.1f}s · review before running')
     return result[:4000]
 
 
@@ -115,6 +108,7 @@ class Speaker:
         self.prepare_speech = prepare_speech
         self.cancel = threading.Event()
         self.thread = None
+        self.playback_lock = threading.Lock()
 
     def stop(self):
         self.cancel.set()
@@ -127,7 +121,9 @@ class Speaker:
         self.cancel = cancel
         def run():
             if previous:
-                previous.join(timeout=2)
+                # The old request may be waiting on a network service. Do not
+                # delay the new voice for two seconds just to join it.
+                previous.join(timeout=0.1)
             if cancel.is_set():
                 return
             if config["provider"] == "Edge Neural (free online)":
@@ -153,8 +149,9 @@ class Speaker:
                     compressed = generate_mp3(spoken, config, cancel)
                     if not cancel.is_set():
                         audio = decode_mp3(compressed, cancel)
-                        if not cancel.is_set():
-                            play_pcm(audio, cancel)
+                        with self.playback_lock:
+                            if not cancel.is_set():
+                                play_pcm(audio, cancel)
                 except VoiceError as exc:
                     if not cancel.is_set():
                         self.notify(str(exc))
@@ -166,8 +163,9 @@ class Speaker:
                 from cloud_voice import generate_pcm, play_pcm, VoiceError
                 try:
                     audio = generate_pcm(text, config, cancel)
-                    if not cancel.is_set():
-                        play_pcm(audio, cancel)
+                    with self.playback_lock:
+                        if not cancel.is_set():
+                            play_pcm(audio, cancel)
                 except VoiceError as exc:
                     if not cancel.is_set():
                         self.notify(str(exc))
@@ -180,13 +178,16 @@ class Speaker:
                 import win32com.client
                 pythoncom.CoInitialize()
                 try:
-                    engine = win32com.client.Dispatch('SAPI.SpVoice')
-                    engine.Rate = 0
-                    engine.Speak(str(text)[:1800], 1)
-                    while not engine.WaitUntilDone(100):
+                    with self.playback_lock:
                         if cancel.is_set():
-                            engine.Speak('', 3)
-                            break
+                            return
+                        engine = win32com.client.Dispatch('SAPI.SpVoice')
+                        engine.Rate = 0
+                        engine.Speak(str(text)[:1800], 1)
+                        while not engine.WaitUntilDone(100):
+                            if cancel.is_set():
+                                engine.Speak('', 3)
+                                break
                 finally:
                     pythoncom.CoUninitialize()
             except Exception:

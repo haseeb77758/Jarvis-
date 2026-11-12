@@ -51,8 +51,10 @@ Internet chahiye, API key nahi. Urdu script ke saath pronunciation behtar hogi.
 Windows voice offline option hai. ElevenLabs paid/key wala optional provider free
 flow ka fallback nahi; free-only use ke liye usay select nahi karna.
 
-Mic sirf button dabane par takreeban 6 seconds record karta hai aur transcription
-local hoti hai. Transcript review ke baad instruction chalti hai. Voice model
+Mic sirf button dabane par recording shuru karta hai. Aap bol kar rukte hain
+to recording lagbhag 0.7 second ki khamoshi ke baad khud band ho jati hai,
+maximum 6 seconds. Noisy room mein 6 seconds tak ja sakti hai. Transcription
+local hoti hai; transcript review ke baad instruction chalti hai. Voice model
 first-time download ho sakta hai; ye chatbot language model se alag hai.
 
 ## Target-PC check

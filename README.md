@@ -58,8 +58,10 @@ Windows speech is available offline. The previously added ElevenLabs provider is
 optional and requires its own key/credits; it is never a fallback for free chat or
 free speech. Do not select it for free-only usage. [Optional setup](ELEVENLABS-VOICE.md).
 
-Mic recording starts only after pressing **Mic**, captures about six seconds,
-transcribes locally, and asks for transcript review before running a command.
+Mic recording starts only after pressing **Mic**, ends after a short speech pause
+(with a six-second hard limit), transcribes locally, and asks for transcript review
+before running a command. A noisy room can prevent early stopping; the six-second
+limit still applies. The readiness/response timings are shown in the status bar.
 There is no always-on recording. Use **Readiness** for device/configuration hints;
 a live device test is needed to verify permission, voice quality and audible output.
 

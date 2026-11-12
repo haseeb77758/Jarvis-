@@ -179,13 +179,13 @@ class App:
         generation = self.generation
         notify = lambda text: self.events.put((generation, 'voice_status', text, '', None))
         self.worker(lambda: listen(self.stop, language, notify), 'voice')
-        self.status.set('Preparing mic / recording 6 seconds · STOP cancels')
+        self.status.set('Preparing mic · recording ends after a pause (max 6s) · STOP cancels')
 
     def setup_voice(self):
         if self.busy or self.stop.is_set():
             return
         if bundled_model():
-            self.say('NOTICE', 'Voice model is EXE mein included hai. Mic 6s dabayein; pehli recognition CPU par kuch seconds le sakti hai.')
+            self.say('NOTICE', 'Voice model is EXE mein included hai. Mic dabayein; speech ke baad recording auto-stop hogi (max 6s). Pehli recognition CPU par kuch seconds le sakti hai.')
             return
         if messagebox.askokcancel('Setup offline voice',
             'Multilingual Whisper tiny model ek dafa internet se download hoga (approximately 75–100 MB).\nUske baad microphone audio local CPU par process hoti hai. Voice quality mic aur language par depend karegi. Download karein?', parent=self.root):

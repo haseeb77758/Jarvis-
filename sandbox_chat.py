@@ -205,7 +205,7 @@ class SandboxWindow:
         self.send_button.pack(side="right", padx=(9, 0))
         speak = tk.Frame(bottom, bg=PANEL)
         speak.pack(fill="x", padx=14, pady=(0, 9))
-        self.mic_button = self._button(speak, "Mic · 6 seconds", self.start_mic)
+        self.mic_button = self._button(speak, "Mic · auto stop", self.start_mic)
         self.mic_button.pack(side="left", padx=(0, 7))
         tk.Checkbutton(speak, text="Speak replies", variable=self.speak_replies,
                        fg=LIGHT, bg=PANEL, selectcolor=SIDE,
@@ -293,7 +293,7 @@ class SandboxWindow:
         self.cancel.clear()
         generation = self.generation
         self.listening = True
-        self._set_busy(True, "Listening for 6 seconds (local microphone)...")
+        self._set_busy(True, "Listening locally · automatically stops after a pause (max 6s)...")
         def work():
             try:
                 transcript = listen(self.cancel, "auto",
