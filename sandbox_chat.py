@@ -303,8 +303,8 @@ class SandboxWindow:
     def refresh_status(self):
         if self.closed:
             return
+        selected = self.selected_model.get()
         def work():
-            selected = self.selected_model.get()
             result = ollama_status(model=selected)
             self.events.put(("health", (selected, result)))
         threading.Thread(target=work, daemon=True).start()
