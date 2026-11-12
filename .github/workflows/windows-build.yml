@@ -24,10 +24,10 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install -r requirements.txt pyinstaller
-      - name: Validate actual optional LiveKit SDK and CLI offline
+      - name: Validate minimal LiveKit realtime SDK and CLI offline (no voice model downloads)
         run: |
           python -m pip install -r livekit_requirements.txt
-          python -c "from livekit.agents import Agent, AgentServer, AgentSession, inference, room_io; from livekit.plugins import ai_coustics"
+          python -c "from dotenv import load_dotenv; from livekit.agents import Agent, AgentServer, AgentSession, inference, room_io; import sounddevice"
           python livekit_agent.py --help
       - name: Run integration and validation tests
         run: python -m unittest discover -s tests -v
