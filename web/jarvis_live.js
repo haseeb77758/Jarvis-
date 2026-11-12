@@ -58,7 +58,8 @@
     // Do not trust payload claims that a request is an agent.
     const attrs = remote.attributes || {};
     const kind = String(remote.kind || "").toLowerCase();
-    return !!attrs["lk.agent.state"] || kind.includes("agent");
+    return !!attrs["lk.agent.state"] || kind.includes("agent") ||
+           remote.kind === 4;
   }
 
   function registerDesktopTool() {
