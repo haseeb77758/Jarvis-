@@ -12,6 +12,23 @@
   const knownAudios = new Set();
   let micMeterTimer = null, silentTicks = 0, detectedMicSound = false;
   let microphoneReady = false, speakerBlocked = false;
+  let agentAudioWatch = null, agentJoined = false, remoteAudioReceived = false;
+  function clearAgentAudioWatch() {
+    clearTimeout(agentAudioWatch);
+    agentAudioWatch = null;
+  }
+  function watchForSilentAgent() {
+    if (!room || !agentJoined || remoteAudioReceived || agentAudioWatch) return;
+    agentAudioWatch = setTimeout(() => {
+      agentAudioWatch = null;
+      // A silent mic is a separate local issue. Never diagnose Cloud failure
+      // solely from a connected room or an unverified remote participant.
+      if (!room || !agentJoined || remoteAudioReceived || !microphoneReady) return;
+      el("modelStatus").textContent = "No agent audio yet · inspect Cloud Events";
+      report("Agent joined but no voice track arrived. If the MIC INPUT LEVEL moves, check LiveKit Cloud > Agents > training-2057 > Console > Events for realtime_model_error. A connected agent does not prove its model is working.", "error");
+      activity("No agent audio after 20 seconds. Check Cloud inference events; model error is not a mic permission error.");
+    }, 20000);
+  }
   function micStatus(message, warning = false) {
     el("micStatus").textContent = message;
     el("micStatus").style.color = warning ? "#ffb47e" : "";
@@ -233,9 +250,16 @@
         "Remote participant (not verified as agent)";
       activity("Remote " + (agent ? "agent" : "participant") +
                " joined; this does not prove microphone or speaker audio works.");
-      if (agent) publishState("AGENT JOINED");
+      if (agent) {
+        agentJoined = true;
+        publishState("AGENT JOINED");
+        watchForSilentAgent();
+      }
     });
     room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      agentJoined = false;
+      clearAgentAudioWatch();
+      el("modelStatus").textContent = "Agent disconnected";
       el("agent").textContent = "Agent left";
       activity("Remote participant disconnected: " + (participant.identity || ""));
       publishState("AGENT LEFT");
@@ -247,6 +271,9 @@
         audio.controls = false;
         el("audios").appendChild(audio);
         knownAudios.add(audio);
+        remoteAudioReceived = true;
+        clearAgentAudioWatch();
+        el("modelStatus").textContent = "Remote audio track received";
         audio.play().then(() => {
           if (room && room.canPlaybackAudio !== false) {
             el("speakerStatus").textContent = "Remote audio playing";
@@ -266,11 +293,14 @@
       }
     });
     room.on(RoomEvent.Disconnected, () => {
+      clearAgentAudioWatch();
+      agentJoined = false;
       stopMicMeter();
       status("DISCONNECTED");
       buttons(false);
       el("agent").textContent = "Not joined";
       el("agentAudio").textContent = "No remote track";
+      el("modelStatus").textContent = "Disconnected";
       activity("LiveKit room disconnected.");
     });
     if (RoomEvent.AudioPlaybackStatusChanged) {
@@ -339,6 +369,10 @@
     speakerBlocked = false;
     muted = false;
     microphoneReady = false;
+    clearAgentAudioWatch();
+    agentJoined = false;
+    remoteAudioReceived = false;
+    el("modelStatus").textContent = "Waiting for agent audio";
     el("agentAudio").textContent = "No remote track";
     el("micSubscribed").textContent = "Not yet";
     el("speakerStatus").textContent = "Checking playback";
@@ -354,6 +388,10 @@
       registerDesktopTool();
       await room.connect(ticket.url, ticket.token, {autoSubscribe:true});
       const micReady = await enableMicrophone();
+      agentJoined = [...room.remoteParticipants.values()].some((p) =>
+        p.isAgent === true || String(p.kind || "").toLowerCase().includes("agent") ||
+        p.kind === 4);
+      watchForSilentAgent();
       // Browser app-mode launch is NOT a user click. Audio may fail due to
       // autoplay rules; provide an explicit button instead of hiding errors.
       try {
@@ -406,6 +444,8 @@
   }
 
   async function disconnect({serverStopped = false} = {}) {
+    clearAgentAudioWatch();
+    agentJoined = false;
     clearInterval(countdown); clearInterval(poller);
     countdown = null; poller = null;
     if (room) {
@@ -420,6 +460,7 @@
     el("remaining").textContent = "Session ended";
     el("agent").textContent = "Not joined";
     buttons(false); status("DISCONNECTED");
+    el("modelStatus").textContent = "Disconnected";
     if (!serverStopped) {
       try {
         const reply = await api("/api/disconnect");
