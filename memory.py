@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
-from core import validate
+from core import validate, MODEL, CHAT_MODELS
 
 
 class PreferenceStore:
@@ -14,6 +14,7 @@ class PreferenceStore:
         self.facts = []
         self.shortcuts = {}
         self.apps = {}
+        self.chat_model = MODEL
         self.load()
 
     def load(self):
@@ -41,13 +42,18 @@ class PreferenceStore:
             for alias, path in apps.items():
                 if not re.fullmatch(r'[a-z0-9][a-z0-9 -]{0,39}', alias) or not isinstance(path, str) or not Path(path).is_absolute() or Path(path).suffix.lower() != '.exe':
                     raise ValueError('bad app path')
+            selected = data.get('chat_model', MODEL)
+            if selected not in CHAT_MODELS:
+                raise ValueError('unsupported AI model preference')
             self.facts, self.shortcuts, self.apps = facts, verified, apps
+            self.chat_model = selected
         except (ValueError, OSError, TypeError, AttributeError):
             # Do not run partially validated persisted actions.
             self.facts, self.shortcuts, self.apps = [], {}, {}
+            self.chat_model = MODEL
 
     def save(self):
-        payload = json.dumps({'version': 1, 'facts': self.facts, 'shortcuts': self.shortcuts, 'apps': self.apps}, ensure_ascii=False, indent=2)
+        payload = json.dumps({'version': 1, 'facts': self.facts, 'shortcuts': self.shortcuts, 'apps': self.apps, 'chat_model': self.chat_model}, ensure_ascii=False, indent=2)
         if len(payload.encode('utf-8')) > 100000:
             raise ValueError('Memory size limit reached. Kuch entries remove karein.')
         self.directory.mkdir(parents=True, exist_ok=True)
