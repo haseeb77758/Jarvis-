@@ -152,7 +152,7 @@ class LiveKitVoiceWindow:
                 log.write_text("No LiveKit session diagnostics yet.\n", encoding="utf-8")
             # Display redacted information, NOT the unfiltered SDK raw file.
             view = log.parent / "last-session-redacted.txt"
-            view.write_text(safe_log_tail(12000) or "No logged error details available.\\n",
+            view.write_text(safe_log_tail(12000) or "No logged error details available.\n",
                             encoding="utf-8")
             if os.name == "nt":
                 subprocess.Popen(['notepad.exe', str(view)])
