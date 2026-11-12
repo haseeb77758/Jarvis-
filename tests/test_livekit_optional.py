@@ -181,6 +181,73 @@ class LiveKitOptionalTests(unittest.TestCase):
             self.assertNotIn('LIVEKIT_API_SECRET', repr(cmd))
             launch.assert_not_called()
 
+    def test_default_repair_does_not_download_unneeded_models(self):
+        """GPT-Live-1 uses Cloud inference; base install must not download models."""
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        completed = Mock(returncode=0, stdout=b'installed', stderr=b'')
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \
+             patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
+            message = lk.install_optional()
+        self.assertIn('No extra model download needed', message)
+        self.assertEqual(runner.call_count, 1)
+        command = runner.call_args.args[0]
+        self.assertEqual(command[1:4], ['-m', 'pip', '--disable-pip-version-check'])
+        self.assertNotIn('download-files', command)
+        self.assertNotIn('ai-coustics', ' '.join(command))
+        preflight.assert_called_once_with(noise_enhancement=False)
+
+    def test_base_install_failure_has_specific_stage_and_local_diagnostic(self):
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        failed = Mock(returncode=1, stdout=b'', stderr=b'No matching distribution found')
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=failed), \
+             patch.object(lk, 'preflight_runtime') as preflight:
+            with self.assertRaisesRegex(lk.LiveKitSetupError, 'pip install'):
+                lk.install_optional()
+            preflight.assert_not_called()
+        self.assertIn('No matching distribution found', lk.safe_log_tail())
+        self.assertIn('pip install', lk.safe_log_tail())
+
+    def test_optional_model_download_only_if_noise_selected(self):
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        completed = Mock(returncode=0, stdout=b'', stderr=b'')
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \
+             patch.object(lk, 'preflight_runtime', return_value=True) as preflight:
+            result = lk.install_optional(noise_enhancement=True)
+        self.assertIn('optional AI-Coustics', result)
+        self.assertEqual(runner.call_count, 3)
+        cmds = [call.args[0] for call in runner.call_args_list]
+        self.assertIn('livekit-plugins-ai-coustics~=0.2', cmds[1])
+        self.assertIn('download-files', cmds[2])
+        preflight.assert_called_once_with(noise_enhancement=True)
+
+    def test_repair_does_not_access_cloud_keys_or_start_metered_session(self):
+        python = lk.environment_python()
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        lk.create_credentials_template().write_text(
+            'LIVEKIT_URL=wss://local.livekit.cloud\n'
+            'LIVEKIT_API_KEY=private-key\n'
+            'LIVEKIT_API_SECRET=private-secret\n', encoding='utf-8')
+        completed = Mock(returncode=0, stdout=b'', stderr=b'')
+        with patch.object(lk.os, 'name', 'nt'), \
+             patch('livekit_bridge.subprocess.run', return_value=completed) as runner, \
+             patch('livekit_bridge.subprocess.Popen') as launch, \
+             patch.object(lk, 'preflight_runtime', return_value=True):
+            lk.install_optional()
+            launch.assert_not_called()
+            self.assertEqual(runner.call_count, 1)
+            self.assertNotIn('private-key', repr(runner.call_args))
+            self.assertNotIn('private-secret', repr(runner.call_args))
+
     def test_packaging_includes_agent_and_ui_but_never_keys(self):
         from tools.package_source import source_files, ROOT
         files = {p.as_posix() for p in source_files(ROOT)}

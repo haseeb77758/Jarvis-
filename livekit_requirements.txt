@@ -1,6 +1,5 @@
-# Optional LiveKit voice dependencies; NOT installed by regular Jarvis setup.
-# Adapted from user-provided training-2057.zip, Python 3.12 on Windows.
+# Core dependencies for Jarvis LiveKit GPT-Live-1/marin realtime console.
+# No local STT, TTS, turn detector or noise model is used by default.
+# The AI-Coustics plugin is an explicit extra installed only when selected.
 livekit-agents>=1.8.8,<2
-livekit-plugins-ai-coustics~=0.2
-livekit-plugins-noise-cancellation~=0.2
 python-dotenv>=1,<2

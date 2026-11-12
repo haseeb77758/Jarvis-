@@ -158,64 +158,121 @@ def python_command():
     )
 
 
-def preflight_runtime():
-    """Verify imports in the optional venv, without microphone or Cloud inference."""
+def _write_install_error(stage, details):
+    """Keep a bounded, redacted Windows-local installer error for diagnosis."""
+    try:
+        path = session_log_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        detail = details.decode("utf-8", "replace") if isinstance(details, bytes) else str(details)
+        path.write_text(
+            "LiveKit setup failure at " + stage + ":\n" + _redact_secrets(detail)[-5500:] + "\n",
+            encoding="utf-8",
+        )
+    except (OSError, UnicodeError, ValueError):
+        pass
+
+
+def _install_command(command, root, stage, timeout=360):
+    """Run an allowlisted Python command, never a shell or a cloud session."""
+    try:
+        result = subprocess.run(
+            command, cwd=str(root), check=False, capture_output=True, timeout=timeout
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _write_install_error(stage, type(exc).__name__ + ": " + str(exc))
+        raise LiveKitSetupError(
+            "LiveKit " + stage + " timeout/fail hua. View last LiveKit error kholo."
+        ) from None
+    if result.returncode:
+        details = (result.stderr or b"") + b"\n" + (result.stdout or b"")
+        _write_install_error(stage, details)
+        raise LiveKitSetupError(
+            "LiveKit " + stage + " fail hua (code " + str(result.returncode) +
+            "). View last LiveKit error / diagnostic log kholo."
+        )
+
+
+def preflight_runtime(noise_enhancement=False):
+    """Check realtime SDK imports offline; no mic, model download or Cloud charge."""
     python = environment_python()
     if not python.is_file():
         raise LiveKitSetupError("LiveKit runtime missing hai. Install / repair LiveKit voice tools dabao.")
+    check = ("from dotenv import load_dotenv; "
+             "from livekit.agents import Agent, AgentServer, AgentSession, inference, room_io; "
+             "import sounddevice")
+    if noise_enhancement:
+        check += "; from livekit.plugins import ai_coustics"
     try:
         completed = subprocess.run(
-            [str(python), "-c", "from dotenv import load_dotenv; from livekit.agents import Agent, AgentServer, AgentSession, inference"],
-            cwd=str(app_data_root()), capture_output=True, timeout=25, check=False,
+            [str(python), "-c", check],
+            cwd=str(app_data_root()), capture_output=True, timeout=35, check=False,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        raise LiveKitSetupError("LiveKit Python preflight fail. Install / repair tools dobara chalao.") from None
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        _write_install_error("SDK preflight", type(exc).__name__ + ": " + str(exc))
+        raise LiveKitSetupError("LiveKit Python preflight fail. Install / repair dobara chalao.") from None
     if completed.returncode:
-        try:
-            output = (completed.stderr or b"")[-5000:]
-            output = output.decode("utf-8", "replace") if isinstance(output, bytes) else str(output)
-            session_log_path().write_text(
-                "Offline LiveKit SDK preflight failed:\n" + _redact_secrets(output)[-4000:],
-                encoding="utf-8",
+        _write_install_error("SDK preflight", completed.stderr or b"")
+        if noise_enhancement:
+            raise LiveKitSetupError(
+                "AI-Coustics extra missing/broken hai. Enhancement OFF karke test karo "
+                "ya checkbox ON rakh kar Install / repair dobara chalao."
             )
-        except (OSError, UnicodeError, ValueError):
-            pass
-        raise LiveKitSetupError("LiveKit Python packages import nahi ho rahe. Install / repair tools dabao. Error details local diagnostics mein dekho.")
+        raise LiveKitSetupError(
+            "LiveKit Python imports fail ho rahe hain. Install / repair dabao "
+            "aur View last LiveKit error kholo."
+        )
     return True
 
 
-def install_optional():
-    """Explicit opt-in only: install separate dependencies, not regular Jarvis deps."""
+def install_optional(noise_enhancement=False):
+    """Install minimal Cloud voice runtime; only requested noise models are extra."""
     if os.name != "nt":
         raise LiveKitSetupError("LiveKit desktop setup abhi Windows 11 ke liye hai.")
+    if type(noise_enhancement) is not bool:
+        raise LiveKitSetupError("LiveKit enhancement choice invalid.")
     if not agent_path().is_file() or not dependencies_path().is_file():
         raise LiveKitSetupError("Jarvis LiveKit files missing hain. Jarvis update karein.")
     root = app_data_root()
     root.mkdir(parents=True, exist_ok=True)
     python = environment_python()
     if not python.is_file():
-        command = python_command() + ["-m", "venv", str(root / ".venv")]
-        try:
-            subprocess.run(command, check=True, cwd=str(root), capture_output=True, timeout=180)
-        except (OSError, subprocess.SubprocessError) as exc:
-            raise LiveKitSetupError("LiveKit ke liye isolated Python environment nahi bana.") from None
-    try:
-        subprocess.run(
-            [str(python), "-m", "pip", "--disable-pip-version-check", "install",
-             "--no-input", "-r", str(dependencies_path())],
-            check=True, cwd=str(root), capture_output=True, timeout=360,
+        _install_command(python_command() + ["-m", "venv", str(root / ".venv")],
+                         root, "Python virtual environment", 180)
+    if not python.is_file():
+        _write_install_error("Python environment", "venv was not created")
+        raise LiveKitSetupError("LiveKit Python environment nahi bani. View last LiveKit error kholo.")
+
+    _install_command(
+        [str(python), "-m", "pip", "--disable-pip-version-check",
+         "install", "--no-input", "-r", str(dependencies_path())],
+        root, "pip install", 450,
+    )
+
+    if noise_enhancement:
+        # Only an explicitly selected extra requires local enhancement assets.
+        _install_command(
+            [str(python), "-m", "pip", "--disable-pip-version-check",
+             "install", "--no-input", "livekit-plugins-ai-coustics~=0.2"],
+            root, "optional AI-Coustics install", 360,
         )
-        # Download only the agent's declared noise processing model files.
-        subprocess.run(
+        _install_command(
             [str(python), str(agent_path()), "download-files"],
-            check=True, cwd=str(package_root()),
-            capture_output=True, timeout=360,
+            root, "optional AI-Coustics model download", 360,
         )
-    except (OSError, subprocess.SubprocessError):
-        raise LiveKitSetupError(
-            "LiveKit dependencies/model download nahi hui. Internet aur available disk space check karein."
-        ) from None
-    return "LiveKit voice environment installed. Credentials locally set karna baqi hai."
+
+    # GPT-Live-1/marin is Cloud inference: no local voice/STT/turn
+    # detector models need to be downloaded in the default configuration.
+    preflight_runtime(noise_enhancement=noise_enhancement)
+    try:
+        session_log_path().write_text(
+            "LiveKit runtime verified locally. No Cloud voice session started.\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+    if noise_enhancement:
+        return "LiveKit installed + optional AI-Coustics ready. Talk Live ab test karo."
+    return "LiveKit realtime voice installed and verified. No extra model download needed."
 
 
 class LiveKitConsole:
