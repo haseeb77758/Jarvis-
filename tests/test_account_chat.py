@@ -137,14 +137,14 @@ class AccountChatTests(unittest.TestCase):
             self.assertEqual(self.http('POST','/connection',data)[0],400)
         self.assertEqual(self.bridge.status(),'sign_in')
 
-    def test_setup_opens_account_page_without_installing_model(self):
+    def test_legacy_setup_entry_points_to_livekit_not_puter(self):
         from app import App
         host = Mock()
-        host.chat_bridge = self.bridge
-        with patch('app.messagebox.askokcancel',return_value=True), patch('app.webbrowser.open') as browser:
+        with patch('app.webbrowser.open') as browser:
             App.setup_ai(host)
-        self.assertTrue(browser.call_args.args[0].startswith(self.bridge.origin))
+        host.open_livekit_voice.assert_called_once()
         host.worker.assert_not_called()
+        browser.assert_not_called()
 
     def test_native_ai_uses_same_account_bridge(self):
         ai = ChatAI(bridge=self.bridge)
