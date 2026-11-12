@@ -112,9 +112,12 @@ class App:
     def toggle_livekit_voice(self):
         """Primary voice control: user-clicked start with explicit cloud consent."""
         current = getattr(self, 'livekit_window', None)
-        if current is not None and not current.closed and current.console.is_running():
-            current.stop()
-            return
+        if current is not None and not current.closed:
+            direct = getattr(current, "direct_service", None)
+            if current.console.is_running() or (
+                    direct is not None and direct.status()["active"]):
+                current.stop()
+                return
         self.open_livekit_voice()
         current = getattr(self, 'livekit_window', None)
         if current is not None and not current.closed:
