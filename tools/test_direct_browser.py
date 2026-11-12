@@ -97,7 +97,7 @@ class DirectBrowserTests(unittest.TestCase):
         self.assertNotIn(SETTINGS["LIVEKIT_API_SECRET"],
                          self.page.content())
         self.assertTrue(self.service.status()["active"])
-        self.page.get_by_role("button", name="Disconnect", exact=True).click()
+        self.page.locator("#disconnect").click()
         self.page.get_by_text("DISCONNECTED", exact=True).first.wait_for()
         self.assertFalse(self.service.status()["active"])
 
