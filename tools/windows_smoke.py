@@ -26,23 +26,22 @@ with tempfile.TemporaryDirectory() as data:
         root.update_idletasks()
         root.update()
         assert root.winfo_exists()
-        assert app.mode.get() == 'AI chat', 'Chat screen must be default'
-        app.mode.set('Computer commands')
-        assert app.mode.get() == 'Computer commands'
-        app.mode.set('AI chat')
-        assert app.entry.winfo_class() == 'Text', 'Multiline Jarvis chat composer is missing'
+        assert app.mode.get() == 'Computer commands', 'Local desktop commands must be default'
+        assert tuple(app.select.cget('values')) == ('Computer commands',), 'Legacy chatbot mode is still available'
+        assert app.entry.winfo_class() == 'Text', 'Multiline local command composer is missing'
         assert app.permission.get() is False
         assert hasattr(app, 'activity_log'), 'Dashboard activity panel missing'
         assert app.entry.winfo_exists() and app.log.winfo_exists()
         assert app.send.winfo_exists() and app.select.winfo_exists()
-        app.open_sandbox()
+        assert not hasattr(app, 'ai') and not hasattr(app, 'chat_bridge'), 'Legacy AI chatbot unexpectedly started'
+        assert not hasattr(app, 'sandbox_window'), 'Legacy sandbox unexpectedly started'
+        assert app.livekit_primary_button.winfo_exists(), 'Primary LiveKit voice button missing'
+        app.open_livekit_voice()
         root.update_idletasks()
         root.update()
-        assert app.sandbox_window.window.winfo_exists(), 'AI sandbox window did not open'
-        assert app.sandbox_window.entry.winfo_exists(), 'Sandbox message input missing'
-        assert app.sandbox_window.send_button.winfo_exists(), 'Sandbox SEND missing'
-        assert app.sandbox_window.session.history == [], 'Sandbox should start with no stored messages'
-        app.sandbox_window.close()
+        assert app.livekit_window.window.winfo_exists(), 'LiveKit setup window missing'
+        assert not app.livekit_window.console.is_running(), 'Voice started without explicit user consent'
+        app.livekit_window.close()
         app.say('RESULT', 'Dashboard activity check')
         assert 'Dashboard activity check' in app.activity_log.get('1.0', 'end')
         width, height = pyautogui.size()
