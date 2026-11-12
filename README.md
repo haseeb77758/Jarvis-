@@ -11,19 +11,12 @@ screen-action review, emergency STOP and GitHub updates.
 
 ## Start LiveKit conversation
 
-1. On Windows 11, open Jarvis and use **Update Jarvis**; restart after a
-   successfully verified update.
-2. Choose **LiveKit setup** and install/repair the separately managed LiveKit
-   voice environment if it is not already installed.
-3. In **LiveKit setup**, open your private credentials file and enter your own
-   `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`.
-   Obtain these from [LiveKit Cloud](https://cloud.livekit.io/). Keep your
-   secret private; never put it in GitHub or a chat.
-4. Click **Talk Live** and explicitly approve the metered Cloud session.
-   The proven LiveKit voice console opens separately while Jarvis displays
-   session status and its remaining duration.
-5. Click **End Live Voice** / STOP to end the session. There is a selectable
-   5/10/15-minute local time cap, **not a cash-spending cap**.
+1. Update Jarvis and restart.
+2. Click **Talk Live** to open the **official LiveKit Cloud Agent Console** in your browser. Sign in, choose your existing project and deployed `training-2057` agent, then click **Launch Console**.
+3. Allow the microphone and explicitly start the conversation inside the browser; LiveKit Cloud usage may be billed.
+4. **End Call/Disconnect in your browser** to stop: Jarvis STOP and the 5/10/15-minute local timer **cannot control browser voice sessions**.
+
+**Browser LiveKit needs no local Python, `blingfire` DLL, or API keys stored in Jarvis.** It works around Windows Application Control blocks without disabling security. **Advanced** local Python mode still exists for systems whose native libraries are allowed by Windows policy; only there do the local timer and process STOP apply.
 
 **This is usage-metered cloud inference, not an unlimited free AI.** Check
 [LiveKit pricing](https://livekit.com/pricing/inference) and project usage.
