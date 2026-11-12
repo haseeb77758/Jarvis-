@@ -14,6 +14,7 @@ from datetime import datetime
 from urllib.request import Request, build_opener, ProxyHandler
 
 MODEL = 'qwen2.5:1.5b'
+CHAT_MODELS = ('qwen2.5:1.5b', 'qwen2.5:3b')  # bounded, CPU-friendly options for 8 GB PCs
 CLOUD_URL = 'https://haseeb-ai-4ybb30.v2.appdeploy.ai/'
 APP_NAMES = ('chrome', 'edge', 'notepad', 'calculator', 'paint', 'explorer')
 KEYS = {'ctrl+c': ('ctrl', 'c'), 'ctrl+v': ('ctrl', 'v'),
@@ -475,20 +476,22 @@ class LocalAI:
             'behtar jawab ke liye bara local model chahiye ho sakta hai.'
         )
 
-def setup_local_model(stop):
+def setup_local_model(stop, model=MODEL):
+    if model not in CHAT_MODELS:
+        raise ValueError('Only approved local Ollama chat models are supported.')
     """Download only the named local model with an existing official Ollama install."""
     if os.name != 'nt':
         raise RuntimeError('Model setup button Windows ke liye hai.')
     executable = ollama_binary()
     if not executable:
         raise FileNotFoundError('Ollama installed nahi. Jarvis ka Setup AI button official Windows download page kholta hai.')
-    status = ollama_status(executable=executable)
+    status = ollama_status(model=model, executable=executable)
     if status == 'stopped':
         raise RuntimeError('Ollama installed hai magar local server band hai. Windows Start menu mein Ollama kholo, phir Setup AI dobara dabao.')
     if status == 'ready':
         return 'Ollama model already downloaded. Local AI chat mein sawal likhein.'
     with tempfile.TemporaryFile(mode='w+b') as log:
-        process = subprocess.Popen([executable, 'pull', MODEL], stdout=log, stderr=subprocess.STDOUT,
+        process = subprocess.Popen([executable, 'pull', model], stdout=log, stderr=subprocess.STDOUT,
                                    shell=False, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         deadline = time.monotonic() + 900
         while process.poll() is None:
@@ -506,6 +509,6 @@ def setup_local_model(stop):
             log.seek(max(0, length - 1500))
             details = log.read().decode('utf-8', errors='replace')
             raise RuntimeError('Ollama model download fail hua. Ollama Start menu se open karein aur internet check karein.\n' + details)
-    if ollama_status(executable=executable) != 'ready':
+    if ollama_status(model=model, executable=executable) != 'ready':
         raise RuntimeError('Download khatam hua magar Ollama API par model confirm nahi hua. Ollama app khol kar Setup AI dobara dabayein.')
-    return 'Ollama qwen2.5:1.5b model ready. Local AI chat mein sawal likhein.'
+    return 'Ollama ' + model + ' model ready. Local AI chat mein sawal likhein.'
