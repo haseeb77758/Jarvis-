@@ -24,6 +24,7 @@ APP_NAME = "HASEEB AI - Jarvis"
 LOCAL_RUNTIME_TESTS = (
     "test_diagnostics.py",
     "test_cloud_voice.py",
+    "test_free_voice.py",
     "test_private_github_auth.py",
     "test_sandbox_chat.py",
     "test_chat_ui.py",

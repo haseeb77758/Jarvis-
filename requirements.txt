@@ -6,3 +6,7 @@ faster-whisper==1.2.1
 # PyAV 19 removed metadata_errors, still used by faster-whisper 1.2.1.
 av>=18,<19
 sounddevice>=0.5,<1
+
+
+# Keyless online neural speech; local playback uses the PyAV dependency above.
+edge-tts==7.3.1

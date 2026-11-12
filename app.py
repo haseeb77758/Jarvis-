@@ -777,6 +777,7 @@ if __name__ == '__main__':
         import pyautogui
         import pywinauto
         import faster_whisper
+        import edge_tts
         import sounddevice
         import win32com.client
         from PIL import ImageTk

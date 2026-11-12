@@ -107,3 +107,13 @@ account ke liye encrypted save karta hai; off ho to session-only hai. STOP local
 playback rokta hai, lekin bheji hui request ke credits wapas hone ki guarantee
 nahi. Urdu script aur matching accent ki voice behtar rahegi. Windows provider
 select karke offline speech use kar sakte ho. ELEVENLABS-VOICE.md dekho.
+
+## Free natural voices (API key ke baghair)
+
+Update aur restart ke baad **Voices → Edge Neural (free online)** select karo.
+Urdu male ke liye Asad, female ke liye Uzma; English ke liye Ryan/Sonia/Guy/Jenny.
+Spoken text Microsoft ko bhejne ka checkbox tick karo, Save aur Test voice dabao.
+Phir Speak replies on karo. Ye internet par chalti hai; koi heavy model download
+ya API key nahi chahiye. Urdu script behtar rahegi; Roman Urdu khud convert nahi
+hoti. Network/service availability aur awaaz target PC par test karni hai.
+Windows provider offline option hai. FREE-VOICES.md mein details hain.
