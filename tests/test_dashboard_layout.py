@@ -28,10 +28,11 @@ class LayoutRegressionTests(TestCase):
             mode=tk.StringVar(master=root, value="AI chat"),
             status=tk.StringVar(master=root, value="Ready"),
             voice_language=tk.StringVar(master=root, value="Auto"),
+            livekit_voice_state=tk.StringVar(master=root, value='LIVEKIT OFF'),
             speak_enabled=tk.BooleanVar(master=root, value=False),
             permission=tk.BooleanVar(master=root, value=False),
         )
-        for command in ("open_voice_settings", "open_livekit_voice", "open_diagnostics", "halt", "resume", "connect_github", "update_jarvis",
+        for command in ("open_voice_settings", "open_livekit_voice", "toggle_livekit_voice", "open_diagnostics", "halt", "resume", "connect_github", "update_jarvis",
                         "setup_ai", "open_sandbox", "open_toolkit",
                         "show_memory", "choose", "add_app", "clear",
                         "listen_voice", "setup_voice", "test_voice",
@@ -39,6 +40,16 @@ class LayoutRegressionTests(TestCase):
             setattr(app, command, Mock())
         make_dashboard(app)
         return root, app
+
+    def test_primary_livekit_button_and_legacy_mic_both_available(self):
+        root, app = self._open()
+        self.assertIsNotNone(app.livekit_primary_button)
+        self.assertIn('Talk Live', app.livekit_primary_button.cget('text'))
+        app.livekit_primary_button.invoke()
+        app.toggle_livekit_voice.assert_called_once()
+        app.livekit_voice_state.set('LIVE')
+        root.update_idletasks()
+        self.assertTrue(root.winfo_exists())
 
     def test_fixed_sidebars_and_visible_chat_controls(self):
         root, app = self._open()
