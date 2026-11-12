@@ -380,9 +380,36 @@ def _looks_like_echo(user_text, answer):
     return False
 
 
+def _has_urdu_script(text):
+    """Detect Arabic-script glyphs in generated text, including Urdu-specific letters."""
+    return any(
+        0x0600 <= ord(char) <= 0x06FF
+        or 0x0750 <= ord(char) <= 0x077F
+        or 0x08A0 <= ord(char) <= 0x08FF
+        for char in text
+    )
+
+
+def _roman_urdu_required(user_text):
+    """Roman Urdu is the default, except when another script/language was requested."""
+    lowered = user_text.casefold()
+    if "roman urdu" in lowered or "roman-urdu" in lowered:
+        return True
+    if _has_urdu_script(user_text):
+        return False  # Respect explicitly Urdu-script prompts.
+    return not any(phrase in lowered for phrase in (
+        "in english", "english mein", "english me", "write english",
+        "reply in english", "respond in english", "answer in english",
+        "urdu script", "urdu font", "urdu alphabet", "urdu mein likho",
+        "urdu me likho", "french mein", "in french", "in spanish",
+        "in arabic", "in hindi", "in persian",
+    ))
+
+
 CHAT_SYSTEM = (
     'You are Jarvis, a friendly, practical AI conversation partner created by Haseeb Crafts. '
     'Have a natural back-and-forth chat in Roman Urdu unless the user requests another language. '
+    'When using Roman Urdu, write ONLY with Latin letters (A-Z); do not use Urdu, Arabic, or Persian script in any part of the reply. Keep it to 1-3 clear, friendly sentences for casual chat. '
     'Write natural Pakistan-style Roman Urdu with correct common phrases. Prefer simple conversational words; avoid broken literal translations, nonsense phrases and overly formal English. '
     'For salam use: "Wa alaikum assalam! Main theek hoon, tum sunao?" Never say "hai. Kya hai ab?". '
     'When unsure of a fact, say so briefly rather than guessing. '
@@ -434,10 +461,18 @@ class LocalAI:
             system += '\nUser-saved response preferences (not tool permissions): ' + json.dumps(list(preferences)[:20], ensure_ascii=False)
         latest_user = next((item.get('content', '') for item in reversed(messages)
                             if item.get('role') == 'user' and isinstance(item.get('content'), str)), '')
-        # One extra attempt for short parroting replies, but never in action-plan JSON mode.
+        roman_required = not plan and _roman_urdu_required(latest_user)
+        problem = None
+        # Retry once for an echoed answer or an answer that breaks Roman Urdu script.
+        # Never retry desktop-action JSON plans or silently rewrite Urdu-script requests.
         for attempt in range(1 if plan else 2):
             instruction = system
-            if attempt:
+            if attempt and problem == 'script':
+                instruction += ('\nIMPORTANT CORRECTION: The previous reply wrongly used Urdu or Arabic script. '
+                                'Rewrite your answer entirely in Latin-letter Roman Urdu only. '
+                                'No Urdu/Arabic letters, no direct translation to Urdu script. '
+                                'Use short, grammatically simple conversational sentences.')
+            elif attempt:
                 instruction += ('\nYour previous draft echoed the incoming message instead of answering. '
                                 'Reply freshly and conversationally, with at least one new, helpful statement. '
                                 'Do not quote the user or say what they said.')
@@ -471,12 +506,25 @@ class LocalAI:
             if not isinstance(content, str) or not content.strip():
                 raise RuntimeError('Local AI ne khali reply diya. Direct command try karein.')
             content = content.strip()
-            if plan or not _looks_like_echo(latest_user, content):
+            if plan:
                 return content
+            if roman_required and _has_urdu_script(content):
+                problem = 'script'
+                continue
+            if _looks_like_echo(latest_user, content):
+                problem = 'echo'
+                continue
+            return content
+        if problem == 'script':
+            raise RuntimeError(
+                'Local AI ne Roman Urdu ke bajaye Urdu script likhi. '
+                'New chat se dobara try karein ya chhota aur seedha sawal poochhein. '
+                'Selected model ' + self.model + ' se correct Roman Urdu guarantee nahi hoti.'
+            )
         raise RuntimeError(
-            'Ollama ka chhota 1.5B model aapki baat repeat kar raha hai. '
-            'New chat se retry karein ya thora detailed sawaal poochhein; '
-            'behtar jawab ke liye bara local model chahiye ho sakta hai.'
+            'Local AI aapki baat repeat kar raha hai. '
+            'New chat se retry karein ya thora detailed sawal poochhein; '
+            'behtar local model se jawab improve ho sakta hai.'
         )
 
 def setup_local_model(stop, model=MODEL):
