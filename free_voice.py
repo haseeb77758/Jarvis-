@@ -102,6 +102,38 @@ def decode_mp3(audio, cancel):
     return bytes(pcm)
 
 
+class _MP3HeaderStripper:
+    """Remove optional ID3v2 metadata before incremental MP3 frame decoding."""
+
+    def __init__(self):
+        self.pending = bytearray()
+        self.ready = False
+
+    def feed(self, data):
+        if self.ready:
+            return data
+        self.pending.extend(data)
+        if len(self.pending) < 10:
+            return b''
+        if self.pending[:3] == b'ID3':
+            header = self.pending[:10]
+            if any(part & 0x80 for part in header[6:10]):
+                raise VoiceError('Invalid audio metadata.')
+            size = 10 + ((header[6] & 127) << 21) + ((header[7] & 127) << 14) + ((header[8] & 127) << 7) + (header[9] & 127)
+            if header[5] & 0x10:
+                size += 10
+            if size > 100_000:
+                raise VoiceError('Audio metadata too large.')
+            if len(self.pending) < size:
+                return b''
+        else:
+            size = 0
+        output = bytes(self.pending[size:])
+        self.pending.clear()
+        self.ready = True
+        return output
+
+
 async def _stream_pcm_play(text, voice, rate, cancel, notify=None):
     """Decode MP3 fragments as they arrive and play PCM without waiting for full TTS."""
     import av
@@ -111,6 +143,7 @@ async def _stream_pcm_play(text, voice, rate, cancel, notify=None):
     from contextlib import ExitStack
 
     codec = av.CodecContext.create('mp3', 'r')
+    metadata = _MP3HeaderStripper()
     resampler = av.AudioResampler(format='s16', layout='mono', rate=24000)
     compressed_size = 0
     decoded_size = 0
@@ -154,8 +187,14 @@ async def _stream_pcm_play(text, voice, rate, cancel, notify=None):
                 compressed_size += len(data)
                 if compressed_size > MAX_AUDIO:
                     raise VoiceError('Free voice audio limit. Chhota reply try karein.')
-                for packet in codec.parse(data):
-                    play_frames(codec.decode(packet))
+                for packet in codec.parse(metadata.feed(data)):
+                    try:
+                        play_frames(codec.decode(packet))
+                    except av.error.InvalidDataError:
+                        if first_sound:
+                            raise
+                        # Some MP3 streams send an initial non-audio header packet.
+                        # Ignore it only before any decoded audio exists.
             if not cancel.is_set():
                 for packet in codec.parse(None):
                     play_frames(codec.decode(packet))
