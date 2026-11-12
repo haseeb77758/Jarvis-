@@ -11,15 +11,15 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 from chat_ui import ChatComposer, on_return, preset_prompt
 
-BG = '#07111d'
-PANEL = '#101e2d'
-PANEL_2 = '#142637'
-DEEP = '#0b1623'
-LINE = '#263e50'
-TEXT = '#e8f3fa'
-MUTED = '#93a9bc'
-CYAN = '#38dcd7'
-GREEN = '#35d994'
+BG = '#06101e'
+PANEL = '#0d2032'
+PANEL_2 = '#112c41'
+DEEP = '#071727'
+LINE = '#174158'
+TEXT = '#eaf8ff'
+MUTED = '#91b2c7'
+CYAN = '#31e4e2'
+GREEN = '#42e5a1'
 AMBER = '#f2b958'
 
 
@@ -137,196 +137,413 @@ def system_window(app):
     messagebox.showinfo('Jarvis | System information', '\n'.join(details), parent=app.root)
 
 
+def _sphere_points(count=140):
+    """Deterministic 3-D point cloud; no GPU or external animation dependency."""
+    if not isinstance(count, int) or not 1 <= count <= 500:
+        raise ValueError("Orb point count must be between 1 and 500.")
+    points = []
+    for i in range(count):
+        y = 1.0 - 2.0 * (i + .5) / count
+        theta = i * 2.399963229728653
+        r = math.sqrt(max(0.0, 1.0 - y * y))
+        points.append((math.cos(theta) * r, y, math.sin(theta) * r))
+    return tuple(points)
+
+
+def _project_orb_point(point, phase, radius=61):
+    """Y-axis rotation with depth-dependent size; bounded frame coordinates."""
+    x, y, z = point
+    xrot = x * math.cos(phase) + z * math.sin(phase)
+    zrot = z * math.cos(phase) - x * math.sin(phase)
+    depth = .78 + .22 * (zrot + 1.0) / 2.0
+    return xrot * radius * depth, y * radius * .87 * depth, zrot
+
+
+class RotatingOrb:
+    """Low-cost, real rotating AI sphere for Tkinter on integrated graphics.
+
+    All animation happens in the Tk main thread. No microphones, network calls,
+    threads or system operations are involved. The loop stops when destroyed.
+    """
+
+    FRAME_MS = 85
+
+    def __init__(self, parent, width=188, height=132):
+        self.canvas = tk.Canvas(parent, width=width, height=height, bg=DEEP,
+                                highlightthickness=0, bd=0)
+        self.canvas.pack(side='right', padx=(0, 6), pady=2)
+        self.cx = width / 2
+        self.cy = height / 2
+        self.points = _sphere_points(144)
+        self.phase = 0.0
+        self.running = True
+        self.alive = True
+        self.canvas.create_oval(self.cx - 67, self.cy - 61, self.cx + 67, self.cy + 61,
+                                outline='#18526a', width=1)
+        self.orbit = self.canvas.create_arc(self.cx - 77, self.cy - 37,
+                                            self.cx + 77, self.cy + 37,
+                                            start=10, extent=285, style='arc',
+                                            outline='#248da1', width=2)
+        self.halo = self.canvas.create_oval(self.cx - 44, self.cy - 44,
+                                             self.cx + 44, self.cy + 44,
+                                             outline='#13475b', width=1)
+        self.dots = [self.canvas.create_oval(0, 0, 1, 1, fill=CYAN, outline='')
+                     for _ in self.points]
+        self.satellite = self.canvas.create_oval(0, 0, 5, 5, fill='#a6fff7', outline='')
+        self.center_text = self.canvas.create_text(self.cx, self.cy, text='AI',
+                                      font=('Segoe UI', 13, 'bold'), fill='#b3fffb')
+        self.canvas.bind('<Destroy>', self._on_destroy, add='+')
+        self._tick()
+
+    def _on_destroy(self, event):
+        if event.widget is self.canvas:
+            self.alive = False
+
+    def toggle(self):
+        self.running = not self.running
+        return self.running
+
+    def _tick(self):
+        if not self.alive:
+            return
+        try:
+            if not self.canvas.winfo_exists():
+                self.alive = False
+                return
+            if self.running and self.canvas.winfo_viewable():
+                self.phase = (self.phase + .042) % (2 * math.pi)
+                self.canvas.itemconfigure(self.orbit, start=(15 + math.degrees(self.phase) * 2) % 360)
+                for item, point in zip(self.dots, self.points):
+                    dx, dy, depth = _project_orb_point(point, self.phase)
+                    radius = .65 + (depth + 1) * .52
+                    x, y = self.cx + dx, self.cy + dy
+                    self.canvas.coords(item, x - radius, y - radius, x + radius, y + radius)
+                    tint = '#146274' if depth < -.35 else '#238fa6' if depth < .15 else (
+                        '#3ee4e3' if depth < .65 else '#a4fff5')
+                    self.canvas.itemconfigure(item, fill=tint)
+                angle = self.phase * 2.0
+                ox = self.cx + 77 * math.cos(angle)
+                oy = self.cy + 37 * math.sin(angle)
+                self.canvas.coords(self.satellite, ox - 3, oy - 3, ox + 3, oy + 3)
+                self.canvas.tag_raise(self.satellite)
+                self.canvas.tag_raise(self.center_text)
+            self.canvas.after(self.FRAME_MS if self.running else 250, self._tick)
+        except tk.TclError:
+            self.alive = False
+
+
 def draw_orb(parent):
-    canvas = tk.Canvas(parent, width=224, height=204, bg=PANEL, highlightthickness=0)
-    canvas.pack(expand=True)
-    cx, cy = 112, 103
-    canvas.create_oval(cx - 83, cy - 83, cx + 83, cy + 83, outline='#1c5564', width=1)
-    # A deterministic Fibonacci sphere: fast to render on integrated graphics.
-    for i in range(260):
-        z = 1 - 2 * (i + .5) / 260
-        angle = i * 2.3999632297
-        rad = math.sqrt(max(0, 1 - z * z))
-        x = rad * math.cos(angle)
-        y = rad * math.sin(angle)
-        # Tilt to give the cloud a 3D appearance without animation overhead.
-        px = cx + (x * .84 + z * .16) * 79
-        py = cy + (y * .86 - z * .20) * 79
-        size = 0.75 + max(0, z + 1) * .36
-        tint = '#1d7884' if z < -.18 else '#36c8cd' if z < .55 else '#8af9ed'
-        canvas.create_oval(px - size, py - size, px + size, py + size, fill=tint, outline='')
-    canvas.create_text(cx, cy + 95, text='READY FOR COMMANDS', fill=CYAN, font=('Segoe UI', 9, 'bold'))
-    return canvas
+    """Compatibility helper for callers expecting a decorative orb widget."""
+    return RotatingOrb(parent).canvas
+
+
+def _set_compact_button_focus(button):
+    """Keep keyboard navigation visibly available."""
+    button.configure(takefocus=1)
+    return button
 
 
 def make_dashboard(app):
+    """Polished Windows AI dashboard, inspired by the approved design reference.
+
+    The screenshot is a visual reference, not a background image: every button
+    is a live Tkinter control wired to the existing reviewed Jarvis handlers.
+    """
     root = app.root
     root.configure(bg=BG)
-    root.title('HASEEB AI  |  JARVIS — Desktop Intelligence')
-    root.geometry('1260x780')
-    root.minsize(980, 620)
+    root.title('HASEEB AI | JARVIS — Desktop Intelligence')
+    usable_width = max(1020, min(1480, root.winfo_screenwidth() - 36))
+    usable_height = max(660, min(900, root.winfo_screenheight() - 88))
+    root.geometry(f'{usable_width}x{usable_height}')
+    root.minsize(1020, 660)
 
-    header = tk.Frame(root, bg=DEEP, height=54, highlightbackground=LINE, highlightthickness=1)
+    # A wide but compact native title/navigation bar. More retains GitHub
+    # connection and resume without hiding the emergency STOP button.
+    header = tk.Frame(root, bg=DEEP, height=68, highlightthickness=1, highlightbackground=LINE)
     header.pack(fill='x')
     header.pack_propagate(False)
     identity = tk.Frame(header, bg=DEEP)
-    identity.pack(side='left', padx=(18, 30), pady=7)
-    label(identity, 'H A S E E B  A I', 13, CYAN, True, bg=DEEP).pack(anchor='w')
-    label(identity, 'Created by Haseeb Crafts', 8, MUTED, bg=DEEP).pack(anchor='w')
-    for title, command in [('AI Chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set())),
-                           ('Notes', lambda: note_window(app)),
-                           ('Tasks', lambda: tasks_window(app))]:
-        tab = tk.Button(header, text=title, command=command, bg=DEEP, fg=CYAN if title == 'Intelligence' else MUTED,
-                        activebackground=DEEP, activeforeground=CYAN, bd=0, font=('Segoe UI', 10),
-                        cursor='hand2', padx=14, pady=15)
-        tab.pack(side='left')
-    btn(header, 'STOP  /  Esc', app.halt, True, True).pack(side='right', padx=(6, 16), pady=10)
-    btn(header, 'Resume', app.resume, compact=True).pack(side='right', padx=4, pady=10)
-    btn(header, 'Connect GitHub', app.connect_github, compact=True).pack(side='right', padx=4, pady=10)
-    btn(header, 'Update Jarvis', app.update_jarvis, compact=True).pack(side='right', padx=4, pady=10)
-    btn(header, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=4, pady=10)
-    btn(header, 'AI Sandbox', app.open_sandbox, compact=True).pack(side='right', padx=4, pady=10)
-    btn(header, 'Toolbox', app.open_toolkit, compact=True).pack(side='right', padx=4, pady=10)
-    btn(header, 'Ask Jarvis', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set()), compact=True).pack(side='right', padx=4, pady=10)
-    label(header, '', 9, CYAN, bg=DEEP, textvariable=app.ai_status).pack(side='right', padx=(6, 12))
+    identity.pack(side='left', padx=(18, 16), pady=8)
+    brand = tk.Frame(identity, bg=DEEP)
+    brand.pack(anchor='w')
+    label(brand, '◈', 16, CYAN, True, bg=DEEP).pack(side='left', padx=(0, 6))
+    label(brand, 'HASEEB AI', 13, CYAN, True, bg=DEEP).pack(side='left')
+    label(brand, '  |  JARVIS', 12, TEXT, True, bg=DEEP).pack(side='left')
+    label(identity, 'Local Desktop Assistant  ·  Haseeb Crafts', 8, MUTED, bg=DEEP).pack(anchor='w')
+
+    navigation = tk.Frame(header, bg=DEEP)
+    navigation.pack(side='left')
+    for title, action in [
+        ('AI Chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set())),
+        ('Notes', lambda: note_window(app)),
+        ('Tasks', lambda: tasks_window(app)),
+        ('Toolbox', app.open_toolkit),
+    ]:
+        is_chat = title == 'AI Chat'
+        item = tk.Button(navigation, text=title, command=action,
+                         bg=DEEP, fg=CYAN if is_chat else MUTED, bd=0,
+                         activebackground=DEEP, activeforeground=CYAN,
+                         cursor='hand2', font=('Segoe UI', 10, 'bold' if is_chat else 'normal'),
+                         padx=10, pady=15)
+        item.pack(side='left', padx=2)
+        if is_chat:
+            tk.Frame(navigation, bg=CYAN, height=2, width=1).place(in_=item, relx=0, rely=1,
+                                                                   relwidth=1, anchor='sw')
+
+    actions = tk.Frame(header, bg=DEEP)
+    actions.pack(side='right', padx=(4, 13))
+    btn(actions, 'STOP / Esc', app.halt, True, True).pack(side='right', padx=3)
+    more = tk.Menubutton(actions, text='•••', bg=PANEL_2, fg=TEXT,
+                         activebackground='#1d3850', activeforeground=CYAN,
+                         relief='flat', padx=10, pady=8,
+                         font=('Segoe UI', 10), cursor='hand2')
+    menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
+                   activebackground=PANEL_2, activeforeground=CYAN)
+    menu.add_command(label='Connect GitHub', command=app.connect_github)
+    menu.add_command(label='Resume', command=app.resume)
+    menu.add_separator()
+    menu.add_command(label='Memory', command=app.show_memory)
+    menu.add_command(label='Choose workspace', command=app.choose)
+    more.configure(menu=menu)
+    more.pack(side='right', padx=3)
+    btn(actions, 'Update', app.update_jarvis, compact=True).pack(side='right', padx=3)
+    btn(actions, 'Sandbox', app.open_sandbox, compact=True).pack(side='right', padx=3)
+    btn(actions, 'Setup AI', app.setup_ai, compact=True).pack(side='right', padx=3)
+    label(actions, '', 9, GREEN, True, bg=DEEP, textvariable=app.ai_status).pack(
+        side='right', padx=(4, 9))
 
     body = tk.Frame(root, bg=BG)
-    body.pack(fill='both', expand=True, padx=12, pady=(12, 10))
-    body.grid_columnconfigure(0, minsize=194)
+    body.pack(fill='both', expand=True, padx=11, pady=(11, 7))
+    body.grid_columnconfigure(0, minsize=215)
     body.grid_columnconfigure(1, weight=1)
-    body.grid_columnconfigure(2, minsize=207)
+    body.grid_columnconfigure(2, minsize=247)
     body.grid_rowconfigure(0, weight=1)
 
+    # Sidebar – navigation and genuine local shortcuts, no fake app entries.
     sidebar = panel(body)
-    sidebar.grid(row=0, column=0, sticky='nsew', padx=(0, 11))
+    sidebar.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
+    sidebar.configure(width=221)
     sidebar.grid_propagate(False)
-    sidebar.configure(width=198)
-    clock = label(sidebar, '--:--', 25, TEXT)
-    clock.pack(anchor='w', padx=15, pady=(16, 0))
-    date_label = label(sidebar, '', 9, MUTED, wraplength=185, justify='left')
-    date_label.pack(anchor='w', padx=15, pady=(0, 10))
+    clock_card = tk.Frame(sidebar, bg='#102c42')
+    clock_card.pack(fill='x', padx=8, pady=(9, 10))
+    clock = label(clock_card, '--:--', 29, TEXT, bg='#102c42')
+    clock.pack(anchor='w', padx=14, pady=(8, 0))
+    date_label = label(clock_card, '', 9, MUTED, bg='#102c42',
+                       justify='left', wraplength=200)
+    date_label.pack(anchor='w', padx=14)
+    wave = tk.Canvas(clock_card, bg='#102c42', height=27, bd=0, highlightthickness=0)
+    wave.pack(fill='x', padx=5, pady=(3, 2))
+    def draw_wave(event=None):
+        wave.delete('wave')
+        width = max(185, wave.winfo_width())
+        for row in range(3):
+            coords = []
+            for x in range(0, width, 4):
+                val = 15 - 7 * math.sin(x / 22.0 + row / 2) * math.exp(-((x - width * .62) / (width * .45)) ** 2)
+                coords.extend((x, val + row * 3))
+            wave.create_line(*coords, fill=('#185a77', '#1d7890', '#29a6af')[row],
+                             smooth=True, width=1, tags='wave')
+    wave.bind('<Configure>', draw_wave)
     def tick():
         if not root.winfo_exists():
             return
         now = datetime.now().astimezone()
         clock.configure(text=now.strftime('%H:%M'))
-        date_label.configure(text=now.strftime('%A %d %B\n%Z / Local time'))
+        date_label.configure(text=now.strftime('%a, %d %B %Y') + '\nLocal time')
         root.after(30000, tick)
     tick()
-    tk.Frame(sidebar, bg=LINE, height=1).pack(fill='x', padx=14, pady=(0, 12))
-    label(sidebar, 'WORKSPACE TOOLS', 9, MUTED, True).pack(anchor='w', padx=15, pady=(0, 5))
-    entries = [
+
+    label(sidebar, 'WORKSPACE TOOLS', 9, MUTED, True).pack(anchor='w', padx=16, pady=(0, 6))
+    sidebar_items = [
+        ('◉   AI Chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set())),
         ('⌕   Web search', lambda: command_search(app, 'google')),
-        ('▣   Files & CSV', app.choose),
-        ('✉   Message draft', lambda: (app.mode.set('Local AI chat'), app.entry.insert(0, 'Draft a message: '), app.entry.focus_set())),
-        ('▤   Notes', lambda: note_window(app)),
+        ('▤   Files & workspace', app.choose),
+        ('✉   Message draft', lambda: (app.mode.set('Local AI chat'),
+                                      preset_prompt(app.entry, 'Draft a professional message: '))),
+        ('▣   Notes', lambda: note_window(app)),
         ('≡   Tasks & shortcuts', lambda: tasks_window(app)),
-        ('◈   AI toolkit & schedule', app.open_toolkit),
+        ('◈   AI Toolbox / Schedule', app.open_toolkit),
         ('⚙   System info', lambda: system_window(app)),
     ]
-    for title, action in entries:
-        b = tk.Button(sidebar, text=title, command=action, anchor='w', bg=PANEL, fg=TEXT,
-                      activebackground=PANEL_2, activeforeground=CYAN, relief='flat', bd=0,
-                      font=('Segoe UI', 10), cursor='hand2', padx=15, pady=8)
-        b.pack(fill='x', padx=5)
-    label(sidebar, 'OPEN APP', 9, MUTED, True).pack(anchor='w', padx=15, pady=(16, 4))
-    for name, command in [('Google Chrome', 'chrome kholo'), ('Microsoft Edge', 'edge kholo'),
-                          ('Calculator', 'calculator kholo'), ('Notepad', 'notepad kholo'),
-                          ('YouTube', 'youtube kholo'), ('WhatsApp Web', 'whatsapp kholo')]:
-        tk.Button(sidebar, text='◫  ' + name, anchor='w', command=lambda c=command: app.submit(c),
-                  bg=PANEL, fg=TEXT, activebackground=PANEL_2, activeforeground=CYAN,
-                  relief='flat', bd=0, cursor='hand2', font=('Segoe UI', 9), padx=15, pady=6).pack(fill='x', padx=6)
+    for i, (title, action) in enumerate(sidebar_items):
+        focused = i == 0
+        b = tk.Button(sidebar, text=title, command=action, anchor='w',
+                      bg='#103c4b' if focused else PANEL,
+                      fg=CYAN if focused else TEXT,
+                      activebackground='#16465a', activeforeground=CYAN,
+                      highlightthickness=1 if focused else 0,
+                      highlightbackground=CYAN,
+                      relief='flat', bd=0, cursor='hand2', padx=12, pady=6,
+                      font=('Segoe UI', 9, 'bold' if focused else 'normal'))
+        b.pack(fill='x', padx=8, pady=1)
 
-    label(sidebar, 'MEDIA CONTROLS', 9, MUTED, True).pack(anchor='w', padx=15, pady=(13, 4))
-    media = tk.Frame(sidebar, bg=PANEL)
-    media.pack(fill='x', padx=10)
-    for title, command in [('◀', 'previous song'), ('⏯', 'play pause'), ('▶', 'next song')]:
-        btn(media, title, lambda c=command: app.submit(c), compact=True).pack(side='left', padx=2, pady=2)
+    label(sidebar, 'DESKTOP HELPER', 9, MUTED, True).pack(
+        anchor='w', padx=15, pady=(13, 6))
+    helper = tk.Frame(sidebar, bg=PANEL)
+    helper.pack(fill='x', padx=8)
+    for i, (title, action) in enumerate([
+        ('Apps', app.add_app),
+        ('Calculator', lambda: app.submit('calculator kholo')),
+        ('Notepad', lambda: app.submit('notepad kholo')),
+        ('Browser', lambda: app.submit('chrome kholo')),
+        ('Explorer', lambda: app.submit('explorer kholo')),
+        ('Commands', lambda: (app.mode.set('Computer commands'), app.entry.focus_set())),
+    ]):
+        b = tk.Button(helper, text=title, command=action,
+                      bg=PANEL_2, fg=TEXT, activebackground='#1a4256',
+                      activeforeground=CYAN, relief='flat',
+                      highlightthickness=1, highlightbackground=LINE,
+                      font=('Segoe UI', 8), cursor='hand2',
+                      padx=2, pady=10)
+        b.grid(row=i // 3, column=i % 3, sticky='ew', padx=2, pady=2)
+    for col in range(3):
+        helper.grid_columnconfigure(col, weight=1, uniform='help')
 
+    # Chat area – native controls and a real, circular rotating AI visualization.
     center = tk.Frame(body, bg=BG)
     center.grid(row=0, column=1, sticky='nsew')
     conversation = panel(center, DEEP)
     conversation.pack(fill='both', expand=True)
-    intro = tk.Frame(conversation, bg=DEEP)
-    intro.pack(fill='x', padx=17, pady=(15, 2))
-    label(intro, 'JARVIS  /  AI CHAT', 15, CYAN, True, bg=DEEP).pack(anchor='w')
-    label(intro, 'Ask anything in Roman Urdu or English. Answers come from your Ollama model on this PC.',
-          9, MUTED, bg=DEEP, wraplength=650, justify='left').pack(anchor='w', pady=(2, 0))
+    intro = tk.Frame(conversation, bg=DEEP, height=141)
+    intro.pack(fill='x', padx=15, pady=(11, 0))
+    intro.pack_propagate(False)
+    app.orb = RotatingOrb(intro, width=166, height=130)
+    intro_text = tk.Frame(intro, bg=DEEP)
+    intro_text.pack(side='left', fill='both', expand=True, padx=(5, 2), pady=(12, 5))
+    label(intro_text, 'JARVIS / AI CHAT', 16, CYAN, True, bg=DEEP).pack(anchor='w', pady=(0, 7))
+    label(intro_text, 'Your private AI desktop companion  ·  Roman Urdu & English',
+          9, MUTED, bg=DEEP, wraplength=410, justify='left').pack(anchor='w')
+    model_name = tk.StringVar(value='LOCAL  /  ' + app.ai.model)
+    label(intro_text, '', 9, GREEN, True, bg=DEEP, textvariable=model_name).pack(
+        anchor='w', pady=(12, 0))
+    def refresh_model_name():
+        if not root.winfo_exists():
+            return
+        model_name.set('LOCAL  /  ' + str(app.ai.model))
+        root.after(2500, refresh_model_name)
+    root.after(2500, refresh_model_name)
+
     controls = tk.Frame(conversation, bg=DEEP)
-    controls.pack(fill='x', padx=14, pady=(7, 7))
+    controls.pack(fill='x', padx=13, pady=(0, 8))
     app.mode.set('Local AI chat')
     style = ttk.Style()
     style.theme_use('clam')
-    style.configure('Jarvis.TCombobox', fieldbackground=PANEL_2, background=PANEL_2, foreground=TEXT)
-    app.select = ttk.Combobox(controls, textvariable=app.mode, state='readonly', width=19,
-                              style='Jarvis.TCombobox',
+    style.configure('Jarvis.TCombobox', fieldbackground=PANEL_2,
+                    background=PANEL_2, foreground=TEXT, arrowcolor=CYAN,
+                    bordercolor=LINE)
+    app.select = ttk.Combobox(controls, textvariable=app.mode,
+                              state='readonly', width=18, style='Jarvis.TCombobox',
                               values=['Local AI chat', 'Computer commands', 'AI action plan'])
-    app.select.pack(side='left', padx=4)
-    btn(controls, 'New chat', app.clear, compact=True).pack(side='right', padx=3)
-    btn(controls, 'Desktop mode', lambda: (app.mode.set('Computer commands'), app.entry.focus_set()),
-        compact=True).pack(side='right', padx=3)
+    app.select.pack(side='left', padx=2)
+    btn(controls, '+ New chat', app.clear, compact=True).pack(side='right', padx=2)
+    btn(controls, 'Desktop mode', lambda: (app.mode.set('Computer commands'),
+                                          app.entry.focus_set()), compact=True).pack(side='right', padx=2)
     btn(controls, 'AI chat', lambda: (app.mode.set('Local AI chat'), app.entry.focus_set()),
-        compact=True).pack(side='right', padx=3)
-    app.log = tk.Text(conversation, bg=PANEL, fg=TEXT, insertbackground=CYAN,
+        compact=True).pack(side='right', padx=2)
+    motion_button = btn(controls, 'Pause orb', lambda: None, compact=True)
+    def toggle_motion():
+        running = app.orb.toggle()
+        motion_button.configure(text='Pause orb' if running else 'Play orb')
+    motion_button.configure(command=toggle_motion)
+    motion_button.pack(side='right', padx=2)
+
+    chat_frame = tk.Frame(conversation, bg=PANEL, highlightthickness=1, highlightbackground=LINE)
+    chat_frame.pack(fill='both', expand=True, padx=13, pady=(0, 8))
+    app.log = tk.Text(chat_frame, bg='#0a1b2c', fg=TEXT, insertbackground=CYAN,
                       relief='flat', wrap='word', font=('Segoe UI', 11),
-                      padx=19, pady=14, state='disabled', spacing3=9,
-                      selectbackground='#235265', highlightthickness=1,
-                      highlightbackground=LINE)
-    app.log.pack(fill='both', expand=True, padx=13, pady=(3, 7))
-    app.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=12)
-    app.log.tag_config('user', foreground='#a8beec', font=('Segoe UI', 10, 'bold'))
-    app.log.tag_config('error', foreground='#ffab9f')
+                      padx=20, pady=13, state='disabled', spacing3=7,
+                      selectbackground='#1e5e70', highlightthickness=0)
+    app.log.pack(fill='both', expand=True, padx=5, pady=5)
+    app.log.tag_config('name', foreground=CYAN, font=('Segoe UI', 10, 'bold'), spacing1=14)
+    app.log.tag_config('user', foreground='#85faf3', font=('Segoe UI', 10, 'bold'), spacing1=12)
+    app.log.tag_config('error', foreground='#ffa9a0')
+    app.log.tag_config('user_body', foreground='#d5fffc', background='#114452')
+    app.log.tag_config('ai_body', foreground=TEXT, background='#102e44')
+
     prompts = tk.Frame(conversation, bg=DEEP)
-    prompts.pack(fill='x', padx=14, pady=(0, 4))
-    label(prompts, 'TRY:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
+    prompts.pack(fill='x', padx=15, pady=(0, 5))
+    label(prompts, '✦  QUICK PROMPTS:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
     for title, prompt in [
-        ('Salam Jarvis', 'Salam Jarvis, mujhe apna introduction do.'),
-        ('Website ideas', 'Mujhe ek business website ke 3 creative ideas do.'),
-        ('Content script', 'Haseeb Crafts ke liye 15 second ki video script likho.'),
+        ('Salam', 'Salam Jarvis, tum kaise ho?'),
+        ('Website idea', 'Mujhe Haseeb Crafts ke liye 3 creative website ideas do.'),
+        ('Video script', 'Haseeb Crafts ke liye 15 second ki professional video script do.'),
+        ('Plan', 'Mujhe aaj ke 3 practical tasks suggest karo.'),
     ]:
-        btn(prompts, title, lambda p=prompt: (app.mode.set('Local AI chat'), preset_prompt(app.entry, p)),
-            compact=True).pack(side='left', padx=3)
+        btn(prompts, title, lambda p=prompt: (app.mode.set('Local AI chat'),
+                                              preset_prompt(app.entry, p)),
+            compact=True).pack(side='left', padx=2)
+
     footer = tk.Frame(conversation, bg=DEEP)
-    footer.pack(fill='x', padx=13, pady=(3, 5))
-    app.entry = ChatComposer(footer, bg=PANEL_2, fg=TEXT, insertbackground=CYAN,
+    footer.pack(fill='x', padx=14, pady=(2, 4))
+    app.entry = ChatComposer(footer, bg='#102b40', fg=TEXT, insertbackground=CYAN,
                             relief='flat', font=('Segoe UI', 11), height=3, wrap='word',
                             padx=12, pady=9, highlightthickness=1,
-                            highlightbackground=LINE, highlightcolor=CYAN,
-                            undo=True)
+                            highlightbackground='#277b91', highlightcolor=CYAN, undo=True)
     app.entry.pack(side='left', fill='both', expand=True)
     app.entry.bind('<Return>', lambda event: on_return(event, app.submit))
-    app.send = btn(footer, 'SEND', app.submit, accent=True)
-    app.send.pack(side='right', padx=(9, 0))
+    app.send = btn(footer, '➤  SEND', app.submit, True)
+    app.send.pack(side='right', padx=(8, 0))
     btn(footer, 'Mic', app.listen_voice, compact=True).pack(side='right', padx=3)
-    label(conversation, 'ENTER to send   ·   SHIFT+ENTER for new line   ·   No cloud API key needed',
-          8, MUTED, bg=DEEP).pack(anchor='w', padx=15, pady=(0, 7))
-    voice_footer = tk.Frame(conversation, bg=DEEP)
-    voice_footer.pack(fill='x', padx=12, pady=(0, 8))
-    btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=3)
-    btn(voice_footer, 'Test voice', app.test_voice, compact=True).pack(side='left', padx=3)
-    ttk.Combobox(voice_footer, textvariable=app.voice_language, width=8, state='readonly',
-                 values=['Auto', 'Urdu', 'English']).pack(side='left', padx=4)
-    tk.Checkbutton(voice_footer, text='Speak replies', variable=app.speak_enabled, bg=DEEP, fg=MUTED,
-                   activebackground=DEEP, activeforeground=TEXT, selectcolor=PANEL_2).pack(side='left', padx=4)
-    tk.Checkbutton(voice_footer, text='Enable reviewed screen input', variable=app.permission, bg=DEEP, fg=MUTED,
-                   activebackground=DEEP, activeforeground=TEXT, selectcolor=PANEL_2).pack(side='right')
 
-    activity = panel(body)
-    activity.grid(row=0, column=2, sticky='nsew', padx=(11, 0))
-    activity.configure(width=218)
-    activity.grid_propagate(False)
-    label(activity, 'ACTIVITY', 13, TEXT, True).pack(anchor='w', padx=15, pady=(16, 10))
-    label(activity, 'Only actual outcomes appear here.\nNo background monitoring.', 9, MUTED,
-          justify='left', wraplength=208).pack(anchor='w', padx=15, pady=(0, 12))
-    app.activity_log = tk.Text(activity, bg=PANEL, fg=MUTED, wrap='word', relief='flat',
-                                font=('Segoe UI', 9), state='disabled', padx=12, pady=9,
-                                highlightthickness=0)
-    app.activity_log.pack(fill='both', expand=True, padx=4)
-    tk.Frame(activity, bg=LINE, height=1).pack(fill='x', padx=12, pady=(6, 6))
-    label(activity, 'SYSTEM STATUS', 9, CYAN, True).pack(anchor='w', padx=15, pady=(4, 6))
-    label(activity, '', 9, TEXT, bg=PANEL, textvariable=app.status, wraplength=208,
-          justify='left').pack(anchor='w', padx=15, pady=(0, 12))
-    btn(activity, 'Add an installed app', app.add_app, compact=True).pack(fill='x', padx=12, pady=(0, 6))
-    btn(activity, 'Choose workspace', app.choose, compact=True).pack(fill='x', padx=12, pady=(0, 12))
-    label(root, 'LOCAL DESKTOP  ·  Screen input requires opt-in + review  ·  STOP: Ctrl+Alt+F12 / Esc',
-          8, MUTED, bg=BG).pack(anchor='w', padx=16, pady=(0, 8))
+    voice_footer = tk.Frame(conversation, bg=DEEP)
+    voice_footer.pack(fill='x', padx=13, pady=(0, 8))
+    btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=2)
+    btn(voice_footer, 'Test voice', app.test_voice, compact=True).pack(side='left', padx=2)
+    ttk.Combobox(voice_footer, textvariable=app.voice_language, width=7,
+                 state='readonly', values=['Auto', 'Urdu', 'English']).pack(side='left', padx=3)
+    tk.Checkbutton(voice_footer, text='Speak replies', variable=app.speak_enabled,
+                   bg=DEEP, fg=MUTED, activebackground=DEEP, activeforeground=TEXT,
+                   selectcolor=PANEL_2).pack(side='left', padx=2)
+    tk.Checkbutton(voice_footer, text='Reviewed screen input',
+                   variable=app.permission, bg=DEEP, fg=MUTED,
+                   activebackground=DEEP, activeforeground=TEXT,
+                   selectcolor=PANEL_2).pack(side='right', padx=1)
+    label(conversation, 'Enter: send  ·  Shift+Enter: new line  ·  No always-on microphone',
+          8, MUTED, bg=DEEP).pack(anchor='w', padx=16, pady=(0, 6))
+
+    # Right column: real session activity and status (never fabricated CPU or
+    # RAM values from the reference artwork).
+    right = tk.Frame(body, bg=BG, width=254)
+    right.grid(row=0, column=2, sticky='nsew', padx=(10, 0))
+    right.grid_propagate(False)
+    activity = panel(right)
+    activity.pack(fill='both', expand=True)
+    heading = tk.Frame(activity, bg=PANEL)
+    heading.pack(fill='x', padx=12, pady=(14, 6))
+    label(heading, '⌁  ACTIVITY', 13, TEXT, True, bg=PANEL).pack(side='left')
+    label(heading, 'SESSION', 8, GREEN, True, bg=PANEL).pack(side='right')
+    label(activity, 'Only real local events are listed. No background monitoring.',
+          9, MUTED, justify='left', wraplength=226).pack(
+          anchor='w', padx=15, pady=(0, 8))
+    tk.Frame(activity, height=1, bg=LINE).pack(fill='x', padx=12)
+    app.activity_log = tk.Text(activity, bg=PANEL, fg=MUTED,
+                               wrap='word', relief='flat',
+                               font=('Segoe UI', 9), state='disabled',
+                               padx=12, pady=8, highlightthickness=0)
+    app.activity_log.pack(fill='both', expand=True, padx=4, pady=4)
+
+    status_card = panel(right)
+    status_card.pack(fill='x', pady=(10, 0))
+    label(status_card, '◈  SYSTEM STATUS', 12, TEXT, True).pack(
+        anchor='w', padx=13, pady=(13, 11))
+    local_row = tk.Frame(status_card, bg=PANEL_2)
+    local_row.pack(fill='x', padx=12, pady=(0, 10))
+    label(local_row, '◉  Ollama / Local AI', 10, CYAN, True, bg=PANEL_2).pack(
+        anchor='w', padx=9, pady=(9, 3))
+    label(local_row, '', 9, GREEN, bg=PANEL_2, textvariable=app.ai_status,
+          wraplength=218, justify='left').pack(anchor='w', padx=9, pady=(0, 8))
+    label(status_card, 'Model:', 9, MUTED, True).pack(anchor='w', padx=13)
+    label(status_card, '', 9, TEXT, textvariable=model_name,
+          wraplength=215, justify='left').pack(anchor='w', padx=13, pady=(1, 8))
+    tk.Frame(status_card, bg=LINE, height=1).pack(fill='x', padx=12)
+    label(status_card, 'Current request:', 9, MUTED, True).pack(
+        anchor='w', padx=13, pady=(8, 2))
+    label(status_card, '', 9, TEXT, textvariable=app.status,
+          wraplength=212, justify='left').pack(anchor='w', padx=13, pady=(0, 9))
+    btn(status_card, 'Toolbox', app.open_toolkit, compact=True).pack(
+        side='left', padx=(12, 4), pady=(0, 11))
+    btn(status_card, 'Workspace', app.choose, compact=True).pack(
+        side='left', padx=3, pady=(0, 11))
+
+    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   LOCAL-FIRST  ·  STOP: Ctrl+Alt+F12 or Esc  ·  Screen actions need review',
+          8, MUTED, bg=BG).pack(anchor='w', padx=17, pady=(0, 7))
