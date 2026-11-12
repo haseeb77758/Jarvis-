@@ -461,6 +461,7 @@ def make_dashboard(app):
     voice_footer.pack(side='bottom', fill='x', padx=13, pady=(0, 8))
     btn(voice_footer, 'Setup voice', app.setup_voice, compact=True).pack(side='left', padx=2)
     btn(voice_footer, 'Voices', app.open_voice_settings, compact=True).pack(side='left', padx=2)
+    btn(voice_footer, 'LiveKit Voice', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
     ttk.Combobox(voice_footer, textvariable=app.voice_language, width=7,
                  state='readonly', values=['Auto', 'Urdu', 'English']).pack(side='left', padx=3)
     tk.Checkbutton(voice_footer, text='Speak replies', variable=app.speak_enabled,
