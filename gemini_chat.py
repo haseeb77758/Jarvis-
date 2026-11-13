@@ -191,10 +191,12 @@ class GeminiClient:
         request = Request(
             API_URL + model + ":generateContent",
             data=body,
-            headers={"x-goog-api-key": key, "Content-Type": "application/json",
+            headers={"Content-Type": "application/json",
                      "User-Agent": "HaseebCrafts-Jarvis/1.0"},
             method="POST",
         )
+        # Do not forward the credential if a remote server sends a redirect.
+        request.add_unredirected_header("x-goog-api-key", key)
         try:
             with urlopen(request, timeout=22, context=ssl.create_default_context()) as reply:
                 raw = reply.read(MAX_RESPONSE_BYTES + 1)
