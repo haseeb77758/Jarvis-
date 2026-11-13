@@ -392,15 +392,16 @@ class App:
         if len(text) > 4000:
             self.say('HASEEB AI', 'Message 4,000 characters se chhota rakhein.')
             return
+        if re.search(r'\bAIza[A-Za-z0-9_-]{25,}\b', text):
+            # Reject before writing user text to the chat/activity transcript.
+            self.say('ERROR', 'API key chat mein mat bhejein. Gemini setup mein securely save karein.')
+            return
         self.entry.delete(0, 'end')
         self.say('YOU', text)
         try:
             if self.mode.get() == 'Gemini AI chat':
                 # Explicit chat mode cannot execute actions, even if the model
                 # suggests a command. User must switch to reviewed local mode.
-                if re.search(r'\bAIza[A-Za-z0-9_-]{25,}\b', text):
-                    self.say('ERROR', 'API key chat mein mat bhejein. Gemini setup mein securely save karein.')
-                    return
                 past = list(self.history)
                 self.worker(lambda: GeminiClient(self.gemini_store).ask(
                     text, past, self.stop), 'gemini_reply', text)
