@@ -48,7 +48,7 @@ def _protect(value: bytes) -> bytes:
     try:
         import win32crypt
         return win32crypt.CryptProtectData(value, "Haseeb Jarvis Gemini", None, None, None, 0)
-    except (ImportError, OSError) as exc:
+    except Exception:
         raise GeminiError("Windows secure credential storage available nahi.") from None
 
 
@@ -58,7 +58,7 @@ def _unprotect(value: bytes) -> bytes:
     try:
         import win32crypt
         return win32crypt.CryptUnprotectData(value, None, None, None, 0)[1]
-    except (ImportError, OSError) as exc:
+    except Exception:
         raise GeminiError("Windows account se Gemini key unlock nahi ho rahi. Key dobara save karein.") from None
 
 
@@ -229,7 +229,7 @@ def open_settings(parent, store: GeminiStore):
     """User-initiated dialog, no automatic paid calls or secret display."""
     window = tk.Toplevel(parent)
     window.title("Jarvis | Gemini Free API setup")
-    window.geometry("570x405")
+    window.geometry("600x485")
     window.configure(bg="#0b1827")
     window.transient(parent)
     window.grab_set()
