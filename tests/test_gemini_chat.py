@@ -8,7 +8,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 from urllib.error import HTTPError, URLError
 
 import gemini_chat as gm
@@ -78,7 +78,7 @@ class GeminiProviderTests(unittest.TestCase):
                 gm._payload(bad, [])
 
     def _response(self, value=None):
-        reply = Mock()
+        reply = MagicMock()
         reply.read.return_value = json.dumps(value or {
             "candidates": [{"content": {"parts": [{"text": "Walaikum salam!"}]}}]
         }).encode()
