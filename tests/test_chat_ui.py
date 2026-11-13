@@ -80,6 +80,8 @@ class LocalChatTests(unittest.TestCase):
         app.submit()
         app.worker.assert_not_called()
         app.say.assert_any_call("ERROR", unittest.mock.ANY)
+        self.assertFalse(any(call.args[0] == "YOU" for call in app.say.call_args_list))
+        app.entry.delete.assert_not_called()
 
     def test_too_long_message_does_not_queue_or_clear_composer(self):
         app = self.create_app()
