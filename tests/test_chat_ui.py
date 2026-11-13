@@ -102,6 +102,13 @@ class LocalChatTests(unittest.TestCase):
         app.toggle_sleep_mode.assert_called_once()
         self.assertFalse(app.sleeping)
 
+    def test_close_does_not_require_removed_legacy_voice_speaker(self):
+        app = self.create_app()
+        app.livekit_window = None
+        app.root = Mock()
+        app.close()
+        app.root.destroy.assert_called_once()
+
     def test_chat_source_is_in_windows_install_bundle(self):
         self.assertIn('chat_ui.py', [p.as_posix() for p in source_files(ROOT)])
         self.assertIn('gemini_chat.py', [p.as_posix() for p in source_files(ROOT)])
