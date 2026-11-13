@@ -1,3 +1,21 @@
+## NEW (13 Nov 2026) — Gemini Free API chat
+
+Jarvis mein Gemini AI chat ab separate optional text mode hai. Pehle
+https://aistudio.google.com/api-keys se **Free Tier** project ki key banao.
+Key ChatGPT/GitHub mein share mat karna. Jarvis ke **Gemini API setup** mein
+paste karke Save dabao. Phir chat dropdown mein **Gemini AI chat** select
+karke 'Salam Jarvis' send karo. Default free-tier text model
+**gemini-3.5-flash-lite** hai. Agar project access 404 aaye, settings
+mein **gemini-3.1-flash-lite** try kar sakte ho.
+
+Ye **text chat only** hai; Gemini voice aur desktop control automatically
+nahi karta. **Computer commands** mode mein Windows ke approved commands
+chalenge. **Talk Live** alag LiveKit voice option hai. Google Free Tier
+prompts product improvement ke liye use kar sakta hai—confidential client
+data mat bhejo. Detailed steps: [GEMINI-SETUP.md](GEMINI-SETUP.md).
+
+---
+
 # HASEEB AI / JARVIS — LiveKit-only voice assistant
 
 Created by Haseeb Crafts.
