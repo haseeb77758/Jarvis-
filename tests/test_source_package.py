@@ -16,7 +16,9 @@ from verify_source_zip import verify
 class SourcePackageTests(unittest.TestCase):
     def test_source_allowlist_excludes_secrets_and_binaries(self):
         paths = [p.as_posix() for p in source_files()]
-        self.assertIn("app.py", paths)\n        self.assertIn("gemini_chat.py", paths)\n        self.assertIn("GEMINI-SETUP.md", paths)
+        self.assertIn("app.py", paths)
+        self.assertIn("gemini_chat.py", paths)
+        self.assertIn("GEMINI-SETUP.md", paths)
         self.assertIn("dashboard.py", paths)
         self.assertIn("RUN-JARVIS.py", paths)
         self.assertIn("START-JARVIS.cmd", paths)
