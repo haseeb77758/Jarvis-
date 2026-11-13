@@ -98,6 +98,7 @@ class GeminiProviderTests(unittest.TestCase):
         self.assertEqual(request.get_method(), "POST")
         self.assertEqual(request.get_header("X-goog-api-key"), self.key)
         self.assertNotIn(self.key, request.full_url)
+        self.assertNotIn(self.key, repr(request.headers))
         self.assertNotIn(self.key.encode(), request.data)
         self.assertEqual(opened.call_args.kwargs["timeout"], 22)
 
