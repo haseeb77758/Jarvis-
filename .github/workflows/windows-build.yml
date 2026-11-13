@@ -44,7 +44,7 @@ jobs:
         continue-on-error: true
         run: python tools/smoke_free_voice.py
       - name: Upload live free voice samples when available
-        if: steps.free-voice-live.outcome == 'success'
+        if: github.event_name != 'pull_request' && steps.free-voice-live.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-Free-Voice-Samples
@@ -73,6 +73,7 @@ jobs:
       - name: Verify source archive and manifest
         run: python tools/verify_source_zip.py dist/Jarvis-Source-Windows.zip
       - name: Upload reviewable Windows source
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-Source-Windows
@@ -80,6 +81,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload Windows application
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-UNSIGNED-Development-Windows-x64
