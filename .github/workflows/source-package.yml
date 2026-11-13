@@ -72,6 +72,7 @@ jobs:
       - name: Verify archive file list and checksums
         run: python tools/verify_source_zip.py dist/Jarvis-Source-Windows.zip
       - name: Upload source ZIP
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-One-Click-Windows
