@@ -565,7 +565,9 @@ class App:
     def close(self):
         if self.livekit_window is not None and not self.livekit_window.closed:
             self.livekit_window.close()
-        self.speaker.stop()
+        legacy_speaker = getattr(self, 'speaker', None)
+        if legacy_speaker is not None:
+            legacy_speaker.stop()
         self.stop.set()
         self.root.destroy()
 
