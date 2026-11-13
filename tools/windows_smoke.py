@@ -27,7 +27,11 @@ with tempfile.TemporaryDirectory() as data:
         root.update()
         assert root.winfo_exists()
         assert app.mode.get() == 'Computer commands', 'Local desktop commands must be default'
-        assert tuple(app.select.cget('values')) == ('Computer commands',), 'Legacy chatbot mode is still available'
+        assert tuple(app.select.cget('values')) == ('Computer commands', 'Gemini AI chat'), 'Gemini text mode missing'
+        assert not app.gemini_store.configured(), 'Gemini cloud key must not be auto-created'
+        app.mode.set('Gemini AI chat')
+        assert app.mode.get() == 'Gemini AI chat'
+        app.mode.set('Computer commands')
         assert app.entry.winfo_class() == 'Text', 'Multiline local command composer is missing'
         assert app.permission.get() is False
         assert hasattr(app, 'activity_log'), 'Dashboard activity panel missing'

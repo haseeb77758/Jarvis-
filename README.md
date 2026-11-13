@@ -1,13 +1,30 @@
-# JARVIS — LiveKit-only AI for Windows 11
+# JARVIS — Gemini Text Chat + LiveKit Voice for Windows 11
 
 Created by **Haseeb Crafts**.
 
-**The only active AI conversation provider is LiveKit Inference
-(`openai/gpt-live-1`, `marin` voice).** Jarvis no longer launches a Puter
-account relay, a sandbox chatbot, local Ollama, alternate AI chat providers,
-AI-generated action plans or a second voice-chat provider. The dashboard
-retains its animated orb, local notes, tasks, direct desktop commands,
-screen-action review, emergency STOP and GitHub updates.
+**Two opt-in modes**: Gemini Free-Tier **text chat**, and separate LiveKit
+Inference **voice** (`openai/gpt-live-1`, `marin` voice). Normal typed
+desktop commands remain local and reviewed. Jarvis does not launch the
+retired Puter relay, Ollama or other chatbots. It keeps the animated orb,
+local notes, tasks, desktop controls, STOP and GitHub updates.
+
+## Current: Gemini Free API text chat (optional)
+
+Open **Gemini API setup** in Jarvis and save your key privately on Windows.
+The key is encrypted using Windows DPAPI and never goes to GitHub. Select
+**Gemini AI chat** in the dropdown for natural Roman Urdu/English replies.
+Press Send to call the fixed official Gemini HTTPS endpoint. Switch back to
+**Computer commands** for Windows tools. Gemini output is **text only** and
+cannot run desktop actions automatically.
+
+The initial model is `gemini-3.5-flash-lite`, with a reviewed optional
+`gemini-3.1-flash-lite` selection. Both currently list Free Tier API text
+pricing, subject to Google account/project availability and limits.
+Jarvis enforces a local 30 attempted requests/day precaution, **not** a
+financial cap. Google Free Tier data may be used to improve its products;
+do not send confidential client content. No auto-retry or background calls.
+Full setup: [Gemini Windows setup](GEMINI-SETUP.md).
+
 
 ## Current: Direct Jarvis desktop WebRTC voice
 
@@ -50,11 +67,11 @@ the settings window. AI-Coustics remains opt-in.
 
 See [LiveKit setup, keys, privacy and safety](LIVEKIT-VOICE.md).
 
-## Local desktop commands (not AI chat)
+## Local desktop commands (separate from Gemini chat)
 
-The text box now accepts *reviewed local commands only*. Typed general
-questions are **never forwarded to an alternate chatbot** and are answered
-with a local command-help notice. Examples:
+When the dropdown is set to **Computer commands**, the text box accepts
+*reviewed local commands only*; unknown text is not sent online.
+Choose **Gemini AI chat** to send a message explicitly to Gemini. Examples:
 
 | Command | Local action |
 | --- | --- |
@@ -66,10 +83,10 @@ with a local command-help notice. Examples:
 | `volume up`, `play pause` | Allowlisted system controls |
 | `shortcut: name` | Run an existing saved shortcut with review |
 
-Local desktop commands **do not come from the LiveKit voice agent**: the voice
-agent currently has *no* desktop-control tools or filesystem access. You
-cannot voice-control Windows apps through LiveKit until a separate,
-permission-reviewed tool integration is developed.
+Gemini text replies **do not execute desktop tools**. LiveKit voice desktop
+actions require an explicit `desktop_command` Client Tool deployed in
+the owner's private LiveKit Builder and a separate native Jarvis approval
+for each supported action. See [Direct Voice setup](LIVEKIT-DIRECT-DESKTOP.md).
 
 Screen input requires user permission and individual review. STOP via the
 app button, focused Esc or global Ctrl+Alt+F12 (if registered).
@@ -84,19 +101,19 @@ and keeps local preferences and LiveKit credentials across updates. See
 [Windows installation](LOCAL-TEST-NO-ID.md) and
 [updating Jarvis](UPDATE-JARVIS-NO-CODE.md).
 
-The old chatbot and free-TTS source files are intentionally left in the
-**reviewed source bundle solely for compatibility with already-installed
-updaters and their offline migration tests**. They are not imported,
-initialized, connected or exposed as providers by the native Jarvis UI.
+The old chatbot and free-TTS source files remain in the reviewed source
+bundle for legacy updater compatibility and offline migration tests.
+They are not activated as additional chat providers. Gemini is separately
+implemented without the retired Puter account relay.
 No old Puter account service is automatically connected; Jarvis does not
 uninstall unrelated Windows software or delete model files on your computer.
 
 ## Verification
 
-Windows CI validates the desktop dashboard, legacy-disabled runtime behavior,
-safe local controls, source ZIP, installer and Windows EXE startup without
-using your personal LiveKit credentials. These tests **do not prove** real
-LiveKit account connectivity, voice quality, latency or billable usage on your PC.
+Windows CI validates the dashboard, mocked Gemini REST/key safety,
+local commands, source ZIP, installer and EXE launch without your private
+Gemini/LiveKit credentials. These tests **do not prove** real Gemini key
+access, LiveKit Cloud voice quality, latency or usage on your PC.
 You have to consent to and run a live device test yourself.
 
 Unsigned development EXEs may be blocked by Windows Smart App Control; keep

@@ -33,6 +33,8 @@ class LocalChatTests(unittest.TestCase):
         app.store.facts = []
         app.store.apps = {}
         app.pending = []
+        app.gemini_store = Mock()
+        app.approve = Mock()
         return app
 
     def test_livekit_only_desktop_command_is_local_and_reviewed(self):
@@ -62,6 +64,25 @@ class LocalChatTests(unittest.TestCase):
         app.approve.assert_called_once_with({'action': 'launch', 'app': 'calculator'})
         app.worker.assert_not_called()
 
+    def test_gemini_chat_is_explicit_only_and_cannot_execute_desktop_commands(self):
+        app = self.create_app("Gemini AI chat")
+        app.entry.get.return_value = "calculator kholo"
+        app.submit()
+        app.worker.assert_called_once()
+        args, _kw = app.worker.call_args
+        self.assertEqual(args[1], "gemini_reply")
+        self.assertEqual(args[2], "calculator kholo")
+        app.approve.assert_not_called()
+
+    def test_gemini_chat_rejects_key_sent_as_message(self):
+        app = self.create_app("Gemini AI chat")
+        app.entry.get.return_value = "AIzaDummySecretKey123456789012345"
+        app.submit()
+        app.worker.assert_not_called()
+        app.say.assert_any_call("ERROR", unittest.mock.ANY)
+        self.assertFalse(any(call.args[0] == "YOU" for call in app.say.call_args_list))
+        app.entry.delete.assert_not_called()
+
     def test_too_long_message_does_not_queue_or_clear_composer(self):
         app = self.create_app()
         app.entry.get.return_value = 'x' * 4001
@@ -81,8 +102,16 @@ class LocalChatTests(unittest.TestCase):
         app.toggle_sleep_mode.assert_called_once()
         self.assertFalse(app.sleeping)
 
+    def test_close_does_not_require_removed_legacy_voice_speaker(self):
+        app = self.create_app()
+        app.livekit_window = None
+        app.root = Mock()
+        app.close()
+        app.root.destroy.assert_called_once()
+
     def test_chat_source_is_in_windows_install_bundle(self):
         self.assertIn('chat_ui.py', [p.as_posix() for p in source_files(ROOT)])
+        self.assertIn('gemini_chat.py', [p.as_posix() for p in source_files(ROOT)])
 
     def test_enter_sends_and_shift_enter_inserts_newline(self):
         send = Mock()

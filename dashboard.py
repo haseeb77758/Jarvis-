@@ -129,8 +129,9 @@ def system_window(app):
     details = [
         'OS: ' + platform.platform(),
         'Workspace: ' + str(app.control.workspace),
-        'AI Voice: LiveKit GPT-Live-1 only; cloud session needs consent and credentials',
-        'Puter, Ollama and other chatbots: disabled',
+        'AI text: optional Gemini free-tier API key, explicit chat mode only',
+        'AI voice: optional LiveKit GPT-Live-1; cloud session needs consent',
+        'Legacy Puter, Ollama and other account chatbots: disabled',
         'Control: explicit action approval, emergency STOP enabled',
         'Network: no remote desktop-control server',
     ]
@@ -275,6 +276,7 @@ def make_dashboard(app):
     navigation.pack(side='left')
     for title, action in [
         ('LiveKit Voice', app.toggle_livekit_voice),
+        ('Gemini Chat', lambda: (app.mode.set('Gemini AI chat'), app.entry.focus_set())),
         ('Notes', lambda: note_window(app)),
         ('Tasks', lambda: tasks_window(app)),
     ]:
@@ -299,6 +301,7 @@ def make_dashboard(app):
     menu = tk.Menu(more, tearoff=False, bg=PANEL, fg=TEXT,
                    activebackground=PANEL_2, activeforeground=CYAN)
     menu.add_command(label='LiveKit project / API keys', command=app.open_livekit_voice)
+    menu.add_command(label='Gemini API key (Windows encrypted)', command=app.open_gemini_settings)
     menu.add_command(label='Connect GitHub', command=app.connect_github)
     menu.add_command(label='Resume', command=app.resume)
     menu.add_separator()
@@ -308,7 +311,7 @@ def make_dashboard(app):
     more.pack(side='right', padx=3)
     btn(actions, 'Update', app.update_jarvis, compact=True).pack(side='right', padx=3)
     btn(actions, 'LiveKit setup', app.open_livekit_voice, compact=True).pack(side='right', padx=3)
-    label(actions, 'LIVEKIT · ONLY AI', 9, GREEN, True, bg=DEEP).pack(
+    label(actions, 'AI · GEMINI / LIVEKIT', 9, GREEN, True, bg=DEEP).pack(
         side='right', padx=(4, 9))
 
     body = tk.Frame(root, bg=BG)
@@ -410,10 +413,14 @@ def make_dashboard(app):
     app.orb = RotatingOrb(intro, width=166, height=130)
     intro_text = tk.Frame(intro, bg=DEEP)
     intro_text.pack(side='left', fill='both', expand=True, padx=(5, 2), pady=(12, 5))
-    label(intro_text, 'JARVIS / LIVEKIT VOICE', 16, CYAN, True, bg=DEEP).pack(anchor='w', pady=(0, 7))
-    label(intro_text, 'Natural Urdu / English voice · consented cloud sessions',
+    label(intro_text, 'JARVIS / AI CHAT + VOICE', 16, CYAN, True, bg=DEEP).pack(anchor='w', pady=(0, 7))
+    label(intro_text, 'Gemini text chat or local commands · LiveKit voice optional',
           9, MUTED, bg=DEEP, wraplength=410, justify='left').pack(anchor='w')
-    model_name = tk.StringVar(value='LIVEKIT  /  GPT-Live-1 · marin')
+    model_name = tk.StringVar(value='LOCAL COMMANDS  /  LiveKit voice optional')
+    def mode_changed(*_args):
+        model_name.set('GEMINI  /  Free-tier text API' if app.mode.get() == 'Gemini AI chat'
+                       else 'LOCAL COMMANDS  /  LiveKit voice optional')
+    app.mode.trace_add('write', mode_changed)
     label(intro_text, '', 9, GREEN, True, bg=DEEP, textvariable=model_name).pack(
         anchor='w', pady=(12, 0))
 
@@ -427,7 +434,7 @@ def make_dashboard(app):
                     bordercolor=LINE)
     app.select = ttk.Combobox(controls, textvariable=app.mode,
                               state='readonly', width=18, style='Jarvis.TCombobox',
-                              values=['Computer commands'])
+                              values=['Computer commands', 'Gemini AI chat'])
     app.select.pack(side='left', padx=2)
     btn(controls, 'Clear activity', app.clear, compact=True).pack(side='right', padx=2)
     btn(controls, 'Desktop mode', lambda: (app.mode.set('Computer commands'),
@@ -442,14 +449,15 @@ def make_dashboard(app):
 
     # Pack controls from the bottom first, before the expanding conversation.
     # Tk otherwise gives the oversized text area priority and hides Send/Mic.
-    label(conversation, 'Command box is LOCAL ONLY · Talk Live starts approved LiveKit voice · STOP always available',
+    label(conversation, 'Choose Computer commands (local) or Gemini AI chat (cloud). LiveKit voice is separate. STOP always available.',
           8, MUTED, bg=DEEP).pack(side='bottom', anchor='w', padx=16, pady=(0, 4))
     tk.Label(conversation, textvariable=app.livekit_voice_state, bg=DEEP, fg=CYAN,
              anchor='w', font=('Segoe UI', 9), padx=14).pack(side='bottom', fill='x', pady=(0, 3))
 
     voice_footer = tk.Frame(conversation, bg=DEEP)
     voice_footer.pack(side='bottom', fill='x', padx=13, pady=(0, 8))
-    btn(voice_footer, 'LiveKit voice settings / API key', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
+    btn(voice_footer, 'LiveKit voice', app.open_livekit_voice, compact=True).pack(side='left', padx=2)
+    btn(voice_footer, 'Gemini API setup', app.open_gemini_settings, compact=True).pack(side='left', padx=2)
     tk.Checkbutton(voice_footer, text='Reviewed screen input',
                    variable=app.permission, bg=DEEP, fg=MUTED,
                    activebackground=DEEP, activeforeground=TEXT,
@@ -471,7 +479,7 @@ def make_dashboard(app):
 
     prompts = tk.Frame(conversation, bg=DEEP)
     prompts.pack(side='bottom', fill='x', padx=15, pady=(0, 5))
-    label(prompts, '⌘  LOCAL COMMAND EXAMPLES:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
+    label(prompts, '⌘  COMMAND EXAMPLES:', 8, MUTED, bg=DEEP).pack(side='left', padx=(0, 6))
     for title, command in [
         ('Calculator', 'calculator kholo'),
         ('Notepad', 'notepad kholo'),
@@ -542,6 +550,6 @@ def make_dashboard(app):
                                padx=12, pady=8, highlightthickness=0)
     app.activity_log.pack(fill='both', expand=True, padx=4, pady=4)
 
-    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   LIVEKIT ONLY + REVIEWED LOCAL CONTROLS  ·  STOP: Ctrl+Alt+F12 or Esc',
+    label(root, 'HASEEB AI  ·  Created by Haseeb Crafts   |   GEMINI TEXT CHAT + LIVEKIT VOICE + REVIEWED LOCAL CONTROLS  ·  STOP: Ctrl+Alt+F12 or Esc',
           8, MUTED, bg=BG).pack(anchor='w', padx=17, pady=(0, 7))
 

@@ -44,7 +44,7 @@ jobs:
         continue-on-error: true
         run: python tools/smoke_free_voice.py
       - name: Upload live free voice samples when available
-        if: steps.free-voice-live.outcome == 'success'
+        if: github.event_name != 'pull_request' && steps.free-voice-live.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-Free-Voice-Samples
@@ -58,7 +58,7 @@ jobs:
       - name: Test synthetic voice output and local recognition
         run: python tools/voice_smoke.py
       - name: Build the Windows executable
-        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis --collect-all urdunlp --copy-metadata urdunlp --collect-all edge_tts --copy-metadata edge-tts --collect-all certifi --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --add-data "web/connect.html;web" --add-data "web/connect.js;web" --add-data "web/connect.css;web" --add-data "web/jarvis_live.html;web" --add-data "web/jarvis_live.css;web" --add-data "web/jarvis_live.js;web" --add-data "build-assets/voice-model;voice-model" --add-data "livekit_agent.py;." --add-data "livekit_requirements.txt;." --add-data "EDGE-TTS-LICENSE.txt;." --add-data "GPL-3.0.txt;." --add-data "THIRD-PARTY-NOTICES.txt;." app.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name Jarvis --collect-all urdunlp --copy-metadata urdunlp --collect-all edge_tts --copy-metadata edge-tts --collect-all certifi --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all onnxruntime --collect-all av --collect-all _sounddevice_data --collect-submodules pywinauto --collect-submodules comtypes --hidden-import win32com.client --hidden-import win32crypt --add-data "web/connect.html;web" --add-data "web/connect.js;web" --add-data "web/connect.css;web" --add-data "web/jarvis_live.html;web" --add-data "web/jarvis_live.css;web" --add-data "web/jarvis_live.js;web" --add-data "build-assets/voice-model;voice-model" --add-data "livekit_agent.py;." --add-data "livekit_requirements.txt;." --add-data "EDGE-TTS-LICENSE.txt;." --add-data "GPL-3.0.txt;." --add-data "THIRD-PARTY-NOTICES.txt;." app.py
       - name: Verify the built app starts
         shell: pwsh
         run: |
@@ -73,6 +73,7 @@ jobs:
       - name: Verify source archive and manifest
         run: python tools/verify_source_zip.py dist/Jarvis-Source-Windows.zip
       - name: Upload reviewable Windows source
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-Source-Windows
@@ -80,6 +81,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload Windows application
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: Jarvis-UNSIGNED-Development-Windows-x64

@@ -12,6 +12,7 @@ import subprocess
 import re
 from memory import PreferenceStore
 from core import Controller, parse_command
+from gemini_chat import GeminiClient, GeminiStore, open_settings as gemini_settings
 from tools.update_windows import check_update, install_update, installed_commit, UpdateError, GitHubAuthenticationRequired, github_cli, launch_github_login
 
 BG, PANEL, TEXT, MUTED, CYAN = '#080e17', '#101c2b', '#eff7fa', '#9ab1c0', '#4ce2d2'
@@ -36,9 +37,10 @@ class App:
         self.pending = []
         self.last_plan = []
         self.store = PreferenceStore(data_directory)
+        self.gemini_store = GeminiStore()
         self.control = Controller(Path.home(), self.stop, self.store.apps)
-        # Only LiveKit provides AI conversation. The legacy Puter relay and
-        # other chatbot engines are NOT constructed or connected.
+        # Gemini is explicit opt-in text chat; LiveKit remains a separate
+        # consented voice provider. No legacy relay is started.
         self.mode = tk.StringVar(value='Computer commands')
         self.status = tk.StringVar(value='Ready · local controls · no background monitoring')
         self.workspace = tk.StringVar(value=str(self.control.workspace))
@@ -51,7 +53,7 @@ class App:
         root.after(2400, self.check_updates_silently)
         if os.name == 'nt':
             threading.Thread(target=self.global_stop, daemon=True).start()
-        self.say('JARVIS', 'LiveKit only AI mode active. Talk Live dabao aur voice session approve karo. Neeche sirf local reviewed desktop commands likh sakte ho; koi Puter/other AI chatbot connect nahi hoga.')
+        self.say('JARVIS', 'Local commands ready. Gemini AI chat ke liye Gemini Setup mein API key save karein, phir Gemini AI chat mode select karein. LiveKit voice alag optional mode hai. AI chat Windows actions automatically execute nahi karti.')
 
     def global_stop(self):
         import ctypes
@@ -108,6 +110,10 @@ class App:
             current.window.lift()
             return
         self.livekit_window = LiveKitVoiceWindow(self)
+
+    def open_gemini_settings(self):
+        """Show the opt-in Gemini API key dialog; never reveal stored secrets."""
+        open_settings(self.root, self.gemini_store)
 
     def toggle_livekit_voice(self):
         """Primary voice control: user-clicked start with explicit cloud consent."""
@@ -334,7 +340,7 @@ class App:
         self.log.configure(state='normal')
         self.log.delete('1.0', 'end')
         self.log.configure(state='disabled')
-        self.say('JARVIS', 'Local activity cleared. LiveKit voice session is separate.')
+        self.say('JARVIS', 'Activity cleared. Gemini conversation context reset; LiveKit voice alag hai.')
 
     def halt(self):
         livekit = getattr(self, 'livekit_window', None)
@@ -386,9 +392,20 @@ class App:
         if len(text) > 4000:
             self.say('HASEEB AI', 'Message 4,000 characters se chhota rakhein.')
             return
+        if re.search(r'\bAIza[A-Za-z0-9_-]{25,}\b', text):
+            # Reject before writing user text to the chat/activity transcript.
+            self.say('ERROR', 'API key chat mein mat bhejein. Gemini setup mein securely save karein.')
+            return
         self.entry.delete(0, 'end')
         self.say('YOU', text)
         try:
+            if self.mode.get() == 'Gemini AI chat':
+                # Explicit chat mode cannot execute actions, even if the model
+                # suggests a command. User must switch to reviewed local mode.
+                past = list(self.history)
+                self.worker(lambda: GeminiClient(self.gemini_store).ask(
+                    text, past, self.stop), 'gemini_reply', text)
+                return
             if text.casefold().startswith('remember:'):
                 fact = text.split(':', 1)[1].strip()
                 if messagebox.askokcancel('Save local preference', fact + '\n\nYeh sirf PC par save hogi. Isay LiveKit ya kisi chatbot ko automatically nahi bheja jayega.', parent=self.root):
@@ -412,7 +429,7 @@ class App:
                 self.last_plan = [action]
                 self.approve(action)
             else:
-                self.say('COMMAND HELP', 'Sirf LiveKit voice se AI conversation hogi. Is box mein local desktop commands dein: calculator kholo, notepad kholo, windows, screenshot, volume up, note: meeting, ya folder banao: Client Work. Unknown text ko kisi chatbot par nahi bheja jayega.')
+                self.say('COMMAND HELP', 'Local desktop commands: calculator kholo, notepad kholo, windows, screenshot, volume up, note: meeting, folder banao: Client Work. General sawal ke liye Gemini AI chat mode select karein; desktop command mode cloud ko text nahi bhejta.')
         except Exception as exc:
             self.say('ACTION ERROR', str(exc))
 
@@ -488,6 +505,13 @@ class App:
                     self.show_screen(value)
                 elif kind == 'update_check':
                     self.approve_update(value)
+                elif kind == 'gemini_reply':
+                    self.history.extend([
+                        {'role': 'user', 'content': user},
+                        {'role': 'assistant', 'content': value},
+                    ])
+                    self.history = self.history[-8:]
+                    self.say('JARVIS', value)
                 elif kind == 'update_apply':
                     self.say('UPDATE', value)
                     self.status.set('Updated · restart Jarvis to use new code')
@@ -541,7 +565,9 @@ class App:
     def close(self):
         if self.livekit_window is not None and not self.livekit_window.closed:
             self.livekit_window.close()
-        self.speaker.stop()
+        legacy_speaker = getattr(self, 'speaker', None)
+        if legacy_speaker is not None:
+            legacy_speaker.stop()
         self.stop.set()
         self.root.destroy()
 
